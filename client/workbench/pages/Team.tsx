@@ -306,7 +306,7 @@ function AgentDetailModal({
   runtimesLoading: boolean;
 }) {
   const ctx = useWorkbench();
-  const { theme, compact, api, toast } = ctx;
+  const { theme, compact, api, toast, invalidate } = ctx;
   const ui = useUi(theme, compact);
   const detail = useQuery<Agent | null>(
     api,
@@ -324,8 +324,21 @@ function AgentDetailModal({
     setBusy(false);
     if (result.ok) {
       toast.show("智能体已归档", { variant: "success" });
+      invalidate();
       onClose();
     } else toast.error(result.error ?? "归档失败");
+  };
+
+  const restore = async () => {
+    if (!agent) return;
+    setBusy(true);
+    const result = await api({ method: "POST", path: `/api/agents/${agent.id}/restore` });
+    setBusy(false);
+    if (result.ok) {
+      toast.show("智能体已恢复", { variant: "success" });
+      invalidate();
+      detail.refresh();
+    } else toast.error(result.error ?? "恢复失败");
   };
 
   return (
@@ -388,7 +401,11 @@ function AgentDetailModal({
             <Text style={ui.s.tiny}>更新于 {fmtDateTime(agent.updated_at)}</Text>
 
             <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }]}>
-              <Btn ui={ui} label="归档" icon="Archive" tone="danger" busy={busy} onPress={() => void archive()} />
+              {agent.archived_at ? (
+                <Btn ui={ui} label="恢复" icon="ArchiveRestore" busy={busy} onPress={() => void restore()} />
+              ) : (
+                <Btn ui={ui} label="归档" icon="Archive" tone="danger" busy={busy} onPress={() => void archive()} />
+              )}
               <Btn ui={ui} label="开始聊天" icon="MessagesSquare" tone="primary" onPress={() => onChat(agent)} />
             </View>
           </View>

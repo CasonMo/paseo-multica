@@ -168,7 +168,66 @@ export interface Project {
   done_count?: number;
   start_date?: string | null;
   due_date?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  archived_at?: string | null;
 }
+
+export interface Label {
+  id: string;
+  name: string;
+  color: string;
+  description?: string | null;
+  resource_type?: string;
+  usage_count?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface WorkflowHandler {
+  type: "none" | "member" | "agent" | "squad" | (string & {});
+  id?: string | null;
+}
+
+export interface WorkflowStep {
+  status_key: string;
+  handler?: WorkflowHandler;
+  instructions?: string;
+  next_status_key?: string | null;
+  back_status_key?: string | null;
+}
+
+export interface Workflow {
+  id: string;
+  name: string;
+  description?: string;
+  is_default?: boolean;
+  owner_id?: string | null;
+  steps?: WorkflowStep[];
+  project_ids?: string[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const PROJECT_STATUS_META: Record<string, { label: string; tone: Tone }> = {
+  planned: { label: "规划中", tone: "muted" },
+  in_progress: { label: "进行中", tone: "accent" },
+  paused: { label: "已暂停", tone: "warning" },
+  completed: { label: "已完成", tone: "success" },
+  cancelled: { label: "已取消", tone: "danger" },
+};
+
+export function projectStatusMeta(status?: string | null) {
+  return PROJECT_STATUS_META[status ?? "planned"] ?? { label: status ?? "未知", tone: "muted" as Tone };
+}
+
+export const HANDLER_LABEL: Record<string, string> = {
+  none: "无处理人",
+  project_lead: "项目负责人",
+  member: "成员",
+  agent: "智能体",
+  squad: "小队",
+};
 
 export interface Comment {
   id: string;

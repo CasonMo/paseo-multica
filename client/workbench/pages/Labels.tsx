@@ -1,0 +1,367 @@
+import { Icon, Modal } from "@getpaseo/plugin/client/ui";
+import { useEffect, useMemo, useState } from "react";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Btn, Card, Chips, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, Tag, useUi } from "../bits";
+import { asList, useQuery } from "../api";
+import { useWorkbench } from "../context";
+import { relTime, type Label } from "../model";
+
+const COLORS = ["#3b82f6", "#8b5cf6", "#22c55e", "#f59e0b", "#ef4444", "#ec4899", "#14b8a6", "#64748b", "#a855f7", "#f97316"];
+
+type KindFilter = "all" | "issue" | "agent";
+
+const KIND_OPTIONS: { value: KindFilter; label: string }[] = [
+  { value: "all", label: "全部" },
+  { value: "issue", label: "需求标签" },
+  { value: "agent", label: "智能体标签" },
+];
+
+export function LabelsPage() {
+  const ctx = useWorkbench();
+  const { theme, compact, api, bump, workspaceId, toast, invalidate } = ctx;
+  const ui = useUi(theme, compact);
+  const key = `${workspaceId}:${bump}`;
+  const [kind, setKind] = useState<KindFilter>("all");
+  const [search, setSearch] = useState("");
+  const [editing, setEditing] = useState<Label | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<Label | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const labelsQuery = useQuery(api, "/api/labels", { select: (data) => asList<Label>(data, "labels") }, key);
+  const labels = labelsQuery.data ?? [];
+  const counts = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const label of labels) map[label.resource_type ?? "issue"] = (map[label.resource_type ?? "issue"] ?? 0) + 1;
+    return map;
+  }, [labels]);
+  const needle = search.trim().toLowerCase();
+  const filtered = labels.filter((label) => {
+    if (kind !== "all" && (label.resource_type ?? "issue") !== kind) return false;
+    return !needle || `${label.name} ${label.description ?? ""}`.toLowerCase().includes(needle);
+  });
+
+  const remove = async () => {
+    if (!confirmDelete) return;
+    setBusy(true);
+    const result = await api({ method: "DELETE", path: `/api/labels/${confirmDelete.id}` });
+    setBusy(false);
+    if (result.ok) {
+      toast.show("标签已删除", { variant: "success" });
+      setConfirmDelete(null);
+      labelsQuery.refresh();
+      invalidate();
+    } else toast.error(result.error ?? "删除失败");
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={{ padding: compact ? 12 : 18, gap: 12, paddingBottom: 48 }}>
+        <View style={[ui.s.row, { gap: 10 }]}>
+          <View style={ui.s.grow}>
+            <Text style={[ui.s.title, { fontSize: compact ? 18 : 21 }]}>标签</Text>
+            <Text style={ui.s.muted}>
+              共 {labels.length} 个标签 · 需求 {counts.issue ?? 0} · 智能体 {counts.agent ?? 0}
+            </Text>
+          </View>
+          <Btn
+            ui={ui}
+            label="新建"
+            icon="Plus"
+            tone="primary"
+            onPress={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+          />
+        </View>
+
+        <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
+          <Chips<KindFilter> ui={ui} options={KIND_OPTIONS} value={kind} onChange={setKind} />
+        </View>
+
+        <View
+          style={[
+            ui.s.row,
+            {
+              gap: 7,
+              paddingHorizontal: 11,
+              borderRadius: 9,
+              borderWidth: 1,
+              borderColor: ui.c.border,
+              backgroundColor: ui.c.surface1,
+              minHeight: 38,
+            },
+          ]}
+        >
+          <Icon name="Search" size={15} color={ui.c.muted} />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="搜索标签名称…"
+            placeholderTextColor={ui.c.muted}
+            style={{ flex: 1, color: ui.c.fg, fontSize: 13, paddingVertical: 8 }}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </View>
+
+        <Card ui={ui} padded={false}>
+          {labelsQuery.loading && labels.length === 0 ? (
+            <LoadingRow ui={ui} />
+          ) : labelsQuery.error ? (
+            <View style={{ padding: 14 }}>
+              <ErrorNote ui={ui} message={labelsQuery.error} onRetry={labelsQuery.refresh} />
+            </View>
+          ) : filtered.length === 0 ? (
+            <Empty
+              ui={ui}
+              icon="Tags"
+              title={needle || kind !== "all" ? "没有匹配的标签" : "还没有标签"}
+              description="用标签给需求和智能体分组，例如 env:dev1、team:growth。"
+              action={
+                <Btn
+                  ui={ui}
+                  label="新建标签"
+                  icon="Plus"
+                  tone="primary"
+                  onPress={() => {
+                    setEditing(null);
+                    setFormOpen(true);
+                  }}
+                />
+              }
+            />
+          ) : (
+            <View style={{ paddingBottom: 6 }}>
+              {filtered.map((label, index) => (
+                <View key={label.id}>
+                  {index > 0 ? <Divider ui={ui} style={{ marginHorizontal: 14 }} /> : null}
+                  <View style={[ui.s.listRow, { alignItems: "flex-start" }]}>
+                    <View
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 7,
+                        marginTop: 1,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: `${label.color || "#64748b"}22`,
+                      }}
+                    >
+                      <View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: label.color || "#64748b" }} />
+                    </View>
+                    <View style={{ flex: 1, gap: 3 }}>
+                      <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
+                        <Text numberOfLines={1} style={[ui.s.body, { fontWeight: "600" }]}>
+                          {label.name}
+                        </Text>
+                        <Tag ui={ui} label={label.resource_type === "agent" ? "智能体" : "需求"} tone="muted" />
+                      </View>
+                      {label.description ? (
+                        <Text numberOfLines={2} style={ui.s.tiny}>
+                          {label.description}
+                        </Text>
+                      ) : null}
+                      <Text style={ui.s.tiny}>
+                        使用 {label.usage_count ?? 0} 次 · 更新于 {relTime(label.updated_at ?? label.created_at)}
+                      </Text>
+                    </View>
+                    <View style={[ui.s.row, { gap: 2 }]}>
+                      <IconBtn
+                        ui={ui}
+                        icon="Pencil"
+                        label={`编辑标签 ${label.name}`}
+                        onPress={() => {
+                          setEditing(label);
+                          setFormOpen(true);
+                        }}
+                      />
+                      <IconBtn
+                        ui={ui}
+                        icon="Trash2"
+                        label={`删除标签 ${label.name}`}
+                        color={ui.c.danger}
+                        onPress={() => setConfirmDelete(label)}
+                      />
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </Card>
+
+        {labelsQuery.refreshing ? <Text style={[ui.s.tiny, { textAlign: "center" }]}>正在同步…</Text> : null}
+      </ScrollView>
+
+      <LabelFormModal
+        open={formOpen}
+        label={editing}
+        defaultKind={kind === "all" ? "issue" : kind}
+        onClose={() => setFormOpen(false)}
+        onSaved={() => {
+          setFormOpen(false);
+          labelsQuery.refresh();
+          invalidate();
+        }}
+        toast={toast}
+      />
+
+      <Modal
+        title="删除标签"
+        icon={<Icon name="TriangleAlert" size={16} color={ui.c.danger} />}
+        open={Boolean(confirmDelete)}
+        onOpenChange={(next) => {
+          if (!next) setConfirmDelete(null);
+        }}
+      >
+        <Modal.Content>
+          <View style={{ gap: 12 }}>
+            <Text style={ui.s.body}>
+              确定删除标签「{confirmDelete?.name}」？它会从 {confirmDelete?.usage_count ?? 0} 处引用中移除。
+            </Text>
+            <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8 }]}>
+              <Btn ui={ui} label="取消" onPress={() => setConfirmDelete(null)} />
+              <Btn ui={ui} label="删除" tone="danger" busy={busy} onPress={() => void remove()} />
+            </View>
+          </View>
+        </Modal.Content>
+      </Modal>
+    </View>
+  );
+}
+
+function LabelFormModal({
+  open,
+  label,
+  defaultKind,
+  onClose,
+  onSaved,
+  toast,
+}: {
+  open: boolean;
+  label: Label | null;
+  defaultKind: "issue" | "agent";
+  onClose(): void;
+  onSaved(): void;
+  toast: ReturnType<typeof useWorkbench>["toast"];
+}) {
+  const { theme, compact, api } = useWorkbench();
+  const ui = useUi(theme, compact);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [color, setColor] = useState(COLORS[0]);
+  const [kind, setKind] = useState<"issue" | "agent">(defaultKind);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setName(label?.name ?? "");
+    setDescription(label?.description ?? "");
+    setColor(label?.color ?? COLORS[0]);
+    setKind(label?.resource_type === "agent" ? "agent" : "issue");
+  }, [open, label]);
+
+  const submit = async () => {
+    if (!name.trim()) {
+      toast.error("请填写标签名称");
+      return;
+    }
+    setBusy(true);
+    const body: Record<string, unknown> = {
+      name: name.trim(),
+      description: description.trim() || null,
+      color,
+      resource_type: kind,
+    };
+    const result = label
+      ? await api({ method: "PUT", path: `/api/labels/${label.id}`, body })
+      : await api({ method: "POST", path: "/api/labels", body });
+    setBusy(false);
+    if (result.ok) {
+      toast.show(label ? "标签已更新" : "标签已创建", { variant: "success" });
+      onSaved();
+    } else toast.error(result.error ?? "保存失败");
+  };
+
+  return (
+    <Modal
+      title={label ? "编辑标签" : "新建标签"}
+      icon={<Icon name="Tags" size={16} color={ui.c.muted} />}
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+    >
+      <Modal.Content>
+        <View style={{ gap: 12 }}>
+          <Field ui={ui} label="名称" value={name} onChangeText={setName} placeholder="例如 env:gray1" autoFocus />
+          <Field
+            ui={ui}
+            label="描述"
+            value={description}
+            onChangeText={setDescription}
+            placeholder="这个标签代表什么？"
+          />
+          <View style={{ gap: 6 }}>
+            <Text style={ui.s.label}>适用对象</Text>
+            <Chips<"issue" | "agent">
+              ui={ui}
+              options={[
+                { value: "issue", label: "需求" },
+                { value: "agent", label: "智能体" },
+              ]}
+              value={kind}
+              onChange={setKind}
+            />
+          </View>
+          <View style={{ gap: 8 }}>
+            <Text style={ui.s.label}>颜色</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {COLORS.map((entry) => {
+                const active = entry.toLowerCase() === color.toLowerCase();
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`选择颜色 ${entry}`}
+                    accessibilityState={{ selected: active }}
+                    key={entry}
+                    onPress={() => setColor(entry)}
+                    style={({ pressed }) => [
+                      {
+                        width: 28,
+                        height: 28,
+                        borderRadius: 9,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: entry,
+                        borderWidth: active ? 2 : 0,
+                        borderColor: ui.c.fg,
+                      },
+                      pressed && ui.s.pressed,
+                    ]}
+                  >
+                    {active ? <Icon name="Check" size={14} color="#ffffff" /> : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+            <View style={[ui.s.row, { gap: 8 }]}>
+              <View style={{ width: 120 }}>
+                <Field ui={ui} label="自定义色值" value={color} onChangeText={setColor} placeholder="#3b82f6" code />
+              </View>
+              <View style={{ paddingTop: 18 }}>
+                <Tag ui={ui} label={name.trim() || "标签预览"} color={color} />
+              </View>
+            </View>
+          </View>
+          <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8, paddingTop: 4 }]}>
+            <Btn ui={ui} label="取消" onPress={onClose} />
+            <Btn ui={ui} label={label ? "保存" : "创建标签"} icon="Check" tone="primary" busy={busy} onPress={() => void submit()} />
+          </View>
+        </View>
+      </Modal.Content>
+    </Modal>
+  );
+}

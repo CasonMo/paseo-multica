@@ -13,7 +13,20 @@ import { SettingsPage } from "./client/workbench/pages/Settings";
 const SCREEN_ID = "multica-workbench";
 const SETTINGS_ID = "multica-connections";
 
-const PAGE_KEYS: PageKey[] = ["overview", "issues", "issue", "team", "chat", "autopilot", "api", "settings"];
+const PAGE_KEYS: PageKey[] = [
+  "overview",
+  "issues",
+  "issue",
+  "projects",
+  "inbox",
+  "labels",
+  "workflows",
+  "team",
+  "chat",
+  "autopilot",
+  "api",
+  "settings",
+];
 
 function asPage(value: string | undefined): PageKey | null {
   return value && (PAGE_KEYS as string[]).includes(value) ? (value as PageKey) : null;

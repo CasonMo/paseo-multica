@@ -7,18 +7,26 @@ import { initials } from "./model";
 import { ApiExplorerPage } from "./pages/ApiExplorer";
 import { AutomationPage } from "./pages/Automation";
 import { ChatPage } from "./pages/Chat";
+import { InboxPage } from "./pages/Inbox";
 import { IssueDetailPage } from "./pages/IssueDetail";
 import { IssuesPage } from "./pages/Issues";
+import { LabelsPage } from "./pages/Labels";
 import { OverviewPage } from "./pages/Overview";
+import { ProjectsPage } from "./pages/Projects";
 import { SettingsPage } from "./pages/Settings";
 import { TeamPage } from "./pages/Team";
+import { WorkflowsPage } from "./pages/Workflows";
 
 const NAV: { key: PageKey; label: string; icon: string }[] = [
   { key: "overview", label: "概览", icon: "LayoutDashboard" },
   { key: "issues", label: "需求", icon: "ListTodo" },
+  { key: "projects", label: "项目", icon: "FolderKanban" },
+  { key: "inbox", label: "收件箱", icon: "Bell" },
   { key: "team", label: "团队", icon: "Users" },
   { key: "chat", label: "聊天", icon: "MessagesSquare" },
   { key: "autopilot", label: "自动化", icon: "Bot" },
+  { key: "workflows", label: "工作流", icon: "Workflow" },
+  { key: "labels", label: "标签", icon: "Tags" },
   { key: "api", label: "接口", icon: "Plug" },
   { key: "settings", label: "设置", icon: "Settings2" },
 ];
@@ -172,6 +180,14 @@ export function Shell() {
           <IssuesPage />
         ) : page === "issue" ? (
           <IssueDetailPage issueId={params.id ?? ""} />
+        ) : page === "projects" ? (
+          <ProjectsPage />
+        ) : page === "inbox" ? (
+          <InboxPage />
+        ) : page === "labels" ? (
+          <LabelsPage />
+        ) : page === "workflows" ? (
+          <WorkflowsPage />
         ) : page === "team" ? (
           <TeamPage />
         ) : page === "chat" ? (

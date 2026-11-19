@@ -4,7 +4,7 @@ import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { Btn, Card, Chips, Divider, Empty, ErrorNote, Field, LoadingRow, SectionHeader, useUi } from "../bits";
 import { asList, asRecord, num, useQuery } from "../api";
 import { useWorkbench } from "../context";
-import type { Issue } from "../model";
+import type { Issue, Project } from "../model";
 import { IssueRow } from "../parts";
 
 type CategoryFilter = "all" | "unstarted" | "started" | "done" | "closed";
@@ -38,6 +38,7 @@ export function IssuesPage() {
   const [priority, setPriority] = useState<PriorityFilter>("all");
   const [limit, setLimit] = useState(25);
   const [createOpen, setCreateOpen] = useState(params.create === "1");
+  const [projectId, setProjectId] = useState<string | null>(params.project ?? null);
 
   useEffect(() => {
     const timer = setTimeout(() => setSearch(query.trim()), 300);
@@ -46,7 +47,7 @@ export function IssuesPage() {
 
   useEffect(() => {
     setLimit(25);
-  }, [search, category, priority]);
+  }, [search, category, priority, projectId]);
 
   const listKey = `${workspaceId}:${bump}`;
   const request = useMemo(() => {
@@ -54,10 +55,18 @@ export function IssuesPage() {
     if (search) when.q = search;
     if (category !== "all") when.status_category = category;
     if (priority !== "all") when.priority = priority;
+    if (projectId) when.project_id = projectId;
     return when;
-  }, [limit, search, category, priority]);
+  }, [limit, search, category, priority, projectId]);
 
   const issues = useQuery(api, "/api/issues", { query: request }, listKey);
+  const projects = useQuery(
+    api,
+    projectId ? "/api/projects" : null,
+    { select: (data) => asList<Project>(data, "projects") },
+    listKey,
+  );
+  const activeProject = (projects.data ?? []).find((project) => project.id === projectId) ?? null;
   const list = asList<Issue>(issues.data, "issues");
   const total = num(asRecord(issues.data).total, list.length);
 
@@ -113,6 +122,37 @@ export function IssuesPage() {
           </View>
         </View>
 
+        {projectId ? (
+          <View
+            style={[
+              ui.s.row,
+              {
+                gap: 7,
+                paddingHorizontal: 11,
+                paddingVertical: 8,
+                borderRadius: 9,
+                borderWidth: 1,
+                borderColor: `${ui.c.accent}55`,
+                backgroundColor: `${ui.c.accent}14`,
+              },
+            ]}
+          >
+            <Icon name="FolderKanban" size={14} color={ui.c.accent} />
+            <Text numberOfLines={1} style={[ui.s.body, { flex: 1, color: ui.c.accent, fontWeight: "600" }]}>
+              {activeProject ? activeProject.title : "已按项目筛选"}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="清除项目筛选"
+              onPress={() => setProjectId(null)}
+              style={({ pressed }) => [ui.s.row, { gap: 3 }, pressed && ui.s.pressed]}
+            >
+              <Text style={[ui.s.tiny, { color: ui.c.accent }]}>清除</Text>
+              <Icon name="X" size={13} color={ui.c.accent} />
+            </Pressable>
+          </View>
+        ) : null}
+
         <View style={{ gap: 6 }}>
           <Chips<CategoryFilter> ui={ui} options={CATEGORY_OPTIONS} value={category} onChange={setCategory} />
           <Chips<PriorityFilter> ui={ui} options={PRIORITY_OPTIONS} value={priority} onChange={setPriority} />
@@ -129,7 +169,7 @@ export function IssuesPage() {
             <Empty
               ui={ui}
               icon="Inbox"
-              title={search || category !== "all" || priority !== "all" ? "没有匹配的需求" : "还没有需求"}
+              title={search || category !== "all" || priority !== "all" || projectId ? "没有匹配的需求" : "还没有需求"}
               description="调整筛选条件，或创建一条新需求。"
               action={<Btn ui={ui} label="新建需求" icon="Plus" tone="primary" onPress={() => setCreateOpen(true)} />}
             />
@@ -167,6 +207,7 @@ export function IssuesPage() {
 
       <CreateIssueModal
         open={createOpen}
+        projectId={projectId}
         onClose={() => setCreateOpen(false)}
         onCreated={(issue) => {
           setCreateOpen(false);
@@ -181,11 +222,13 @@ export function IssuesPage() {
 
 function CreateIssueModal({
   open,
+  projectId,
   onClose,
   onCreated,
   toast,
 }: {
   open: boolean;
+  projectId?: string | null;
   onClose(): void;
   onCreated(issue: Issue | null): void;
   toast: ReturnType<typeof useWorkbench>["toast"];
@@ -215,6 +258,7 @@ function CreateIssueModal({
     const body: Record<string, unknown> = { title: title.trim(), priority };
     if (description.trim()) body.description = description.trim();
     if (status) body.status = status;
+    if (projectId) body.project_id = projectId;
     const result = await api({ method: "POST", path: "/api/issues", body });
     setBusy(false);
     if (result.ok) {

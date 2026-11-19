@@ -15,7 +15,19 @@ import {
 import { asList, useApi, useQuery, type ApiFn } from "./api";
 import type { IssueStatusEntry } from "./model";
 
-export type PageKey = "overview" | "issues" | "issue" | "team" | "chat" | "autopilot" | "api" | "settings";
+export type PageKey =
+  | "overview"
+  | "issues"
+  | "issue"
+  | "projects"
+  | "inbox"
+  | "labels"
+  | "workflows"
+  | "team"
+  | "chat"
+  | "autopilot"
+  | "api"
+  | "settings";
 
 export interface WorkbenchValue {
   theme: PluginTheme;

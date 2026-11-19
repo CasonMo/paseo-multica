@@ -1,4 +1,5 @@
 import { Icon } from "@getpaseo/plugin/client/ui";
+import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import type { Ui } from "./bits";
 import { Avatar, Dot, Tag } from "./bits";
@@ -77,18 +78,37 @@ export function IssueRow({
   );
 }
 
+const INBOX_ICON: Record<string, string> = {
+  issue_created: "FilePlus",
+  issue_status_changed: "RefreshCw",
+  issue_assigned: "UserCheck",
+  issue_comment: "MessageSquare",
+  comment: "MessageSquare",
+  agent_started: "Bot",
+  agent_completed: "Bot",
+  agent_failed: "Bot",
+  mention: "AtSign",
+  workflow: "Workflow",
+};
+
+function inboxIconFor(type: string): string {
+  return INBOX_ICON[type] ?? "Bell";
+}
+
 export function InboxRow({
   ui,
   item,
   onPress,
   onRead,
   onArchive,
+  extra,
 }: {
   ui: Ui;
   item: InboxItem;
   onPress(): void;
   onRead?: () => void;
   onArchive?: () => void;
+  extra?: ReactNode;
 }) {
   const tone =
     item.severity === "error" || item.severity === "critical"
@@ -114,7 +134,7 @@ export function InboxRow({
           backgroundColor: `${tone}1f`,
         }}
       >
-        <Icon name={item.read ? "BellOff" : "Bell"} size={12} color={item.read ? ui.c.muted : tone} />
+        <Icon name={item.read ? "BellOff" : inboxIconFor(item.type)} size={12} color={item.read ? ui.c.muted : tone} />
       </View>
       <View style={{ flex: 1, gap: 3 }}>
         <Text numberOfLines={2} style={[ui.s.body, { fontWeight: item.read ? "500" : "700" }]}>
@@ -128,6 +148,7 @@ export function InboxRow({
         </View>
       </View>
       <View style={[ui.s.row, { gap: 2 }]}>
+        {extra}
         {!item.read && onRead ? (
           <Pressable
             accessibilityRole="button"
