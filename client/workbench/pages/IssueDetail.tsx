@@ -14,6 +14,7 @@ import {
   type Agent,
   type Comment,
   type Issue,
+  type Label,
 } from "../model";
 import { PriorityTag, StatusPill } from "../parts";
 
@@ -36,6 +37,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const [editOpen, setEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [labelsOpen, setLabelsOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const issueQuery = useQuery(api, issueId ? `/api/issues/${issueId}` : null, {}, key);
@@ -51,6 +53,18 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     issueId ? `/api/issues/${issueId}/children` : null,
     { select: (data) => asList<Issue>(data, "issues", "children") },
     key,
+  );
+  const issueLabelsQuery = useQuery(
+    api,
+    issueId ? `/api/issues/${issueId}/labels` : null,
+    { select: (data) => asList<Label>(data, "labels") },
+    key,
+  );
+  const allLabelsQuery = useQuery(
+    api,
+    labelsOpen ? "/api/labels" : null,
+    { select: (data) => asList<Label>(data, "labels") },
+    `${key}:labels`,
   );
   const agentsQuery = useQuery(api, "/api/agents", { query: { limit: 100 }, select: (data) => asList<Agent>(data, "agents") }, key);
   const membersQuery = useQuery(
@@ -133,6 +147,29 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     } else toast.error(result.error ?? "发送失败");
   };
 
+  const attachLabel = async (label: Label) => {
+    if (!issue) return;
+    setBusy(true);
+    const result = await api({ method: "POST", path: `/api/issues/${issue.id}/labels`, body: { label_id: label.id } });
+    setBusy(false);
+    if (result.ok) {
+      toast.show(`已添加标签 ${label.name}`, { variant: "success" });
+      setLabelsOpen(false);
+      issueLabelsQuery.refresh();
+      invalidate();
+    } else toast.error(result.error ?? "添加标签失败");
+  };
+
+  const detachLabel = async (label: Label) => {
+    if (!issue) return;
+    const result = await api({ method: "DELETE", path: `/api/issues/${issue.id}/labels/${label.id}` });
+    if (result.ok) {
+      toast.show(`已移除标签 ${label.name}`, { variant: "success" });
+      issueLabelsQuery.refresh();
+      invalidate();
+    } else toast.error(result.error ?? "移除标签失败");
+  };
+
   const rerun = async () => {
     if (!issue) return;
     setBusy(true);
@@ -174,6 +211,11 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
 
   const comments = commentsQuery.data ?? [];
   const children = childrenQuery.data ?? [];
+  const issueLabels = issueLabelsQuery.data ?? [];
+  const attachedIds = new Set(issueLabels.map((label) => label.id));
+  const availableLabels = (allLabelsQuery.data ?? []).filter(
+    (label) => (label.resource_type ?? "issue") === "issue" && !attachedIds.has(label.id),
+  );
   const statusColor = issueStatusColor(issue, statuses);
 
   return (
@@ -369,6 +411,49 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                 <Icon name="ChevronRight" size={14} color={ui.c.muted} />
               </Pressable>
             </View>
+            <Divider ui={ui} />
+            <View style={{ gap: 6 }}>
+              <View style={[ui.s.row, { justifyContent: "space-between" }]}>
+                <Text style={ui.s.label}>标签</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="添加标签"
+                  onPress={() => setLabelsOpen(true)}
+                  style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
+                >
+                  <Icon name="Plus" size={14} color={ui.c.muted} />
+                </Pressable>
+              </View>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                {issueLabels.map((label) => (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`移除标签 ${label.name}`}
+                    key={label.id}
+                    onPress={() => void detachLabel(label)}
+                    style={({ pressed }) => [
+                      {
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 5,
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        borderColor: `${label.color}55`,
+                        backgroundColor: `${label.color}1f`,
+                      },
+                      pressed && ui.s.pressed,
+                    ]}
+                  >
+                    <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: label.color }} />
+                    <Text style={[ui.s.tiny, { color: label.color, fontWeight: "600" }]}>{label.name}</Text>
+                    <Icon name="X" size={11} color={label.color} />
+                  </Pressable>
+                ))}
+                {issueLabels.length === 0 ? <Text style={ui.s.muted}>未添加标签</Text> : null}
+              </View>
+            </View>
           </Card>
 
           <Card ui={ui} style={{ gap: 10 }}>
@@ -432,6 +517,39 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                   <Text style={ui.s.tiny}>{member.email}</Text>
                 </View>
                 {issue.assignee_id === member.id ? <Icon name="Check" size={14} color={ui.c.accent} /> : null}
+              </Pressable>
+            ))}
+          </ScrollView>
+        </Modal.Content>
+      </Modal>
+
+      <Modal
+        title="添加标签"
+        icon={<Icon name="Tags" size={16} color={ui.c.muted} />}
+        open={labelsOpen}
+        onOpenChange={setLabelsOpen}
+      >
+        <Modal.Content>
+          <ScrollView style={{ maxHeight: 380 }} contentContainerStyle={{ gap: 2 }}>
+            {allLabelsQuery.loading && availableLabels.length === 0 ? <LoadingRow ui={ui} /> : null}
+            {!allLabelsQuery.loading && availableLabels.length === 0 ? (
+              <Empty ui={ui} icon="Tags" title="没有可添加的标签" description="在标签页新建标签后即可绑定到需求。" />
+            ) : null}
+            {availableLabels.map((label) => (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`添加标签 ${label.name}`}
+                key={label.id}
+                disabled={busy}
+                onPress={() => void attachLabel(label)}
+                style={({ pressed }) => [ui.s.listRow, pressed && ui.s.pressed]}
+              >
+                <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: label.color }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={ui.s.body}>{label.name}</Text>
+                  {label.description ? <Text style={ui.s.tiny}>{label.description}</Text> : null}
+                </View>
+                <Icon name="Plus" size={14} color={ui.c.muted} />
               </Pressable>
             ))}
           </ScrollView>

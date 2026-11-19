@@ -152,6 +152,7 @@ export interface InboxItem {
   issue_priority?: string | null;
   read: boolean;
   archived: boolean;
+  snoozed_until?: string | null;
   created_at: string;
 }
 

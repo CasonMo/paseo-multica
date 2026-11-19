@@ -4,7 +4,7 @@ import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { Btn, Card, Chips, Divider, Empty, ErrorNote, LoadingRow, Tag, useUi } from "../bits";
 import { asList, asRecord, num, useQuery } from "../api";
 import { useWorkbench } from "../context";
-import { relTime, type InboxItem } from "../model";
+import { relTime, type InboxItem, type Issue } from "../model";
 import { InboxRow } from "../parts";
 
 type Tab = "inbox" | "archived" | "snoozed";
@@ -13,6 +13,21 @@ const TABS: { value: Tab; label: string }[] = [
   { value: "inbox", label: "收件箱" },
   { value: "archived", label: "已归档" },
   { value: "snoozed", label: "已搁置" },
+];
+
+const SNOOZE_OPTIONS: { label: string; until(): Date }[] = [
+  { label: "1 小时后", until: () => new Date(Date.now() + 3600_000) },
+  { label: "4 小时后", until: () => new Date(Date.now() + 4 * 3600_000) },
+  {
+    label: "明天 9:00",
+    until: () => {
+      const next = new Date();
+      next.setDate(next.getDate() + 1);
+      next.setHours(9, 0, 0, 0);
+      return next;
+    },
+  },
+  { label: "1 周后", until: () => new Date(Date.now() + 7 * 86400_000) },
 ];
 
 export function InboxPage() {
@@ -24,6 +39,7 @@ export function InboxPage() {
   const [search, setSearch] = useState("");
   const [confirmArchiveAll, setConfirmArchiveAll] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<InboxItem | null>(null);
+  const [snoozeItem, setSnoozeItem] = useState<InboxItem | null>(null);
   const [busy, setBusy] = useState(false);
 
   const itemsQuery = useQuery(
@@ -33,7 +49,35 @@ export function InboxPage() {
     `${key}:${tab}`,
   );
   const unreadQuery = useQuery(api, "/api/inbox/unread-count", {}, key);
-  const items = asList<InboxItem>(itemsQuery.data, "items", "inbox");
+  const snoozedIssuesQuery = useQuery(
+    api,
+    tab === "snoozed" ? "/api/issues" : null,
+    { query: { limit: 100 }, select: (data) => asList<Issue>(data, "issues") },
+    key,
+  );
+  const issueById = useMemo(
+    () => new Map((snoozedIssuesQuery.data ?? []).map((issue) => [issue.id, issue])),
+    [snoozedIssuesQuery.data],
+  );
+  const items = useMemo(
+    () =>
+      asList<InboxItem & { item_id?: string; snoozed_at?: string }>(itemsQuery.data, "items", "inbox").map((item) => {
+        if (!item.item_id) return item;
+        const issue = item.issue_id ? issueById.get(item.issue_id) : undefined;
+        return {
+          id: item.item_id,
+          type: item.type ?? "issue_updated",
+          issue_id: item.issue_id ?? null,
+          issue_identifier: issue?.identifier ?? null,
+          title: issue?.title ?? "需求更新",
+          read: true,
+          archived: false,
+          snoozed_until: item.snoozed_until ?? null,
+          created_at: item.snoozed_at ?? item.created_at ?? "",
+        };
+      }),
+    [itemsQuery.data, issueById],
+  );
   const unreadCount =
     typeof unreadQuery.data === "number"
       ? unreadQuery.data
@@ -90,6 +134,22 @@ export function InboxPage() {
       setConfirmDelete(null);
       refreshAll();
     } else toast.error(result.error ?? "删除失败");
+  };
+
+  const snooze = async (until: Date) => {
+    if (!snoozeItem) return;
+    setBusy(true);
+    const result = await api({
+      method: "POST",
+      path: `/api/inbox/${snoozeItem.id}/snooze`,
+      body: { until: until.toISOString() },
+    });
+    setBusy(false);
+    if (result.ok) {
+      toast.show("已搁置该通知", { variant: "success" });
+      setSnoozeItem(null);
+      refreshAll();
+    } else toast.error(result.error ?? "搁置失败");
   };
 
   return (
@@ -192,12 +252,18 @@ export function InboxPage() {
                           />
                         ) : null}
                         {tab === "inbox" ? (
+                          <IconBtnSmall ui={ui} icon="AlarmClock" label="搁置通知" onPress={() => setSnoozeItem(item)} />
+                        ) : null}
+                        {tab === "inbox" ? (
                           <IconBtnSmall
                             ui={ui}
                             icon="Archive"
                             label="归档通知"
                             onPress={() => void action(`/api/inbox/${item.id}/archive`, "POST", "已归档")}
                           />
+                        ) : null}
+                        {tab === "snoozed" && item.snoozed_until ? (
+                          <Text style={ui.s.tiny}>至 {shortTime(item.snoozed_until)}</Text>
                         ) : null}
                         {tab === "archived" ? (
                           <IconBtnSmall
@@ -273,8 +339,36 @@ export function InboxPage() {
           </View>
         </Modal.Content>
       </Modal>
+
+      <Modal
+        title="搁置通知"
+        icon={<Icon name="AlarmClock" size={16} color={ui.c.muted} />}
+        open={Boolean(snoozeItem)}
+        onOpenChange={(next) => {
+          if (!next) setSnoozeItem(null);
+        }}
+      >
+        <Modal.Content>
+          <View style={{ gap: 10 }}>
+            <Text style={ui.s.muted}>「{snoozeItem?.title}」将在选定时间后重新回到收件箱。</Text>
+            <View style={{ gap: 6 }}>
+              {SNOOZE_OPTIONS.map((option) => (
+                <Btn ui={ui} key={option.label} label={option.label} icon="Clock" busy={busy} onPress={() => void snooze(option.until())} />
+              ))}
+            </View>
+            <Btn ui={ui} label="取消" onPress={() => setSnoozeItem(null)} />
+          </View>
+        </Modal.Content>
+      </Modal>
     </View>
   );
+}
+
+function shortTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (input: number) => String(input).padStart(2, "0");
+  return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 function IconBtnSmall({
