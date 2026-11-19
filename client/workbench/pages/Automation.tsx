@@ -1,12 +1,13 @@
-import { Icon, Modal } from "@getpaseo/plugin/client/ui";
-import { useMemo, useState } from "react";
+import { Icon, Modal, copyText } from "@getpaseo/plugin/client/ui";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { asList, useQuery } from "../api";
+import { asList, asRecord, useQuery, type ApiFn } from "../api";
 import {
   Avatar,
   Btn,
   Card,
   Chips,
+  Divider,
   Empty,
   ErrorNote,
   Field,
@@ -16,7 +17,7 @@ import {
   useUi,
   type Ui,
 } from "../bits";
-import { useWorkbench } from "../context";
+import { useWorkbench, type WorkbenchValue } from "../context";
 import { fmtDateTime, relTime, type Agent, type Autopilot, type Squad } from "../model";
 
 const RUN_STATUS: Record<string, { label: string; tone: "success" | "danger" | "muted" | "warning" | "accent" }> = {
@@ -29,7 +30,30 @@ const RUN_STATUS: Record<string, { label: string; tone: "success" | "danger" | "
 
 const TRIGGER_LABEL: Record<string, string> = { schedule: "定时", webhook: "Webhook", api: "API" };
 
+const TIMEZONES = [
+  "Asia/Shanghai",
+  "Asia/Tokyo",
+  "UTC",
+  "Europe/London",
+  "America/New_York",
+  "America/Los_Angeles",
+];
+
 type Filter = "all" | "active" | "paused";
+
+interface AutopilotTrigger {
+  id: string;
+  kind: string;
+  enabled: boolean;
+  cron_expression?: string | null;
+  timezone?: string | null;
+  next_run_at?: string | null;
+  webhook_url?: string | null;
+  webhook_path?: string | null;
+  has_signing_secret?: boolean;
+  label?: string | null;
+  last_fired_at?: string | null;
+}
 
 export function AutomationPage() {
   const ctx = useWorkbench();
@@ -39,6 +63,9 @@ export function AutomationPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [createOpen, setCreateOpen] = useState(false);
   const [runsFor, setRunsFor] = useState<Autopilot | null>(null);
+  const [detailFor, setDetailFor] = useState<Autopilot | null>(null);
+  const [editFor, setEditFor] = useState<Autopilot | null>(null);
+  const [deleteFor, setDeleteFor] = useState<Autopilot | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const query = useQuery(
@@ -49,8 +76,17 @@ export function AutomationPage() {
   );
   const agentsQuery = useQuery(api, "/api/agents", { query: { limit: 100 }, select: (data) => asList<Agent>(data, "agents") }, key);
   const squadsQuery = useQuery(api, "/api/squads", { select: (data) => asList<Squad>(data, "squads") }, key);
+  const usageQuery = useQuery(
+    api,
+    "/api/autopilots/usage",
+    { select: (data) => asRecord(data) },
+    key,
+  );
   const agents = agentsQuery.data ?? [];
   const squads = squadsQuery.data ?? [];
+  const usage = usageQuery.data;
+  const quotaUsed = typeof usage?.used === "number" ? usage.used : null;
+  const quotaLimit = typeof usage?.limit === "number" ? usage.limit : null;
 
   const nameOf = (item: Autopilot) => {
     if (item.assignee_type === "squad") return squads.find((s) => s.id === item.assignee_id)?.name ?? "小队";
@@ -71,14 +107,19 @@ export function AutomationPage() {
     };
   }, [query.data]);
 
+  const refreshAll = () => {
+    query.refresh();
+    usageQuery.refresh();
+    invalidate();
+  };
+
   const trigger = async (item: Autopilot) => {
     setBusyId(item.id);
     const result = await api({ method: "POST", path: `/api/autopilots/${item.id}/trigger` });
     setBusyId(null);
     if (result.ok) {
       toast.show("已触发一次运行", { variant: "success" });
-      query.refresh();
-      invalidate();
+      refreshAll();
     } else toast.error(result.error ?? "触发失败");
   };
 
@@ -89,21 +130,55 @@ export function AutomationPage() {
     setBusyId(null);
     if (result.ok) {
       toast.show(next === "active" ? "已恢复" : "已暂停", { variant: "success" });
-      query.refresh();
-      invalidate();
+      refreshAll();
     } else toast.error(result.error ?? "操作失败");
   };
 
+  const remove = async () => {
+    if (!deleteFor) return;
+    setBusyId(deleteFor.id);
+    const result = await api({ method: "DELETE", path: `/api/autopilots/${deleteFor.id}` });
+    setBusyId(null);
+    if (result.ok) {
+      toast.show("自动化已删除", { variant: "success" });
+      if (detailFor?.id === deleteFor.id) setDetailFor(null);
+      setDeleteFor(null);
+      refreshAll();
+    } else toast.error(result.error ?? "删除失败");
+  };
+
   return (
-    <ScrollView contentContainerStyle={{ padding: compact ? 12 : 20, gap: 12 }}>
+    <ScrollView contentContainerStyle={{ padding: compact ? 12 : 20, gap: 12, paddingBottom: 40 }}>
       <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
         <View style={ui.s.grow}>
           <Text style={ui.s.title}>自动化</Text>
           <Text style={ui.s.muted}>定时或通过 Webhook / API 触发的智能体任务</Text>
         </View>
         <Btn ui={ui} label="新建" icon="Plus" tone="primary" onPress={() => setCreateOpen(true)} />
-        <IconBtn ui={ui} icon="RefreshCw" label="刷新" busy={query.refreshing} onPress={query.refresh} />
+        <IconBtn ui={ui} icon="RefreshCw" label="刷新" busy={query.refreshing} onPress={refreshAll} />
       </View>
+
+      {quotaUsed !== null && quotaLimit !== null ? (
+        <Card ui={ui} style={{ gap: 6 }}>
+          <View style={[ui.s.row, { gap: 8 }]}>
+            <Icon name="Gauge" size={14} color={ui.c.muted} />
+            <Text style={ui.s.label}>本月自动化额度</Text>
+            <View style={ui.s.grow} />
+            <Text style={ui.s.tiny}>
+              {quotaUsed} / {quotaLimit}
+            </Text>
+          </View>
+          <View style={{ height: 6, borderRadius: 3, backgroundColor: ui.c.surface2, overflow: "hidden" }}>
+            <View
+              style={{
+                height: 6,
+                width: `${Math.min(100, Math.round((quotaUsed / Math.max(quotaLimit, 1)) * 100))}%`,
+                backgroundColor: ui.c.accent,
+              }}
+            />
+          </View>
+        </Card>
+      ) : null}
 
       <Chips<Filter>
         ui={ui}
@@ -123,9 +198,17 @@ export function AutomationPage() {
           <Empty
             ui={ui}
             icon="Bot"
-            title="还没有自动化"
-            description="创建一条自动化，让智能体按时或按事件自动开始工作。"
-            action={<Btn ui={ui} label="新建自动化" icon="Plus" tone="primary" onPress={() => setCreateOpen(true)} />}
+            title={counts.all === 0 ? "还没有自动化" : "没有匹配的自动化"}
+            description={
+              counts.all === 0
+                ? "创建一条自动化，让智能体按时或按事件自动开始工作。"
+                : "换个筛选条件看看。"
+            }
+            action={
+              counts.all === 0 ? (
+                <Btn ui={ui} label="新建自动化" icon="Plus" tone="primary" onPress={() => setCreateOpen(true)} />
+              ) : undefined
+            }
           />
         </Card>
       ) : null}
@@ -138,12 +221,17 @@ export function AutomationPage() {
             style={{ width: compact ? "100%" : "48%", gap: 10, minWidth: compact ? undefined : 300 }}
           >
             <View style={[ui.s.rowTop, { gap: 10 }]}>
-              <View style={{ flex: 1, gap: 4 }}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`打开自动化 ${item.title}`}
+                onPress={() => setDetailFor(item)}
+                style={({ pressed }) => [{ flex: 1, gap: 4 }, pressed && ui.s.pressed]}
+              >
                 <Text style={[ui.s.body, { fontWeight: "700", fontSize: 14.5 }]}>{item.title}</Text>
                 <Text numberOfLines={2} style={ui.s.muted}>
                   {item.description || "没有描述"}
                 </Text>
-              </View>
+              </Pressable>
               <Tag
                 ui={ui}
                 label={item.status === "active" ? "运行中" : item.status === "paused" ? "已暂停" : item.status}
@@ -180,7 +268,9 @@ export function AutomationPage() {
             </View>
 
             <View style={[ui.s.row, { gap: 6, justifyContent: "flex-end" }]}>
-              <Btn ui={ui} label="运行记录" onPress={() => setRunsFor(item)} />
+              <IconBtn ui={ui} icon="Pencil" label="编辑自动化" onPress={() => setEditFor(item)} />
+              <IconBtn ui={ui} icon="Trash2" label="删除自动化" color={ui.c.danger} onPress={() => setDeleteFor(item)} />
+              <Btn ui={ui} label="触发器" icon="Zap" onPress={() => setDetailFor(item)} />
               <Btn
                 ui={ui}
                 label={item.status === "active" ? "暂停" : "恢复"}
@@ -188,7 +278,7 @@ export function AutomationPage() {
                 busy={busyId === item.id}
                 onPress={() => void toggle(item)}
               />
-              <Btn ui={ui} label="立即运行" icon="Zap" tone="primary" busy={busyId === item.id} onPress={() => void trigger(item)} />
+              <Btn ui={ui} label="立即运行" icon="Play" tone="primary" busy={busyId === item.id} onPress={() => void trigger(item)} />
             </View>
           </Card>
         ))}
@@ -196,33 +286,87 @@ export function AutomationPage() {
 
       <CreateAutopilotModal
         ui={ui}
+        api={api}
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         agents={agents}
         squads={squads}
-        onCreate={async (body, cron, timezone) => {
+        onCreate={async (body, kind, schedule) => {
           const result = await api({ method: "POST", path: "/api/autopilots", body });
           if (!result.ok) {
             toast.error(result.error ?? "创建失败");
             return false;
           }
-          const created = result.data as { id?: string; autopilot?: { id?: string } } | null;
-          const id = created?.id ?? created?.autopilot?.id;
-          if (id && cron.trim()) {
+          const created = asRecord(result.data);
+          const autopilot = asRecord(created.autopilot);
+          const id = String(created.id ?? autopilot.id ?? "");
+          if (id) {
             const triggerResult = await api({
               method: "POST",
               path: `/api/autopilots/${id}/triggers`,
-              body: { kind: "schedule", cron_expression: cron.trim(), timezone },
+              body:
+                kind === "webhook"
+                  ? { kind: "webhook" }
+                  : { kind: "schedule", cron_expression: schedule.cron.trim(), timezone: schedule.timezone },
             });
-            if (!triggerResult.ok) toast.error(triggerResult.error ?? "触发计划创建失败");
+            if (!triggerResult.ok) toast.error(triggerResult.error ?? "触发器创建失败");
           }
           toast.show("自动化已创建", { variant: "success" });
           setCreateOpen(false);
-          query.refresh();
-          invalidate();
+          refreshAll();
           return true;
         }}
       />
+
+      <AutopilotDetailModal
+        ui={ui}
+        api={api}
+        autopilot={detailFor}
+        workspaceId={workspaceId}
+        bump={bump}
+        toast={toast}
+        onClose={() => setDetailFor(null)}
+        onEdit={() => detailFor && setEditFor(detailFor)}
+        onDelete={() => detailFor && setDeleteFor(detailFor)}
+        onChanged={refreshAll}
+        onRuns={() => {
+          if (detailFor) setRunsFor(detailFor);
+        }}
+      />
+
+      <EditAutopilotModal
+        ui={ui}
+        api={api}
+        autopilot={editFor}
+        agents={agents}
+        squads={squads}
+        onClose={() => setEditFor(null)}
+        onSaved={() => {
+          setEditFor(null);
+          refreshAll();
+          toast.show("自动化已更新", { variant: "success" });
+        }}
+        onError={(message) => toast.error(message)}
+      />
+
+      <Modal
+        title="删除自动化"
+        icon={<Icon name="Trash2" size={16} color={ui.c.danger} />}
+        open={Boolean(deleteFor)}
+        onOpenChange={(next) => !next && setDeleteFor(null)}
+      >
+        <Modal.Content>
+          <View style={{ gap: 12 }}>
+            <Text style={ui.s.body}>
+              确定删除「{deleteFor?.title ?? ""}」吗？删除后它的触发器与运行记录将一并移除，无法恢复。
+            </Text>
+            <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end" }]}>
+              <Btn ui={ui} label="取消" onPress={() => setDeleteFor(null)} />
+              <Btn ui={ui} label="删除" icon="Trash2" tone="danger" busy={busyId === deleteFor?.id} onPress={() => void remove()} />
+            </View>
+          </View>
+        </Modal.Content>
+      </Modal>
 
       <RunsModal ui={ui} item={runsFor} onClose={() => setRunsFor(null)} onOpenIssue={(id) => navigate("issue", { id })} />
     </ScrollView>
@@ -231,6 +375,7 @@ export function AutomationPage() {
 
 function CreateAutopilotModal({
   ui,
+  api,
   open,
   onClose,
   agents,
@@ -238,17 +383,21 @@ function CreateAutopilotModal({
   onCreate,
 }: {
   ui: Ui;
+  api: ApiFn;
   open: boolean;
   onClose(): void;
   agents: Agent[];
   squads: Squad[];
-  onCreate(body: Record<string, unknown>, cron: string, timezone: string): Promise<boolean>;
+  onCreate(body: Record<string, unknown>, kind: "schedule" | "webhook", schedule: { cron: string; timezone: string }): Promise<boolean>;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [mode, setMode] = useState<"create_issue" | "run_only">("create_issue");
   const [target, setTarget] = useState("");
+  const [kind, setKind] = useState<"schedule" | "webhook">("schedule");
   const [cron, setCron] = useState("0 9 * * 1-5");
+  const [timezone, setTimezone] = useState("Asia/Shanghai");
+  const [label, setLabel] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -286,6 +435,7 @@ function CreateAutopilotModal({
                 return (
                   <Pressable
                     accessibilityRole="button"
+                    accessibilityLabel={`选择执行者 ${item.name}`}
                     key={`${item.kind}:${item.id}`}
                     onPress={() => setTarget(`${item.kind}:${item.id}`)}
                     style={({ pressed }) => [
@@ -310,14 +460,38 @@ function CreateAutopilotModal({
               })}
             </ScrollView>
           </View>
-          <Field
-            ui={ui}
-            label="定时表达式（Cron）"
-            value={cron}
-            onChangeText={setCron}
-            code
-            hint="留空则不创建定时触发器，之后仍可手动或通过 API 触发。"
-          />
+          <View style={{ gap: 6 }}>
+            <Text style={ui.s.label}>触发方式</Text>
+            <Chips<"schedule" | "webhook">
+              ui={ui}
+              value={kind}
+              onChange={setKind}
+              options={[
+                { value: "schedule", label: "定时", icon: "Clock" },
+                { value: "webhook", label: "Webhook", icon: "Webhook" },
+              ]}
+            />
+          </View>
+          {kind === "schedule" ? (
+            <>
+              <Field
+                ui={ui}
+                label="定时表达式（Cron）"
+                value={cron}
+                onChangeText={setCron}
+                code
+                hint="留空则不创建定时触发器，之后仍可手动或通过 API 触发。"
+              />
+              <View style={{ gap: 6 }}>
+                <Text style={ui.s.label}>时区</Text>
+                <Chips<string> ui={ui} value={timezone} onChange={setTimezone} options={TIMEZONES.map((tz) => ({ value: tz, label: tz }))} />
+              </View>
+              <CronPreview ui={ui} api={api} cron={cron} timezone={timezone} />
+            </>
+          ) : (
+            <Text style={ui.s.muted}>创建后会生成一个 Webhook URL，向它 POST 任意 JSON 即可触发。</Text>
+          )}
+          <Field ui={ui} label="触发器标签（可选）" value={label} onChangeText={setLabel} placeholder="例如：工作日早上" />
           {error ? <ErrorNote ui={ui} message={error} /> : null}
         </ScrollView>
         <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end", marginTop: 12 }]}>
@@ -330,28 +504,442 @@ function CreateAutopilotModal({
             onPress={async () => {
               if (!title.trim()) return setError("请填写名称");
               if (!target) return setError("请选择执行者");
-              const [kind, id] = target.split(":");
+              if (kind === "schedule" && cron.trim() === "") return setError("请填写 Cron 表达式，或切换为 Webhook 触发");
+              const [targetKind, id] = target.split(":");
               setBusy(true);
               setError(null);
               const done = await onCreate(
                 {
                   title: title.trim(),
                   description: description.trim() || undefined,
-                  assignee_type: kind,
+                  assignee_type: targetKind,
                   assignee_id: id,
                   execution_mode: mode,
                 },
-                cron,
-                "Asia/Shanghai",
+                kind,
+                { cron, timezone },
               );
               setBusy(false);
               if (done) {
                 setTitle("");
                 setDescription("");
                 setTarget("");
+                setLabel("");
               }
             }}
           />
+        </View>
+      </Modal.Content>
+    </Modal>
+  );
+}
+
+function CronPreview({ ui, api, cron, timezone }: { ui: Ui; api: ApiFn; cron: string; timezone: string }) {
+  const [debounced, setDebounced] = useState(cron.trim());
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(cron.trim()), 600);
+    return () => clearTimeout(timer);
+  }, [cron]);
+  const query = useQuery(
+    api,
+    debounced ? "/api/autopilots/cron-preview" : null,
+    { query: { expr: debounced, tz: timezone }, select: (data) => asList<string>(data, "next_runs") },
+    `${debounced}|${timezone}`,
+  );
+  const next = query.data ?? [];
+  if (!debounced) return null;
+  if (query.error) return <Text style={[ui.s.tiny, { color: ui.c.danger }]}>{query.error}</Text>;
+  if (next.length === 0) return null;
+  return (
+    <View style={{ gap: 3 }}>
+      <Text style={ui.s.label}>接下来</Text>
+      {next.slice(0, 3).map((value) => (
+        <Text key={value} style={ui.s.tiny}>
+          {fmtDateTime(value)} · {relTime(value)}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
+function AutopilotDetailModal({
+  ui,
+  api,
+  autopilot,
+  workspaceId,
+  bump,
+  toast,
+  onClose,
+  onEdit,
+  onDelete,
+  onChanged,
+  onRuns,
+}: {
+  ui: Ui;
+  api: ApiFn;
+  autopilot: Autopilot | null;
+  workspaceId: string | null;
+  bump: number;
+  toast: WorkbenchValue["toast"];
+  onClose(): void;
+  onEdit(): void;
+  onDelete(): void;
+  onChanged(): void;
+  onRuns(): void;
+}) {
+  const query = useQuery(
+    api,
+    autopilot ? `/api/autopilots/${autopilot.id}` : null,
+    {
+      select: (data) => {
+        const record = asRecord(data);
+        return {
+          autopilot: asRecord(record.autopilot) as unknown as Autopilot,
+          triggers: asList<AutopilotTrigger>(record, "triggers"),
+        };
+      },
+    },
+    `${workspaceId}:${bump}:${autopilot?.id ?? ""}`,
+  );
+  const triggers = query.data?.triggers ?? [];
+  const live = query.data?.autopilot ?? autopilot;
+
+  const [kind, setKind] = useState<"schedule" | "webhook">("schedule");
+  const [cron, setCron] = useState("0 9 * * 1-5");
+  const [timezone, setTimezone] = useState("Asia/Shanghai");
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const afterChange = () => {
+    query.refresh();
+    onChanged();
+  };
+
+  const addTrigger = async () => {
+    if (!autopilot) return;
+    if (kind === "schedule" && !cron.trim()) {
+      toast.error("请填写 Cron 表达式");
+      return;
+    }
+    setBusy("add");
+    const result = await api({
+      method: "POST",
+      path: `/api/autopilots/${autopilot.id}/triggers`,
+      body: kind === "schedule" ? { kind: "schedule", cron_expression: cron.trim(), timezone } : { kind: "webhook" },
+    });
+    setBusy(null);
+    if (result.ok) {
+      toast.show(kind === "schedule" ? "定时触发器已添加" : "Webhook 触发器已添加", { variant: "success" });
+      afterChange();
+    } else toast.error(result.error ?? "添加失败");
+  };
+
+  const toggleTrigger = async (item: AutopilotTrigger) => {
+    if (!autopilot) return;
+    setBusy(item.id);
+    const result = await api({
+      method: "PATCH",
+      path: `/api/autopilots/${autopilot.id}/triggers/${item.id}`,
+      body: { enabled: !item.enabled },
+    });
+    setBusy(null);
+    if (result.ok) afterChange();
+    else toast.error(result.error ?? "操作失败");
+  };
+
+  const removeTrigger = async (item: AutopilotTrigger) => {
+    if (!autopilot) return;
+    setBusy(item.id);
+    const result = await api({ method: "DELETE", path: `/api/autopilots/${autopilot.id}/triggers/${item.id}` });
+    setBusy(null);
+    if (result.ok) {
+      toast.show("触发器已删除", { variant: "success" });
+      afterChange();
+    } else toast.error(result.error ?? "删除失败");
+  };
+
+  const rotate = async (item: AutopilotTrigger) => {
+    if (!autopilot) return;
+    setBusy(item.id);
+    const result = await api({
+      method: "POST",
+      path: `/api/autopilots/${autopilot.id}/triggers/${item.id}/rotate-webhook-token`,
+    });
+    setBusy(null);
+    if (result.ok) {
+      toast.show("Webhook 链接已重置", { variant: "success" });
+      afterChange();
+    } else toast.error(result.error ?? "重置失败");
+  };
+
+  return (
+    <Modal
+      title={autopilot ? `触发器 · ${autopilot.title}` : "触发器"}
+      icon={<Icon name="Zap" size={16} color={ui.c.muted} />}
+      open={Boolean(autopilot)}
+      onOpenChange={(next) => !next && onClose()}
+    >
+      <Modal.Content>
+        <ScrollView style={{ maxHeight: 520 }} contentContainerStyle={{ gap: 12 }}>
+          {live ? (
+            <View style={[ui.s.row, { gap: 6, flexWrap: "wrap" }]}>
+              <Tag
+                ui={ui}
+                label={live.status === "active" ? "运行中" : live.status === "paused" ? "已暂停" : live.status}
+                tone={live.status === "active" ? "success" : live.status === "paused" ? "warning" : "muted"}
+              />
+              <Tag ui={ui} label={live.execution_mode === "create_issue" ? "创建任务" : "直接执行"} tone="muted" />
+              <Tag ui={ui} label={live.next_run_at ? `下次 ${fmtDateTime(live.next_run_at)}` : "未排期"} icon="Clock" />
+            </View>
+          ) : null}
+
+          <View style={{ gap: 8 }}>
+            <Text style={ui.s.label}>已有触发器</Text>
+            {query.loading && triggers.length === 0 ? <LoadingRow ui={ui} /> : null}
+            {!query.loading && triggers.length === 0 ? (
+              <Text style={ui.s.muted}>还没有触发器。添加定时或 Webhook 触发器后，自动化才会自动运行。</Text>
+            ) : null}
+            {triggers.map((item) => (
+              <View
+                key={item.id}
+                style={{
+                  gap: 7,
+                  padding: 10,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: ui.c.border,
+                  backgroundColor: ui.c.surface0,
+                }}
+              >
+                <View style={[ui.s.row, { gap: 6 }]}>
+                  <Tag
+                    ui={ui}
+                    label={TRIGGER_LABEL[item.kind] ?? item.kind}
+                    icon={item.kind === "webhook" ? "Webhook" : "Clock"}
+                    tone="accent"
+                  />
+                  {!item.enabled ? <Tag ui={ui} label="已停用" tone="muted" /> : null}
+                  <View style={ui.s.grow} />
+                  <IconBtn
+                    ui={ui}
+                    icon={item.enabled ? "ToggleRight" : "ToggleLeft"}
+                    label={item.enabled ? "停用触发器" : "启用触发器"}
+                    busy={busy === item.id}
+                    onPress={() => void toggleTrigger(item)}
+                  />
+                  <IconBtn
+                    ui={ui}
+                    icon="Trash2"
+                    label="删除触发器"
+                    color={ui.c.danger}
+                    onPress={() => void removeTrigger(item)}
+                  />
+                </View>
+                {item.kind === "schedule" ? (
+                  <View style={{ gap: 2 }}>
+                    <Text selectable style={ui.s.mono}>
+                      {item.cron_expression ?? "—"}
+                    </Text>
+                    <Text style={ui.s.tiny}>
+                      {item.timezone ?? "UTC"}
+                      {item.next_run_at ? ` · 下次 ${fmtDateTime(item.next_run_at)}` : ""}
+                      {item.last_fired_at ? ` · 最近 ${relTime(item.last_fired_at)}` : ""}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={{ gap: 6 }}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="复制 Webhook 地址"
+                      onPress={async () => {
+                        const url = item.webhook_url ?? item.webhook_path ?? "";
+                        if (!url) return;
+                        await copyText(url);
+                        toast.show("Webhook 地址已复制", { variant: "success" });
+                      }}
+                      style={({ pressed }) => [ui.s.row, { gap: 6 }, pressed && ui.s.pressed]}
+                    >
+                      <Text selectable numberOfLines={1} style={[ui.s.mono, { flex: 1 }]}>
+                        {item.webhook_url ?? item.webhook_path ?? "—"}
+                      </Text>
+                      <Icon name="Copy" size={13} color={ui.c.muted} />
+                    </Pressable>
+                    <View style={[ui.s.row, { gap: 6 }]}>
+                      <Btn ui={ui} label="重置 Webhook 链接" icon="RefreshCw" busy={busy === item.id} onPress={() => void rotate(item)} />
+                      {item.has_signing_secret ? <Tag ui={ui} label="已配置签名" tone="success" icon="ShieldCheck" /> : null}
+                    </View>
+                  </View>
+                )}
+              </View>
+            ))}
+          </View>
+
+          <Divider ui={ui} />
+
+          <View style={{ gap: 8 }}>
+            <Text style={ui.s.label}>添加触发器</Text>
+            <Chips<"schedule" | "webhook">
+              ui={ui}
+              value={kind}
+              onChange={setKind}
+              options={[
+                { value: "schedule", label: "定时", icon: "Clock" },
+                { value: "webhook", label: "Webhook", icon: "Webhook" },
+              ]}
+            />
+            {kind === "schedule" ? (
+              <>
+                <Field ui={ui} label="Cron 表达式" value={cron} onChangeText={setCron} code />
+                <Chips<string> ui={ui} value={timezone} onChange={setTimezone} options={TIMEZONES.map((tz) => ({ value: tz, label: tz }))} />
+                <CronPreview ui={ui} api={api} cron={cron} timezone={timezone} />
+              </>
+            ) : (
+              <Text style={ui.s.muted}>添加后会立即生成 Webhook URL，向它 POST 即可触发。</Text>
+            )}
+            <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end" }]}>
+              <Btn ui={ui} label="添加触发器" icon="Plus" tone="primary" busy={busy === "add"} onPress={() => void addTrigger()} />
+            </View>
+          </View>
+
+          <Divider ui={ui} />
+
+          <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
+            <Btn ui={ui} label="运行记录" icon="History" onPress={onRuns} />
+            <Btn ui={ui} label="编辑" icon="Pencil" onPress={onEdit} />
+            <View style={ui.s.grow} />
+            <Btn ui={ui} label="删除自动化" icon="Trash2" tone="danger" onPress={onDelete} />
+          </View>
+          {live?.last_run_at ? (
+            <Text style={ui.s.tiny}>
+              上次运行 {relTime(live.last_run_at)}
+              {live.last_run_status ? ` · ${RUN_STATUS[live.last_run_status]?.label ?? live.last_run_status}` : ""}
+            </Text>
+          ) : null}
+        </ScrollView>
+      </Modal.Content>
+    </Modal>
+  );
+}
+
+function EditAutopilotModal({
+  ui,
+  api,
+  autopilot,
+  agents,
+  squads,
+  onClose,
+  onSaved,
+  onError,
+}: {
+  ui: Ui;
+  api: ApiFn;
+  autopilot: Autopilot | null;
+  agents: Agent[];
+  squads: Squad[];
+  onClose(): void;
+  onSaved(): void;
+  onError(message: string): void;
+}) {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [mode, setMode] = useState<"create_issue" | "run_only">("create_issue");
+  const [target, setTarget] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!autopilot) return;
+    setTitle(autopilot.title ?? "");
+    setDescription(autopilot.description ?? "");
+    setMode(autopilot.execution_mode === "run_only" ? "run_only" : "create_issue");
+    setTarget(autopilot.assignee_id ? `${autopilot.assignee_type}:${autopilot.assignee_id}` : "");
+  }, [autopilot?.id]);
+
+  const targets = [
+    ...agents.map((agent) => ({ id: agent.id, name: agent.name, kind: "agent" as const, avatar: agent.avatar_url })),
+    ...squads.map((squad) => ({ id: squad.id, name: squad.name, kind: "squad" as const, avatar: squad.avatar_url })),
+  ];
+
+  const save = async () => {
+    if (!autopilot) return;
+    if (!title.trim()) {
+      onError("请填写名称");
+      return;
+    }
+    const [kind, id] = target.split(":");
+    setBusy(true);
+    const result = await api({
+      method: "PATCH",
+      path: `/api/autopilots/${autopilot.id}`,
+      body: {
+        title: title.trim(),
+        description: description.trim() || null,
+        execution_mode: mode,
+        ...(kind && id ? { assignee_type: kind, assignee_id: id } : {}),
+      },
+    });
+    setBusy(false);
+    if (result.ok) onSaved();
+    else onError(result.error ?? "保存失败");
+  };
+
+  return (
+    <Modal
+      title="编辑自动化"
+      icon={<Icon name="Pencil" size={16} color={ui.c.muted} />}
+      open={Boolean(autopilot)}
+      onOpenChange={(next) => !next && onClose()}
+    >
+      <Modal.Content>
+        <ScrollView style={{ maxHeight: 460 }} contentContainerStyle={{ gap: 12 }}>
+          <Field ui={ui} label="名称" value={title} onChangeText={setTitle} />
+          <Field ui={ui} label="描述" value={description} onChangeText={setDescription} multiline />
+          <View style={{ gap: 6 }}>
+            <Text style={ui.s.label}>执行方式</Text>
+            <Chips<"create_issue" | "run_only">
+              ui={ui}
+              value={mode}
+              onChange={setMode}
+              options={[
+                { value: "create_issue", label: "创建任务并执行", icon: "ListTodo" },
+                { value: "run_only", label: "直接执行", icon: "Play" },
+              ]}
+            />
+          </View>
+          <View style={{ gap: 6 }}>
+            <Text style={ui.s.label}>执行者</Text>
+            <ScrollView style={{ maxHeight: 180 }} contentContainerStyle={{ gap: 6 }}>
+              {targets.map((item) => {
+                const active = target === `${item.kind}:${item.id}`;
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`选择执行者 ${item.name}`}
+                    key={`${item.kind}:${item.id}`}
+                    onPress={() => setTarget(`${item.kind}:${item.id}`)}
+                    style={({ pressed }) => [
+                      ui.s.row,
+                      {
+                        gap: 8,
+                        padding: 9,
+                        borderRadius: 9,
+                        borderWidth: 1,
+                        borderColor: active ? ui.c.accent : ui.c.border,
+                        backgroundColor: active ? `${ui.c.accent}12` : ui.c.surface0,
+                      },
+                      pressed && ui.s.pressed,
+                    ]}
+                  >
+                    <Avatar ui={ui} name={item.name} url={item.avatar} size={24} />
+                    <Text style={[ui.s.body, { flex: 1 }]}>{item.name}</Text>
+                    {active ? <Icon name="Check" size={14} color={ui.c.accent} /> : null}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </ScrollView>
+        <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end", marginTop: 12 }]}>
+          <Btn ui={ui} label="取消" onPress={onClose} />
+          <Btn ui={ui} label="保存" tone="primary" busy={busy} onPress={() => void save()} />
         </View>
       </Modal.Content>
     </Modal>
