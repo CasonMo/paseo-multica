@@ -33,6 +33,9 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const [sending, setSending] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
   const [busy, setBusy] = useState(false);
 
   const issueQuery = useQuery(api, issueId ? `/api/issues/${issueId}` : null, {}, key);
@@ -102,6 +105,22 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     } else toast.error(result.error ?? "更新失败");
   };
 
+  const openEdit = () => {
+    if (!issue) return;
+    setEditTitle(issue.title ?? "");
+    setEditDescription(issue.description ?? "");
+    setEditOpen(true);
+  };
+
+  const saveEdit = async () => {
+    if (!editTitle.trim()) {
+      toast.error("标题不能为空");
+      return;
+    }
+    setEditOpen(false);
+    await updateIssue({ title: editTitle.trim(), description: editDescription }, "需求已更新");
+  };
+
   const sendComment = async () => {
     if (!issue || !comment.trim()) return;
     setSending(true);
@@ -162,6 +181,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
       <View style={[ui.s.row, { gap: 8 }]}>
         <Btn ui={ui} label="返回" icon="ArrowLeft" onPress={() => navigate("issues")} />
         <View style={ui.s.grow} />
+        <Btn ui={ui} label="编辑" icon="Pencil" onPress={openEdit} />
         <Btn ui={ui} label="重跑" icon="RotateCw" busy={busy} onPress={() => void rerun()} />
         <Pressable
           accessibilityRole="button"
@@ -415,6 +435,31 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
               </Pressable>
             ))}
           </ScrollView>
+        </Modal.Content>
+      </Modal>
+
+      <Modal
+        title="编辑需求"
+        icon={<Icon name="Pencil" size={16} color={ui.c.muted} />}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      >
+        <Modal.Content>
+          <ScrollView style={{ maxHeight: 460 }} contentContainerStyle={{ gap: 12 }}>
+            <Field ui={ui} label="标题" value={editTitle} onChangeText={setEditTitle} placeholder="用一句话描述要做的事" />
+            <Field
+              ui={ui}
+              label="描述"
+              value={editDescription}
+              onChangeText={setEditDescription}
+              multiline
+              placeholder="补充背景、验收标准…（支持 Markdown）"
+            />
+          </ScrollView>
+          <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8, marginTop: 12 }]}>
+            <Btn ui={ui} label="取消" onPress={() => setEditOpen(false)} />
+            <Btn ui={ui} label="保存" tone="primary" onPress={() => void saveEdit()} />
+          </View>
         </Modal.Content>
       </Modal>
 
