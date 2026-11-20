@@ -1,9 +1,10 @@
 import { t } from "../i18n";
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View, type TextStyle } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View, type TextStyle } from "react-native";
 import { asList, useQuery } from "../api";
 import { Avatar, Btn, Card, Dot, Empty, ErrorNote, LoadingRow, useUi, type Ui } from "../bits";
+import { TaskStepsBlock } from "../Execution";
 import { useWorkbench } from "../context";
 import { relTime, type Agent, type ChatMessage, type ChatSession } from "../model";
 
@@ -95,6 +96,17 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
     `${key}:${activeId ?? ""}`,
   );
   const messages = messagesQuery.data ?? [];
+  const pendingQuery = useQuery(
+    api,
+    activeId ? "/api/chat/pending-tasks" : null,
+    {
+      query: { session_id: activeId ?? "" },
+      pollMs: 4000,
+      select: (data) => asList<{ id: string; status?: string; started_at?: string | null }>(data, "tasks"),
+    },
+    `${key}:pending:${activeId ?? ""}`,
+  );
+  const runningTask = (pendingQuery.data ?? []).find((task) => task.status === "running") ?? (pendingQuery.data ?? [])[0] ?? null;
 
   useEffect(() => {
     if (!activeId) return;
@@ -210,8 +222,8 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
                       </View>
                     ) : null}
                   </View>
-                  <Text numberOfLines={1} style={ui.s.tiny}>
-                    {session.last_message?.content ?? t("Chat.11")}
+                  <Text numberOfLines={1} style={[ui.s.tiny, isActive && runningTask ? { color: ui.c.brand } : null]}>
+                    {isActive && runningTask ? t("Chat.38") : (session.last_message?.content ?? t("Chat.11"))}
                   </Text>
                 </View>
                 <Text style={ui.s.tiny}>{relTime(session.updated_at)}</Text>
@@ -290,7 +302,14 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
           </View>
         ) : null}
         {messages.map((message) => (
-          <Bubble key={message.id} ui={ui} message={message} agentName={agentMap.get(active.agent_id)?.name} />
+          <Bubble
+            key={message.id}
+            ui={ui}
+            message={message}
+            agentName={agentMap.get(active.agent_id)?.name}
+            runningTask={runningTask}
+            onQuickAction={(text) => setDraft(text)}
+          />
         ))}
       </ScrollView>
 
@@ -408,9 +427,23 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
   );
 }
 
-function Bubble({ ui, message, agentName }: { ui: Ui; message: ChatMessage; agentName?: string }) {
+function Bubble({
+  ui,
+  message,
+  agentName,
+  runningTask,
+  onQuickAction,
+}: {
+  ui: Ui;
+  message: ChatMessage;
+  agentName?: string;
+  runningTask?: { id: string; started_at?: string | null } | null;
+  onQuickAction?(text: string): void;
+}) {
   const mine = message.role === "user";
   const failed = Boolean(message.failure_reason);
+  const turnRunning = Boolean(mine && runningTask && runningTask.id === message.task_id);
+  const quickActions = Array.isArray(message.quick_actions) ? message.quick_actions : [];
   return (
     <View style={{ alignItems: mine ? "flex-end" : "flex-start", gap: 4 }}>
       <View style={[ui.s.row, { gap: 6 }]}>
@@ -451,6 +484,30 @@ function Bubble({ ui, message, agentName }: { ui: Ui; message: ChatMessage; agen
           <Text style={[ui.s.tiny, { color: ui.c.danger, marginTop: 6 }]}>{message.failure_reason}</Text>
         ) : null}
       </View>
+      {message.task_id && (!mine || turnRunning) ? (
+        <View style={{ alignSelf: "stretch", maxWidth: "88%" }}>
+          <TaskStepsBlock
+            ui={ui}
+            taskId={message.task_id}
+            running={turnRunning}
+            startedAt={runningTask?.started_at ?? message.created_at}
+            elapsedMs={mine ? null : message.elapsed_ms}
+          />
+          {!mine && quickActions.length > 0 ? (
+            <View style={[ui.s.row, { gap: 6, flexWrap: "wrap", marginTop: 6, alignItems: "center" }]}>
+              <Text style={ui.s.tiny}>{t("Chat.42")}</Text>
+              {quickActions.map((action, i) => {
+                const text =
+                  typeof action === "string"
+                    ? action
+                    : String((action as Record<string, unknown>).text ?? (action as Record<string, unknown>).label ?? (action as Record<string, unknown>).title ?? "");
+                if (!text) return null;
+                return <Btn key={i} ui={ui} label={text.slice(0, 40)} onPress={() => onQuickAction?.(text)} />;
+              })}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }

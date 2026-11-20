@@ -648,45 +648,30 @@ interface Step {
   detail: string;
 }
 
-/** 图5：单次运行日志（触发内容 / 产出 / 模型与工具时间条 / 可搜索步骤）。 */
-export function RunLogModal({
-  ui,
-  run,
-  agents,
-  comments,
-  onClose,
-}: {
-  ui: Ui;
-  run: TaskRun | null;
-  agents: Agent[];
-  comments: Comment[];
-  onClose(): void;
-}) {
-  const [search, setSearch] = useState("");
+type RawMessage = { call_id?: string; seq?: number; type?: string; tool?: string; input?: Record<string, unknown>; output?: string; content?: string; created_at?: string };
+
+/** 串行轮询 task messages 并归一为步骤列表；运行中续 poll，完成态只拉一次。 */
+export function useTaskSteps(taskId: string | null, running: boolean, startedAt: string | null) {
   const logRpc = useRpc(taskLogRpc);
   const logRef = useRef(logRpc);
   logRef.current = logRpc;
-  const [messages, setMessages] = useState<{ call_id?: string; seq?: number; type?: string; tool?: string; input?: Record<string, unknown>; output?: string; content?: string; created_at?: string }[]>([]);
-  const [logLoading, setLogLoading] = useState(true);
-  const runId = run?.id ?? null;
-  const runStatus = run?.status ?? null;
-
+  const [messages, setMessages] = useState<RawMessage[]>([]);
+  const [loading, setLoading] = useState(Boolean(taskId));
   useEffect(() => {
-    if (!runId) return;
+    if (!taskId) return;
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | null = null;
-    setLogLoading(true);
+    setLoading(true);
     const load = async () => {
       try {
-        const result = await logRef.current({ taskId: runId });
+        const result = await logRef.current({ taskId });
         if (!alive) return;
-        setMessages((result.messages ?? []) as typeof messages);
-        setLogLoading(false);
+        setMessages((result.messages ?? []) as RawMessage[]);
+        setLoading(false);
       } catch {
-        if (alive) setLogLoading(false);
+        if (alive) setLoading(false);
       } finally {
-        // 运行中 messages 可能长轮询：串行续 poll，避免请求堆积堵死 RPC 通道
-        if (alive && runStatus === "running") timer = setTimeout(() => void load(), 4000);
+        if (alive && running) timer = setTimeout(() => void load(), 4000);
       }
     };
     void load();
@@ -694,10 +679,8 @@ export function RunLogModal({
       alive = false;
       if (timer) clearTimeout(timer);
     };
-  }, [runId, runStatus]);
-  const started = run?.started_at ? Date.parse(run.started_at) : 0;
-  const totalMs = run ? runDurationMs(run) : 0;
-
+  }, [taskId, running]);
+  const started = startedAt ? Date.parse(startedAt) : 0;
   const steps: Step[] = useMemo(() => {
     const results = new Map<string, { created_at?: string }>();
     for (const m of messages) if (m.type === "tool_result" && m.call_id) results.set(m.call_id, m);
@@ -718,6 +701,109 @@ export function RunLogModal({
     }
     return list.sort((a, b) => a.offsetMs - b.offsetMs);
   }, [messages, started]);
+  return { steps, loading };
+}
+
+/** 聊天/评论通用的执行过程块：运行中实时步骤+计时，完成态折叠「N 步」+耗时。 */
+export function TaskStepsBlock({
+  ui,
+  taskId,
+  running,
+  startedAt,
+  elapsedMs,
+}: {
+  ui: Ui;
+  taskId: string;
+  running: boolean;
+  startedAt: string | null;
+  elapsedMs?: number | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const [openStep, setOpenStep] = useState<string | null>(null);
+  const [, setTick] = useState(0);
+  const { steps, loading } = useTaskSteps(taskId, running, startedAt);
+  useEffect(() => {
+    if (!running) return;
+    const timer = setInterval(() => setTick((x) => x + 1), 1000);
+    return () => clearInterval(timer);
+  }, [running]);
+  const elapsed = running ? (startedAt ? Math.max(0, Date.now() - Date.parse(startedAt)) : 0) : (elapsedMs ?? 0);
+  const expanded = open || running;
+  return (
+    <View style={{ gap: 4, marginTop: 6 }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        accessibilityLabel={running ? t("Chat.39") : t("Chat.43", { a: steps.length })}
+        onPress={() => setOpen(!open)}
+        style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+          ui.s.row,
+          { gap: 6, paddingVertical: 3, borderRadius: 6 },
+          hovered && { backgroundColor: ui.c.fillHover },
+          pressed && ui.s.pressed,
+        ]}
+      >
+        {running ? <ActivityIndicator size="small" color={ui.c.brand} /> : <Icon name={open ? "ChevronDown" : "ChevronRight"} size={13} color={ui.c.muted} />}
+        <Text style={{ fontSize: 12, fontWeight: 600, color: running ? ui.c.brand : ui.c.muted }}>
+          {running ? `${t("Chat.39")} · ${fmtDuration(elapsed)}` : t("Chat.43", { a: steps.length })}
+        </Text>
+        {!running && elapsedMs != null ? <Text style={ui.s.tiny}>{t("Chat.44", { a: fmtDuration(elapsedMs) })}</Text> : null}
+      </Pressable>
+      {expanded ? (
+        <View style={{ gap: 2, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: ui.c.line, marginLeft: 6 }}>
+          {loading && steps.length === 0 ? <Text style={ui.s.tiny}>{t("Execution.80")}</Text> : null}
+          {steps.map((s) => (
+            <View key={s.id} style={{ gap: 2 }}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={s.title}
+                onPress={() => setOpenStep(openStep === s.id ? null : s.id)}
+                style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+                  ui.s.row,
+                  { gap: 6, paddingVertical: 2, borderRadius: 4 },
+                  hovered && { backgroundColor: ui.c.fillHover },
+                  pressed && ui.s.pressed,
+                ]}
+              >
+                <Icon name={s.kind === "tool" ? (/bash|shell|exec|terminal/i.test(s.tool) ? "Terminal" : "Wrench") : s.kind === "think" ? "Brain" : "MessageSquare"} size={12} color={ui.c.faint} />
+                <Text numberOfLines={openStep === s.id ? undefined : 1} style={{ flex: 1, fontSize: 12, color: ui.c.muted, overflowWrap: "anywhere" } as TextStyle}>
+                  {s.kind === "tool" ? `${s.tool} ${s.title}` : s.title}
+                </Text>
+                {s.durationMs != null ? <Text style={ui.s.tiny}>{s.durationMs < 100 ? "<0.1s" : fmtDuration(s.durationMs)}</Text> : null}
+              </Pressable>
+              {openStep === s.id && s.detail ? (
+                <Text selectable style={{ fontFamily: "Menlo", fontSize: 11, lineHeight: 16, color: ui.c.fg, backgroundColor: ui.c.fill, borderRadius: 6, padding: 8, overflowWrap: "anywhere" } as TextStyle}>
+                  {s.detail.slice(0, 4000)}
+                </Text>
+              ) : null}
+            </View>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/** 图5：单次运行日志（触发内容 / 产出 / 模型与工具时间条 / 可搜索步骤）。 */
+export function RunLogModal({
+  ui,
+  run,
+  agents,
+  comments,
+  onClose,
+}: {
+  ui: Ui;
+  run: TaskRun | null;
+  agents: Agent[];
+  comments: Comment[];
+  onClose(): void;
+}) {
+  const [search, setSearch] = useState("");
+  const runId = run?.id ?? null;
+  const runStatus = run?.status ?? null;
+  const { steps, loading: logLoading } = useTaskSteps(runId, runStatus === "running", run?.started_at ?? null);
+  const started = run?.started_at ? Date.parse(run.started_at) : 0;
+  const totalMs = run ? runDurationMs(run) : 0;
 
   const toolMs = steps.reduce((s, x) => s + (x.durationMs ?? 0), 0);
   const modelMs = Math.max(0, totalMs - toolMs);

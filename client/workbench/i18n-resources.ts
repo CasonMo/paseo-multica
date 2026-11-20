@@ -541,7 +541,12 @@ export const resources = {
     "33": "Me",
     "35": "Response timed out",
     "36": "Execution failed",
-    "37": "(no reply content)"
+    "37": "(no reply content)",
+    "38": "Typing…",
+    "39": "Processing",
+    "42": "Follow-ups",
+    "43": "{{a}} steps",
+    "44": "replied in {{a}}"
   },
   "Inbox": {
     "3": "Snoozed",
@@ -1508,7 +1513,12 @@ export const resources = {
     "33": "我",
     "35": "响应超时",
     "36": "执行失败",
-    "37": "（无回复内容）"
+    "37": "（无回复内容）",
+    "38": "正在输入…",
+    "39": "处理中",
+    "42": "后续提问",
+    "43": "{{a}} 步",
+    "44": "{{a}} 内回复"
   },
   "Inbox": {
     "3": "已搁置",

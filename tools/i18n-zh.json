@@ -907,5 +907,10 @@
   "Settings.71": "中文",
   "AgentDetail.112": "MCP",
   "Automation.133": "Webhook",
-  "Automation.134": "API"
+  "Automation.134": "API",
+  "Chat.38": "正在输入…",
+  "Chat.39": "处理中",
+  "Chat.42": "后续提问",
+  "Chat.43": "{{a}} 步",
+  "Chat.44": "{{a}} 内回复"
 }

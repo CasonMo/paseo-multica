@@ -123,6 +123,7 @@ export interface ChatMessage {
   failure_reason?: string | null;
   created_at: string;
   elapsed_ms?: number | null;
+  quick_actions?: (string | { text?: string; label?: string; title?: string })[] | null;
 }
 
 export interface Autopilot {
