@@ -78,18 +78,28 @@ export function IssueRow({
   );
 }
 
-const INBOX_ICON: Record<string, string> = {
-  issue_created: "FilePlus",
-  issue_status_changed: "RefreshCw",
-  issue_assigned: "UserCheck",
-  issue_comment: "MessageSquare",
-  comment: "MessageSquare",
-  agent_started: "Bot",
-  agent_completed: "Bot",
-  agent_failed: "Bot",
-  mention: "AtSign",
-  workflow: "Workflow",
+const INBOX_META: Record<string, { label: string; icon: string }> = {
+  issue_created: { label: "新需求", icon: "FilePlus" },
+  issue_status_changed: { label: "状态变更", icon: "RefreshCw" },
+  status_changed: { label: "状态变更", icon: "RefreshCw" },
+  issue_assigned: { label: "指派给你", icon: "UserCheck" },
+  assignee_changed: { label: "负责人变更", icon: "UserCheck" },
+  unassigned: { label: "取消指派", icon: "UserMinus" },
+  issue_comment: { label: "新评论", icon: "MessageSquare" },
+  comment: { label: "新评论", icon: "MessageSquare" },
+  new_comment: { label: "新评论", icon: "MessageSquare" },
+  agent_started: { label: "智能体开始", icon: "Bot" },
+  agent_completed: { label: "智能体完成", icon: "Bot" },
+  agent_failed: { label: "智能体失败", icon: "TriangleAlert" },
+  task_failed: { label: "任务失败", icon: "TriangleAlert" },
+  quick_create_done: { label: "快速创建完成", icon: "Sparkles" },
+  mention: { label: "提到你", icon: "AtSign" },
+  workflow: { label: "工作流", icon: "Workflow" },
 };
+
+const INBOX_ICON: Record<string, string> = Object.fromEntries(
+  Object.entries(INBOX_META).map(([type, meta]) => [type, meta.icon]),
+);
 
 function inboxIconFor(type: string): string {
   return INBOX_ICON[type] ?? "Bell";
@@ -110,12 +120,14 @@ export function InboxRow({
   onArchive?: () => void;
   extra?: ReactNode;
 }) {
+  const failed = item.type === "task_failed" || item.type === "agent_failed";
   const tone =
-    item.severity === "error" || item.severity === "critical"
+    item.severity === "error" || item.severity === "critical" || failed
       ? ui.c.danger
       : item.severity === "warning"
         ? ui.c.warning
         : ui.c.accent;
+  const meta = INBOX_META[item.type];
   return (
     <Pressable
       accessibilityRole="button"
@@ -137,9 +149,17 @@ export function InboxRow({
         <Icon name={item.read ? "BellOff" : inboxIconFor(item.type)} size={12} color={item.read ? ui.c.muted : tone} />
       </View>
       <View style={{ flex: 1, gap: 3 }}>
+        {meta ? (
+          <Text style={[ui.s.tiny, { color: tone, fontWeight: "600" }]}>{meta.label}</Text>
+        ) : null}
         <Text numberOfLines={2} style={[ui.s.body, { fontWeight: item.read ? "500" : "700" }]}>
           {item.title}
         </Text>
+        {item.body ? (
+          <Text numberOfLines={2} style={ui.s.muted}>
+            {item.body}
+          </Text>
+        ) : null}
         <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
           {item.issue_identifier ? (
             <Text style={[ui.s.tiny, { fontFamily: "Menlo" }]}>{item.issue_identifier}</Text>
