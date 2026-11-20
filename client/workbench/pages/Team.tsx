@@ -1,12 +1,10 @@
-import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
+import { Icon } from "@getpaseo/plugin/client/ui";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { Avatar, Btn, Card, Divider, Dot, Empty, ErrorNote, LoadingRow, SectionHeader, Tag, useUi } from "../bits";
+import { Avatar, Btn, Card, Divider, Dot, Empty, ErrorNote, LoadingRow, Tag, useUi } from "../bits";
 import { asList, asRecord, useQuery } from "../api";
 import { useWorkbench } from "../context";
 import {
-  agentStatusMeta,
-  fmtDateTime,
   relTime,
   runtimeName,
   type Agent,
@@ -17,6 +15,8 @@ import {
 import { AgentRow } from "../parts";
 import { AgentDetailModal } from "../AgentDetail";
 import { RuntimeDetailModal } from "../RuntimeDetail";
+import { SquadDetailModal } from "../SquadDetail";
+import { CreateAgentModal, CreateSquadModal } from "../TeamCreate";
 
 type Tab = "agents" | "squads" | "runtimes" | "skills";
 
@@ -38,6 +38,8 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
   const [squadId, setSquadId] = useState<string | null>(null);
   const [runtimeId, setRuntimeId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [creatingAgent, setCreatingAgent] = useState(false);
+  const [creatingSquad, setCreatingSquad] = useState(false);
 
   const agentsQuery = useQuery(
     api,
@@ -101,6 +103,11 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
             <Text style={[ui.s.title, { fontSize: compact ? 18 : 21 }]}>团队</Text>
             <Text style={ui.s.muted}>智能体、小队、运行时与技能</Text>
           </View>
+          {tab === "agents" ? (
+            <Btn ui={ui} label="新建智能体" icon="Plus" tone="primary" onPress={() => setCreatingAgent(true)} />
+          ) : tab === "squads" ? (
+            <Btn ui={ui} label="新建小队" icon="Plus" tone="primary" onPress={() => setCreatingSquad(true)} />
+          ) : null}
         </View>
 
         <View style={[ui.s.row, { flexWrap: "wrap", gap: 6 }]}>
@@ -318,7 +325,33 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
         runtimeList={runtimes}
         runtimesLoading={runtimesQuery.loading}
       />
-      <SquadDetailModal squadId={squadId} onClose={() => setSquadId(null)} />
+      <SquadDetailModal
+        squadId={squadId}
+        agents={agents}
+        onClose={() => setSquadId(null)}
+        onChanged={() => {
+          squadsQuery.refresh();
+          agentsQuery.refresh();
+        }}
+      />
+      <CreateAgentModal
+        open={creatingAgent}
+        runtimes={runtimes}
+        onClose={() => setCreatingAgent(false)}
+        onDone={() => {
+          agentsQuery.refresh();
+          toast.show("智能体已创建", { variant: "success" });
+        }}
+      />
+      <CreateSquadModal
+        open={creatingSquad}
+        agents={agents}
+        onClose={() => setCreatingSquad(false)}
+        onDone={() => {
+          squadsQuery.refresh();
+          toast.show("小队已创建", { variant: "success" });
+        }}
+      />
       <RuntimeDetailModal
         runtime={runtimes.find((item) => item.id === runtimeId) ?? null}
         agents={agents}
@@ -333,67 +366,4 @@ function runtimeLabel(agent: Agent, runtimes: AgentRuntime[]): string {
   const runtime = runtimes.find((item) => item.id === agent.runtime_id);
   if (!runtime) return agent.runtime_availability === "offline" ? "运行时离线" : "运行时";
   return `${runtimeName(runtime)}${runtime.status === "online" ? "" : "（离线）"}`;
-}
-
-function SquadDetailModal({ squadId, onClose }: { squadId: string | null; onClose(): void }) {
-  const ctx = useWorkbench();
-  const { theme, compact, api } = ctx;
-  const ui = useUi(theme, compact);
-  const squad = useQuery<Squad | null>(
-    api,
-    squadId ? `/api/squads/${squadId}` : null,
-    { select: (data) => (data && typeof data === "object" ? (data as Squad) : null) },
-    squadId ?? "",
-  );
-  const members = useQuery(
-    api,
-    squadId ? `/api/squads/${squadId}/members` : null,
-    { select: (data) => asList<Record<string, unknown>>(data, "members") },
-    squadId ?? "",
-  );
-
-  return (
-    <Modal
-      title={squad.data?.name ?? "小队"}
-      icon={<Icon name="UsersRound" size={16} color={ui.c.muted} />}
-      open={Boolean(squadId)}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-    >
-      <Modal.Content>
-        {squad.loading && !squad.data ? (
-          <LoadingRow ui={ui} />
-        ) : squad.data ? (
-          <View style={{ gap: 10 }}>
-            {squad.data.description ? <Text style={ui.s.body}>{squad.data.description}</Text> : null}
-            <Text style={ui.s.label}>成员 · {(members.data ?? []).length}</Text>
-            {(members.data ?? []).length === 0 ? (
-              <Text style={ui.s.muted}>暂无成员信息</Text>
-            ) : (
-              (members.data ?? []).map((member, index) => {
-                const id = String(member.member_id ?? member.id ?? index);
-                const role = String(member.role ?? "member");
-                return (
-                  <View key={id} style={[ui.s.row, { gap: 8, paddingVertical: 4 }]}>
-                    <Avatar ui={ui} name={id.slice(0, 2)} size={24} />
-                    <Text style={[ui.s.body, { flex: 1 }]} numberOfLines={1}>
-                      {String(member.name ?? member.member_id ?? id)}
-                    </Text>
-                    <Tag ui={ui} label={role === "leader" ? "队长" : role} tone={role === "leader" ? "accent" : "muted"} />
-                  </View>
-                );
-              })
-            )}
-            {squad.data.instructions ? (
-              <View style={{ gap: 6 }}>
-                <Text style={ui.s.label}>协作指令</Text>
-                <Markdown>{squad.data.instructions}</Markdown>
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-      </Modal.Content>
-    </Modal>
-  );
 }
