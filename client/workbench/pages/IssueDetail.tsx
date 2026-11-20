@@ -1,6 +1,7 @@
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -29,7 +30,19 @@ import {
   type Project,
 } from "../model";
 import { PriorityMark, StatusMark } from "../parts";
-import { ExecutionSteps, RunningChip, type ActiveTask } from "../Execution";
+import {
+  ActivityList,
+  ExecutionLogSection,
+  RunLogModal,
+  RunningChip,
+  RunsModal,
+  activitiesByRoot,
+  fmtDuration,
+  runDurationMs,
+  useIssueInsights,
+  type ActiveTask,
+  type TaskRun,
+} from "../Execution";
 
 const PRIORITIES = ["urgent", "high", "medium", "low", "none"] as const;
 
@@ -64,12 +77,6 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const issue = issueQuery.data && typeof issueQuery.data === "object" ? (issueQuery.data as Issue) : null;
   const parentQuery = useQuery(api, issue?.parent_issue_id ? `/api/issues/${issue.parent_issue_id}` : null, {}, `${key}:parent`);
   const parent = parentQuery.data && typeof parentQuery.data === "object" ? (parentQuery.data as Issue) : null;
-  const commentsQuery = useQuery(
-    api,
-    issueId ? `/api/issues/${issueId}/comments` : null,
-    { select: (data) => asList<Comment>(data, "comments"), pollMs: 8000 },
-    key,
-  );
   const childrenQuery = useQuery(
     api,
     issueId ? `/api/issues/${issueId}/children` : null,
@@ -127,6 +134,12 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const activeTask = (activeTaskQuery.data ?? []).find((task) => task.status === "running") ?? null;
   const activeAgent = activeTask ? agents.find((agent) => agent.id === activeTask.agent_id) ?? null : null;
 
+  const insights = useIssueInsights(issueId, bump);
+  const runs = insights.runs;
+  const [runsOpen, setRunsOpen] = useState(false);
+  const [runLogId, setRunLogId] = useState<string | null>(null);
+  const [openActivity, setOpenActivity] = useState<Record<string, boolean>>({});
+
   const assignee = useMemo(() => {
     if (!issue?.assignee_id) return null;
     if (issue.assignee_type === "agent") {
@@ -138,7 +151,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     return { name: member?.name || "成员", url: member?.avatar_url ?? null, kind: "成员" };
   }, [issue, agents, members]);
 
-  const commentCount = commentsQuery.data?.length ?? 0;
+  const commentCount = insights.comments.length;
 
   const applyMetrics = () => {
     const { y, viewH, contentH } = metrics.current;
@@ -225,7 +238,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
       setDrafts((prev) => ({ ...prev, [key]: "" }));
       setMentions((prev) => ({ ...prev, [key]: [] }));
       closeComposer();
-      commentsQuery.refresh();
+      insights.refresh();
       toast.show(parentId ? "回复已发送" : "评论已发送", { variant: "success" });
     } else toast.error(result.error ?? "发送失败");
   };
@@ -247,7 +260,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     const result = await api({ method: resolved ? "DELETE" : "POST", path: `/api/comments/${item.id}/resolve` });
     setThreadBusy(null);
     if (result.ok) {
-      commentsQuery.refresh();
+      insights.refresh();
       toast.show(resolved ? "已取消解决" : "已标记解决", { variant: "success" });
     } else toast.error(result.error ?? "操作失败");
   };
@@ -339,9 +352,11 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   }
   if (!issue) return null;
 
-  const comments = commentsQuery.data ?? [];
+  const comments = insights.comments;
   const commentById = new Map(comments.map((item) => [item.id, item]));
   const roots = comments.filter((item) => !item.parent_id || !commentById.has(item.parent_id));
+  const activityMap = activitiesByRoot(insights.timeline, roots);
+  const runLogRun = runLogId ? runs.find((run) => run.id === runLogId) ?? null : null;
   const threadOf = (id: string) =>
     comments.filter((item) => {
       let cursor = item.parent_id ?? null;
@@ -577,7 +592,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
         <Text style={{ fontSize: 14, fontWeight: "500", color: ui.c.fg }}>
           评论{comments.length > 0 ? ` · ${comments.length}` : ""}
         </Text>
-        {commentsQuery.loading && comments.length === 0 ? (
+        {insights.loading && comments.length === 0 ? (
           <View style={ui.s.panel}>
             <LoadingRow ui={ui} />
           </View>
@@ -591,6 +606,8 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
               const replies = threadOf(root.id);
               const folded = collapsed[root.id] === true;
               const target = replyTo && (replyTo.id === root.id || replies.some((item) => item.id === replyTo.id)) ? replyTo : null;
+              const activities = activityMap.get(root.id) ?? [];
+              const actOpen = openActivity[root.id] === true;
               return (
                 <View key={root.id}>
                   <View style={[ui.s.panel, mentionFor === root.id && { overflow: "visible" }]}>
@@ -599,6 +616,8 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                       item={root}
                       agents={agents}
                       members={members}
+                      runs={runs}
+                      onOpenRun={setRunLogId}
                       busy={threadBusy === root.id}
                       onReply={() => openReply(root.id, root)}
                       onResolve={() => void toggleResolve(root)}
@@ -613,6 +632,8 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                               item={reply}
                               agents={agents}
                               members={members}
+                              runs={runs}
+                              onOpenRun={setRunLogId}
                               replyToName={commentAuthor(commentById.get(reply.parent_id ?? "") ?? null, agents, members).name}
                               busy={threadBusy === reply.id}
                               onReply={() => openReply(root.id, reply)}
@@ -634,11 +655,36 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                       onPickAgent={insertMention}
                       onSend={() => void sendComment(root.id, target ? target.id : root.id)}
                     />
+                    {activities.length > 0 ? (
+                      <>
+                        <Divider ui={ui} color={half} />
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={actOpen ? `收起 ${activities.length} 条动态` : `展开 ${activities.length} 条动态`}
+                          accessibilityState={{ expanded: actOpen }}
+                          onPress={() => setOpenActivity((prev) => ({ ...prev, [root.id]: !actOpen }))}
+                          style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+                            ui.s.row,
+                            { gap: 5, paddingHorizontal: 16, paddingVertical: 7 },
+                            hovered && { backgroundColor: ui.c.fillHover },
+                            pressed && ui.s.pressed,
+                          ]}
+                        >
+                          <Icon name={actOpen ? "ChevronDown" : "ChevronRight"} size={13} color={ui.c.muted} />
+                          <Text style={{ fontSize: 12, color: ui.c.muted }}>{activities.length} 条动态</Text>
+                        </Pressable>
+                        {actOpen ? (
+                          <View style={{ paddingBottom: 8 }}>
+                            <ActivityList ui={ui} entries={activities} statuses={statuses} agents={agents} runs={runs} />
+                          </View>
+                        ) : null}
+                      </>
+                    ) : null}
                   </View>
                   {replies.length > 0 ? (
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={folded ? `展开 ${replies.length} 条动态` : `收起 ${replies.length} 条动态`}
+                      accessibilityLabel={folded ? `展开 ${replies.length} 条回复` : `收起 ${replies.length} 条回复`}
                       accessibilityState={{ expanded: !folded }}
                       onPress={() => setCollapsed((prev) => ({ ...prev, [root.id]: !folded }))}
                       style={({ pressed }) => [
@@ -648,7 +694,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                       ]}
                     >
                       <Icon name={folded ? "ChevronRight" : "ChevronDown"} size={13} color={ui.c.muted} />
-                      <Text style={{ fontSize: 12, color: ui.c.muted }}>{replies.length} 条动态</Text>
+                      <Text style={{ fontSize: 12, color: ui.c.muted }}>{replies.length} 条回复</Text>
                     </Pressable>
                   ) : null}
                 </View>
@@ -657,16 +703,6 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
           </View>
         )}
       </View>
-
-      <ExecutionSteps
-        ui={ui}
-        api={api}
-        issueId={issue.id}
-        assigneeType={issue.assignee_type}
-        assigneeId={issue.assignee_id}
-        agents={agents}
-        cacheKey={key}
-      />
     </>
   );
 
@@ -773,6 +809,17 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
           <DetailLine ui={ui} label="更新于" value={fmtDateTime(issue.updated_at)} />
           {assignee ? <DetailLine ui={ui} label="类型" value={assignee.kind} /> : null}
         </View>
+      </PanelSection>
+
+      <PanelSection ui={ui} title={`执行日志 · ${runs.length}`}>
+        <ExecutionLogSection
+          ui={ui}
+          runs={runs}
+          usage={insights.usage}
+          agents={agents}
+          onOpenRuns={() => setRunsOpen(true)}
+          onOpenRun={setRunLogId}
+        />
       </PanelSection>
 
       <PanelSection ui={ui} title="操作">
@@ -1050,6 +1097,25 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
           </View>
         </Modal.Content>
       </Modal>
+
+      <RunsModal
+        ui={ui}
+        open={runsOpen}
+        onClose={() => setRunsOpen(false)}
+        issueIdentifier={issue.identifier}
+        issueTitle={issue.title}
+        runs={runs}
+        usage={insights.usage}
+        agents={agents}
+        onOpenRun={(id) => { setRunsOpen(false); setRunLogId(id); }}
+      />
+      <RunLogModal
+        ui={ui}
+        run={runLogRun}
+        agents={agents}
+        comments={comments}
+        onClose={() => setRunLogId(null)}
+      />
     </View>
   );
 }
@@ -1357,6 +1423,8 @@ function CommentCard({
   item,
   agents,
   members,
+  runs,
+  onOpenRun,
   replyToName,
   busy,
   onReply,
@@ -1366,6 +1434,8 @@ function CommentCard({
   item: Comment;
   agents: Agent[];
   members: { id: string; name: string; avatar_url?: string | null }[];
+  runs: TaskRun[];
+  onOpenRun(id: string): void;
   replyToName?: string;
   busy?: boolean;
   onReply(): void;
@@ -1373,6 +1443,9 @@ function CommentCard({
 }) {
   const author = commentAuthor(item, agents, members);
   const resolved = Boolean(item.resolved_at);
+  const sourceTask = item.source_task_id ? runs.find((run) => run.id === item.source_task_id) ?? null : null;
+  const running = sourceTask?.status === "running";
+  const elapsed = sourceTask ? runDurationMs(sourceTask) : 0;
   return (
     <View style={{ gap: 8, padding: 16, backgroundColor: resolved ? `${ui.c.success}0f` : "transparent" }}>
       <View style={[ui.s.row, { gap: 12 }]}>
@@ -1399,13 +1472,48 @@ function CommentCard({
           onPress={onResolve}
         />
       </View>
-      {item.content ? (
+      {running ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="查看智能体运行日志"
+          onPress={() => sourceTask && onOpenRun(sourceTask.id)}
+          style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+            ui.s.row,
+            { gap: 8, paddingLeft: 32, paddingVertical: 4, borderRadius: 6 },
+            hovered && { backgroundColor: ui.c.fillHover },
+            pressed && ui.s.pressed,
+          ]}
+        >
+          <ActivityIndicator size="small" color={ui.c.brand} />
+          <Text style={{ fontSize: 13, color: ui.c.muted }}>等待智能体响应。</Text>
+          <View style={ui.s.grow} />
+          <Text style={ui.s.tiny}>{fmtDuration(elapsed)}</Text>
+          <Icon name="ScrollText" size={14} color={ui.c.muted} />
+        </Pressable>
+      ) : item.content ? (
         <View style={{ paddingLeft: 32 }}>
           <Markdown>{item.content}</Markdown>
         </View>
       ) : (
         <Text style={[ui.s.tiny, { paddingLeft: 32, fontStyle: "italic" }]}>（空评论）</Text>
       )}
+      {sourceTask && !running ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="查看该评论触发的运行日志"
+          onPress={() => onOpenRun(sourceTask.id)}
+          style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+            ui.s.row,
+            { gap: 6, paddingLeft: 32, paddingVertical: 3, borderRadius: 6, alignSelf: "flex-start" },
+            hovered && { backgroundColor: ui.c.fillHover },
+            pressed && ui.s.pressed,
+          ]}
+        >
+          <Icon name="ScrollText" size={13} color={ui.c.muted} />
+          <Text style={{ fontSize: 12, color: ui.c.muted }}>运行日志 · {fmtDuration(runDurationMs(sourceTask))}</Text>
+          <Icon name="ChevronRight" size={12} color={ui.c.faint} />
+        </Pressable>
+      ) : null}
       {item.resolved_at ? (
         <Text style={[ui.s.tiny, { paddingLeft: 32 }]}>解决于 {fmtDateTime(item.resolved_at)}</Text>
       ) : null}

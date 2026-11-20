@@ -254,3 +254,24 @@ export const wecomUnbindRpc = defineRpc({
   input: z.object({ id: z.string(), chatid: z.string() }),
   output: wecomListViewSchema,
 });
+
+export const issueInsightsRpc = defineRpc({
+  name: "workbench.issue_insights",
+  input: z.object({ issueId: z.string() }),
+  output: z.object({
+    runs: z.array(z.record(z.string(), z.unknown())),
+    usage: z.record(z.string(), z.unknown()),
+    timeline: z.array(z.record(z.string(), z.unknown())),
+    comments: z.array(z.record(z.string(), z.unknown())),
+    error: z.string().nullable(),
+  }),
+});
+
+export const taskLogRpc = defineRpc({
+  name: "workbench.task_log",
+  input: z.object({ taskId: z.string() }),
+  output: z.object({
+    messages: z.array(z.record(z.string(), z.unknown())),
+    error: z.string().nullable(),
+  }),
+});

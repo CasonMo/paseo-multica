@@ -244,6 +244,7 @@ export interface Comment {
   updated_at?: string;
   resolved?: boolean;
   resolved_at?: string | null;
+  source_task_id?: string | null;
   attachments?: { id: string; name?: string; url?: string; size?: number }[];
 }
 

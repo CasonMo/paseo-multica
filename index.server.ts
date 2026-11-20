@@ -8,7 +8,9 @@ import {
   connectionsSaveRpc,
   connectionsTestRpc,
   inboxBadgeRpc,
+  issueInsightsRpc,
   preferencesSaveRpc,
+  taskLogRpc,
   workspaceSelectRpc,
   wecomListRpc,
   wecomPushRpc,
@@ -33,6 +35,8 @@ export default function contribute(server: PluginServerContext) {
   server.handle(bootstrapRpc, handlers.bootstrap);
   server.handle(apiRequestRpc, handlers.request);
   server.handle(inboxBadgeRpc, handlers.inboxBadge);
+  server.handle(issueInsightsRpc, handlers.issueInsights);
+  server.handle(taskLogRpc, handlers.taskLog);
   server.handle(wecomListRpc, handlers.wecomList);
   server.handle(wecomSaveRpc, handlers.wecomSave);
   server.handle(wecomRemoveRpc, handlers.wecomRemove);
