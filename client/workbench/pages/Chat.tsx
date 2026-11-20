@@ -299,7 +299,7 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
           borderTopColor: ui.c.border,
           padding: compact ? 10 : 12,
           gap: 8,
-          backgroundColor: ui.c.surface1,
+          backgroundColor: ui.c.surface2,
         }}
       >
         <View style={[ui.s.rowTop, { gap: 8 }]}>
@@ -311,7 +311,10 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
             multiline
             onSubmitEditing={() => void send()}
             blurOnSubmit={false}
-            style={[ui.s.input, { flex: 1, minHeight: 42, maxHeight: 140, paddingTop: 11 }]}
+            style={[
+              ui.s.input,
+              { flex: 1, minHeight: 42, maxHeight: 140, paddingTop: 11, backgroundColor: ui.c.surface0 },
+            ]}
           />
           <Pressable
             accessibilityRole="button"

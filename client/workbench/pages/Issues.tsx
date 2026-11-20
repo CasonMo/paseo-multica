@@ -198,7 +198,7 @@ export function IssuesPage() {
               borderRadius: 8,
               borderWidth: 1,
               borderColor: ui.c.border,
-              backgroundColor: ui.c.surface0,
+              backgroundColor: ui.c.surface2,
               minHeight: 30,
             },
           ]}

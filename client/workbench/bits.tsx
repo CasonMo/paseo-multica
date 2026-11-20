@@ -53,7 +53,7 @@ export function useUi(theme: PluginTheme, compact: boolean) {
       pressed: { opacity: 0.65 },
       divider: { height: StyleSheet.hairlineWidth, backgroundColor: c.border },
       input: {
-        backgroundColor: c.surface0,
+        backgroundColor: c.surface2,
         borderColor: c.border,
         borderWidth: 1,
         borderRadius: 9,
