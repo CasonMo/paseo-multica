@@ -45,10 +45,10 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
     api,
     "/api/agents",
     {
-      query: { limit: 100, include_archived: showArchived ? "true" : "" },
+      query: { limit: 100, include_archived: "true" },
       select: (data) => asList<Agent>(data, "agents"),
     },
-    `${key}:${showArchived}`,
+    key,
   );
   const runtimesQuery = useQuery(api, "/api/runtimes", { select: (data) => asList<AgentRuntime>(data, "runtimes") }, key);
   const squadsQuery = useQuery(api, "/api/squads", { select: (data) => asList<Squad>(data, "squads") }, key);
