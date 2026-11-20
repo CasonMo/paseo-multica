@@ -243,6 +243,8 @@ export interface Comment {
   created_at: string;
   updated_at?: string;
   resolved?: boolean;
+  resolved_at?: string | null;
+  attachments?: { id: string; name?: string; url?: string; size?: number }[];
 }
 
 export const CATEGORY_META: Record<IssueCategory, { label: string; tone: Tone }> = {

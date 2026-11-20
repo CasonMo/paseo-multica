@@ -37,9 +37,13 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const [pick, setPick] = useState<null | "status" | "priority">(null);
   const [childOpen, setChildOpen] = useState(false);
   const [childTitle, setChildTitle] = useState("");
+  const [replyTo, setReplyTo] = useState<Comment | null>(null);
+  const [threadBusy, setThreadBusy] = useState<string | null>(null);
 
   const issueQuery = useQuery(api, issueId ? `/api/issues/${issueId}` : null, {}, key);
   const issue = issueQuery.data && typeof issueQuery.data === "object" ? (issueQuery.data as Issue) : null;
+  const parentQuery = useQuery(api, issue?.parent_issue_id ? `/api/issues/${issue.parent_issue_id}` : null, {}, `${key}:parent`);
+  const parent = parentQuery.data && typeof parentQuery.data === "object" ? (parentQuery.data as Issue) : null;
   const commentsQuery = useQuery(
     api,
     issueId ? `/api/issues/${issueId}/comments` : null,
@@ -136,13 +140,27 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const sendComment = async () => {
     if (!issue || !comment.trim()) return;
     setSending(true);
-    const result = await api({ method: "POST", path: `/api/issues/${issue.id}/comments`, body: { content: comment.trim() } });
+    const body: Record<string, unknown> = { content: comment.trim() };
+    if (replyTo) body.parent_id = replyTo.id;
+    const result = await api({ method: "POST", path: `/api/issues/${issue.id}/comments`, body });
     setSending(false);
     if (result.ok) {
       setComment("");
+      setReplyTo(null);
       commentsQuery.refresh();
-      toast.show("评论已发送", { variant: "success" });
+      toast.show(replyTo ? "回复已发送" : "评论已发送", { variant: "success" });
     } else toast.error(result.error ?? "发送失败");
+  };
+
+  const toggleResolve = async (item: Comment) => {
+    const resolved = Boolean(item.resolved_at);
+    setThreadBusy(item.id);
+    const result = await api({ method: resolved ? "DELETE" : "POST", path: `/api/comments/${item.id}/resolve` });
+    setThreadBusy(null);
+    if (result.ok) {
+      commentsQuery.refresh();
+      toast.show(resolved ? "已取消解决" : "已标记解决", { variant: "success" });
+    } else toast.error(result.error ?? "操作失败");
   };
 
   const addChild = async () => {
@@ -231,6 +249,19 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   if (!issue) return null;
 
   const comments = commentsQuery.data ?? [];
+  const commentById = new Map(comments.map((item) => [item.id, item]));
+  const roots = comments.filter((item) => !item.parent_id || !commentById.has(item.parent_id));
+  const threadOf = (id: string) =>
+    comments.filter((item) => {
+      let cursor = item.parent_id ?? null;
+      const seen = new Set<string>();
+      while (cursor && !seen.has(cursor)) {
+        if (cursor === id) return true;
+        seen.add(cursor);
+        cursor = commentById.get(cursor)?.parent_id ?? null;
+      }
+      return false;
+    });
   const children = childrenQuery.data ?? [];
   const issueLabels = issueLabelsQuery.data ?? [];
   const attachedIds = new Set(issueLabels.map((label) => label.id));
@@ -239,6 +270,16 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   );
   const statusColor = issueStatusColor(issue, statuses);
   const project = (projectsQuery.data ?? []).find((item) => item.id === issue.project_id) ?? null;
+  const personOf = (type?: string | null, id?: string | null) => {
+    if (!id) return null;
+    if (type === "agent") {
+      const agent = agents.find((item) => item.id === id);
+      return { name: agent?.name ?? "智能体", url: agent?.avatar_url ?? null };
+    }
+    if (type === "squad") return { name: "小队", url: null };
+    const member = members.find((item) => item.id === id);
+    return { name: member?.name || "成员", url: member?.avatar_url ?? null };
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -298,6 +339,36 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
       <ScrollView contentContainerStyle={{ padding: compact ? 14 : 20, paddingBottom: 48 }}>
         <View style={{ flexDirection: compact ? "column" : "row", gap: compact ? 16 : 24, alignItems: "flex-start" }}>
           <View style={{ flex: 1, minWidth: 0, gap: 14 }}>
+            {parent ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`父任务 ${parent.identifier}`}
+                onPress={() => navigate("issue", { id: parent.id })}
+                style={({ pressed }) => [
+                  {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 7,
+                    alignSelf: "flex-start",
+                    maxWidth: "100%",
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 7,
+                    borderWidth: 1,
+                    borderColor: ui.c.border,
+                    backgroundColor: ui.c.surface1,
+                  },
+                  pressed && ui.s.pressed,
+                ]}
+              >
+                <Text style={{ fontSize: 10.5, color: ui.c.muted, fontWeight: "700" }}>父任务</Text>
+                <Text style={{ fontSize: 11.5, fontFamily: "Menlo", color: ui.c.muted }}>{parent.identifier}</Text>
+                <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 12, color: ui.c.fg }}>
+                  {parent.title}
+                </Text>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: issueStatusColor(parent, statuses) }} />
+              </Pressable>
+            ) : null}
             <Text
               style={{
                 color: ui.c.fg,
@@ -383,21 +454,32 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
               {children.length === 0 && !childOpen ? (
                 <Text style={[ui.s.tiny, { paddingVertical: 8 }]}>暂无子任务</Text>
               ) : (
-                children.map((child) => (
-                  <Pressable
-                    accessibilityRole="button"
-                    key={child.id}
-                    onPress={() => navigate("issue", { id: child.id })}
-                    style={({ pressed }) => [ui.s.listRow, pressed && ui.s.pressed]}
-                  >
-                    <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: issueStatusColor(child, statuses) }} />
-                    <Text style={[ui.s.tiny, { fontFamily: "Menlo" }]}>{child.identifier}</Text>
-                    <Text numberOfLines={1} style={[ui.s.body, { flex: 1 }]}>
-                      {child.title}
-                    </Text>
-                    <Text style={ui.s.tiny}>{issueStatusLabel(child, statuses)}</Text>
-                  </Pressable>
-                ))
+                children.map((child) => {
+                  const owner = personOf(child.assignee_type, child.assignee_id);
+                  return (
+                    <Pressable
+                      accessibilityRole="button"
+                      key={child.id}
+                      onPress={() => navigate("issue", { id: child.id })}
+                      style={({ pressed }) => [ui.s.listRow, pressed && ui.s.pressed]}
+                    >
+                      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: issueStatusColor(child, statuses) }} />
+                      <Text style={[ui.s.tiny, { fontFamily: "Menlo" }]}>{child.identifier}</Text>
+                      <Text numberOfLines={1} style={[ui.s.body, { flex: 1 }]}>
+                        {child.title}
+                      </Text>
+                      {owner ? (
+                        <View style={[ui.s.row, { gap: 4 }]}>
+                          <Avatar ui={ui} name={owner.name} url={owner.url} size={16} />
+                          <Text numberOfLines={1} style={[ui.s.tiny, { maxWidth: 90 }]}>
+                            {owner.name}
+                          </Text>
+                        </View>
+                      ) : null}
+                      <Text style={ui.s.tiny}>{issueStatusLabel(child, statuses)}</Text>
+                    </Pressable>
+                  );
+                })
               )}
             </View>
 
@@ -410,24 +492,91 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
               ) : comments.length === 0 ? (
                 <Text style={[ui.s.tiny, { paddingVertical: 8 }]}>还没有评论，@ 智能体即可触发协作。</Text>
               ) : (
-                <View style={{ gap: 2 }}>
-                  {comments.map((item) => (
-                    <CommentRow key={item.id} ui={ui} item={item} agents={agents} members={members} />
-                  ))}
+                <View style={{ gap: 10, paddingTop: 4 }}>
+                  {roots.map((root) => {
+                    const replies = threadOf(root.id);
+                    return (
+                      <View key={root.id} style={{ gap: 8 }}>
+                        <CommentCard
+                          ui={ui}
+                          item={root}
+                          agents={agents}
+                          members={members}
+                          busy={threadBusy === root.id}
+                          onReply={() => setReplyTo(root)}
+                          onResolve={() => void toggleResolve(root)}
+                        />
+                        {replies.length > 0 ? (
+                          <View
+                            style={{
+                              marginLeft: 14,
+                              paddingLeft: 14,
+                              gap: 8,
+                              borderLeftWidth: 1,
+                              borderLeftColor: ui.c.border,
+                            }}
+                          >
+                            {replies.map((reply) => (
+                              <CommentCard
+                                key={reply.id}
+                                ui={ui}
+                                item={reply}
+                                agents={agents}
+                                members={members}
+                                replyToName={commentAuthor(commentById.get(reply.parent_id ?? "") ?? null, agents, members).name}
+                                busy={threadBusy === reply.id}
+                                onReply={() => setReplyTo(reply)}
+                                onResolve={() => void toggleResolve(reply)}
+                              />
+                            ))}
+                          </View>
+                        ) : null}
+                      </View>
+                    );
+                  })}
                 </View>
               )}
-              <View style={{ gap: 8, paddingTop: 8 }}>
+              <View style={{ gap: 8, paddingTop: 10 }}>
+                {replyTo ? (
+                  <View
+                    style={[
+                      ui.s.row,
+                      {
+                        gap: 6,
+                        paddingHorizontal: 8,
+                        paddingVertical: 5,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: `${ui.c.accent}55`,
+                        backgroundColor: `${ui.c.accent}14`,
+                      },
+                    ]}
+                  >
+                    <Icon name="CornerDownRight" size={12} color={ui.c.accent} />
+                    <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, color: ui.c.fg }}>
+                      回复 {commentAuthor(replyTo, agents, members).name}：{replyTo.content.replace(/\s+/g, " ").slice(0, 40)}
+                    </Text>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="取消回复"
+                      onPress={() => setReplyTo(null)}
+                      style={({ pressed }) => [pressed && ui.s.pressed]}
+                    >
+                      <Icon name="X" size={12} color={ui.c.muted} />
+                    </Pressable>
+                  </View>
+                ) : null}
                 <Field
                   ui={ui}
                   value={comment}
                   onChangeText={setComment}
-                  placeholder="写下评论，支持 Markdown 与 @智能体…"
+                  placeholder={replyTo ? "写下回复，支持 Markdown 与 @智能体…" : "写下评论，支持 Markdown 与 @智能体…"}
                   multiline
                 />
                 <View style={[ui.s.row, { justifyContent: "flex-end" }]}>
                   <Btn
                     ui={ui}
-                    label="发送评论"
+                    label={replyTo ? "发送回复" : "发送评论"}
                     icon="Send"
                     tone="primary"
                     busy={sending}
@@ -766,38 +915,110 @@ function PropRow({
   );
 }
 
-function CommentRow({
+function commentAuthor(
+  item: Comment | null,
+  agents: Agent[],
+  members: { id: string; name: string; avatar_url?: string | null }[],
+) {
+  if (!item) return { name: "成员", url: null as string | null };
+  const agent = item.author_type === "agent" ? agents.find((entry) => entry.id === item.author_id) : undefined;
+  const member = members.find((entry) => entry.id === item.author_id);
+  return {
+    name: item.author_name || agent?.name || member?.name || (item.author_type === "agent" ? "智能体" : "成员"),
+    url: agent?.avatar_url ?? member?.avatar_url ?? null,
+  };
+}
+
+function CommentAction({
+  ui,
+  icon,
+  label,
+  onPress,
+  disabled,
+}: {
+  ui: ReturnType<typeof useUi>;
+  icon: string;
+  label: string;
+  onPress(): void;
+  disabled?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        ui.s.row,
+        { gap: 4, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6, opacity: disabled ? 0.45 : 1 },
+        pressed && ui.s.pressed,
+      ]}
+    >
+      <Icon name={icon} size={12} color={ui.c.muted} />
+      <Text style={{ fontSize: 11.5, color: ui.c.muted }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function CommentCard({
   ui,
   item,
   agents,
   members,
+  replyToName,
+  busy,
+  onReply,
+  onResolve,
 }: {
   ui: ReturnType<typeof useUi>;
   item: Comment;
   agents: Agent[];
-  members: { id: string; name: string; avatar_url: string | null }[];
+  members: { id: string; name: string; avatar_url?: string | null }[];
+  replyToName?: string;
+  busy?: boolean;
+  onReply(): void;
+  onResolve(): void;
 }) {
-  const name =
-    item.author_name ||
-    (item.author_type === "agent"
-      ? agents.find((agent) => agent.id === item.author_id)?.name
-      : members.find((member) => member.id === item.author_id)?.name) ||
-    (item.author_type === "agent" ? "智能体" : "成员");
-  const avatarUrl =
-    item.author_type === "agent"
-      ? agents.find((agent) => agent.id === item.author_id)?.avatar_url ?? null
-      : members.find((member) => member.id === item.author_id)?.avatar_url ?? null;
+  const author = commentAuthor(item, agents, members);
+  const resolved = Boolean(item.resolved_at);
   return (
-    <View style={{ paddingVertical: 10, gap: 6 }}>
-      <View style={[ui.s.row, { gap: 8 }]}>
-        <Avatar ui={ui} name={name} url={avatarUrl} size={22} />
-        <Text style={[ui.s.body, { fontWeight: "600" }]}>{name}</Text>
+    <View
+      style={{
+        gap: 6,
+        padding: 10,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: resolved ? `${ui.c.success}44` : ui.c.border,
+        backgroundColor: resolved ? `${ui.c.success}0f` : ui.c.surface0,
+      }}
+    >
+      <View style={[ui.s.row, { gap: 7, flexWrap: "wrap" }]}>
+        <Avatar ui={ui} name={author.name} url={author.url} size={22} />
+        <Text style={[ui.s.body, { fontWeight: "600" }]}>{author.name}</Text>
+        {item.author_type === "agent" ? <Tag ui={ui} label="智能体" tone="accent" /> : null}
         <Text style={ui.s.tiny}>{relTime(item.created_at)}</Text>
-        {item.resolved ? <Tag ui={ui} label="已解决" tone="success" /> : null}
+        {replyToName ? <Text style={ui.s.tiny}>回复 {replyToName}</Text> : null}
+        <View style={ui.s.grow} />
+        {resolved ? <Tag ui={ui} label="已解决" tone="success" icon="Check" /> : null}
+        <CommentAction ui={ui} icon="CornerDownRight" label="回复" onPress={onReply} />
+        <CommentAction
+          ui={ui}
+          icon={resolved ? "CircleX" : "Check"}
+          label={resolved ? "取消解决" : "解决"}
+          onPress={onResolve}
+          disabled={busy}
+        />
       </View>
-      <View style={{ paddingLeft: 30 }}>
-        {item.content ? <Markdown>{item.content}</Markdown> : <Text style={[ui.s.tiny, { fontStyle: "italic" }]}>（空评论）</Text>}
-      </View>
+      {item.content ? (
+        <View style={{ paddingLeft: 29 }}>
+          <Markdown>{item.content}</Markdown>
+        </View>
+      ) : (
+        <Text style={[ui.s.tiny, { paddingLeft: 29, fontStyle: "italic" }]}>（空评论）</Text>
+      )}
+      {item.resolved_at ? (
+        <Text style={[ui.s.tiny, { paddingLeft: 29 }]}>解决于 {fmtDateTime(item.resolved_at)}</Text>
+      ) : null}
     </View>
   );
 }
