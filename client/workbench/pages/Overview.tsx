@@ -1,5 +1,5 @@
 import { Icon } from "@getpaseo/plugin/client/ui";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Btn, Card, Divider, Empty, ErrorNote, LoadingRow, SectionHeader, Stat, Tag, useUi } from "../bits";
 import { asList, asRecord, num, useQuery } from "../api";
 import { useWorkbench } from "../context";
@@ -18,7 +18,7 @@ export function OverviewPage() {
   const unread = useQuery(api, "/api/inbox/unread-count", {}, key);
   const agents = useQuery(api, "/api/agents", { query: { limit: 100 } }, key);
   const runtimes = useQuery(api, "/api/runtimes", {}, key);
-  const inbox = useQuery(api, "/api/inbox", { query: { limit: 6 } }, key);
+  const inbox = useQuery(api, "/api/inbox", { query: { limit: 20 } }, key);
   const projects = useQuery(api, "/api/projects", {}, key);
 
   const recentList = asList<Issue>(recent.data, "issues");
@@ -29,6 +29,7 @@ export function OverviewPage() {
   const agentList = asList<Agent>(agents.data, "agents");
   const runtimeList = asList<AgentRuntime>(runtimes.data, "runtimes", "devices");
   const inboxList = asList<InboxItem>(inbox.data, "items", "inbox");
+  const inboxTotal = num(asRecord(inbox.data).total, inboxList.length);
   const projectList = asList<Project>(projects.data, "projects");
   const onlineRuntimes = runtimeList.filter((runtime) => runtime.status === "online");
   const workingAgents = agentList.filter((agent) => agent.status === "working" || agent.status === "idle");
@@ -169,7 +170,7 @@ export function OverviewPage() {
         </View>
 
         <View style={{ flex: compact ? undefined : 1, gap: 14, width: compact ? "100%" : undefined }}>
-          <Card ui={ui} padded={false}>
+          <Card ui={ui} padded={false} style={{ overflow: "hidden" }}>
             <View style={{ paddingHorizontal: 14, paddingTop: 14 }}>
               <SectionHeader
                 ui={ui}
@@ -187,19 +188,39 @@ export function OverviewPage() {
             ) : inboxList.length === 0 ? (
               <Empty ui={ui} icon="BellOff" title="收件箱已清空" />
             ) : (
-              <View style={{ paddingBottom: 6 }}>
-                {inboxList.map((item, index) => (
-                  <View key={item.id}>
-                    {index > 0 ? <Divider ui={ui} style={{ marginHorizontal: 14 }} /> : null}
-                    <InboxRow
-                      ui={ui}
-                      item={item}
-                      onPress={() => openItem(item)}
-                      onRead={item.read ? undefined : () => void markRead(item)}
-                      onArchive={() => void archive(item)}
-                    />
-                  </View>
-                ))}
+              <View>
+                <ScrollView
+                  style={{ height: compact ? 280 : 360 }}
+                  contentContainerStyle={{ paddingBottom: 6 }}
+                >
+                  {inboxList.map((item, index) => (
+                    <View key={item.id}>
+                      {index > 0 ? <Divider ui={ui} style={{ marginHorizontal: 14 }} /> : null}
+                      <InboxRow
+                        ui={ui}
+                        item={item}
+                        onPress={() => openItem(item)}
+                        onRead={item.read ? undefined : () => void markRead(item)}
+                        onArchive={() => void archive(item)}
+                      />
+                    </View>
+                  ))}
+                </ScrollView>
+                <View
+                  style={[
+                    ui.s.row,
+                    {
+                      justifyContent: "space-between",
+                      paddingHorizontal: 14,
+                      paddingVertical: 8,
+                      borderTopWidth: StyleSheet.hairlineWidth,
+                      borderTopColor: ui.c.line,
+                    },
+                  ]}
+                >
+                  <Text style={ui.s.tiny}>共 {inboxTotal} 条</Text>
+                  <LinkBtn ui={ui} label="查看全部" onPress={() => navigate("inbox")} />
+                </View>
               </View>
             )}
           </Card>
