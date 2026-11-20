@@ -1,6 +1,6 @@
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Btn, Card, Chips, Divider, Empty, ErrorNote, LoadingRow, Tag, useUi } from "../bits";
 import { asList, asRecord, num, useQuery } from "../api";
 import { refreshInboxBadge } from "../badge";
@@ -156,48 +156,64 @@ export function InboxPage() {
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ padding: compact ? 12 : 18, gap: 12, paddingBottom: 48 }}>
-        <View style={[ui.s.row, { gap: 10, flexWrap: "wrap" }]}>
-          <View style={ui.s.grow}>
-            <View style={[ui.s.row, { gap: 8 }]}>
-              <Text style={[ui.s.title, { fontSize: compact ? 18 : 21 }]}>收件箱</Text>
-              {unreadCount > 0 ? <Tag ui={ui} label={`${unreadCount} 未读`} tone="accent" /> : null}
-            </View>
-            <Text style={ui.s.muted}>需求流转、智能体结果与 @ 提醒都在这里</Text>
-          </View>
-          <View style={[ui.s.row, { gap: 6 }]}>
-            <Btn ui={ui} label="全部已读" icon="CheckCheck" onPress={() => void markAllRead()} />
-            {tab === "inbox" ? (
-              <Btn ui={ui} label="全部归档" icon="Archive" onPress={() => setConfirmArchiveAll(true)} />
-            ) : null}
-          </View>
-        </View>
+      <View
+        style={[
+          ui.s.row,
+          {
+            gap: 8,
+            paddingHorizontal: compact ? 12 : 16,
+            height: 48,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: ui.c.line,
+            backgroundColor: ui.c.canvas,
+          },
+        ]}
+      >
+        <Icon name="Bell" size={16} color={ui.c.muted} />
+        <Text style={{ color: ui.c.fg, fontSize: 14, fontWeight: "600" }}>收件箱</Text>
+        {unreadCount > 0 ? <Tag ui={ui} label={`${unreadCount} 未读`} tone="accent" /> : null}
+        <View style={ui.s.grow} />
+        <Btn ui={ui} label="全部已读" icon="CheckCheck" onPress={() => void markAllRead()} />
+        {tab === "inbox" ? (
+          <Btn ui={ui} label="全部归档" icon="Archive" onPress={() => setConfirmArchiveAll(true)} />
+        ) : null}
+      </View>
 
-        <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
-          <Chips<Tab> ui={ui} options={TABS} value={tab} onChange={setTab} />
-        </View>
-
+      <View
+        style={[
+          ui.s.row,
+          {
+            gap: 8,
+            paddingHorizontal: compact ? 12 : 16,
+            paddingVertical: 10,
+            flexWrap: "wrap",
+          },
+        ]}
+      >
+        <Chips<Tab> ui={ui} options={TABS} value={tab} onChange={setTab} />
         <View
           style={[
             ui.s.row,
             {
+              flex: 1,
+              minWidth: 160,
               gap: 7,
-              paddingHorizontal: 11,
-              borderRadius: 9,
+              paddingHorizontal: 8,
+              borderRadius: 8,
               borderWidth: 1,
               borderColor: ui.c.border,
-              backgroundColor: ui.c.surface1,
-              minHeight: 38,
+              backgroundColor: ui.c.card,
+              height: 32,
             },
           ]}
         >
-          <Icon name="Search" size={15} color={ui.c.muted} />
+          <Icon name="Search" size={14} color={ui.c.muted} />
           <TextInput
             value={search}
             onChangeText={setSearch}
             placeholder="搜索通知标题或需求编号…"
-            placeholderTextColor={ui.c.muted}
-            style={{ flex: 1, color: ui.c.fg, fontSize: 13, paddingVertical: 8 }}
+            placeholderTextColor={ui.c.faint}
+            style={{ flex: 1, color: ui.c.fg, fontSize: 13, paddingVertical: 5 }}
             autoCapitalize="none"
             autoCorrect={false}
           />
@@ -212,7 +228,12 @@ export function InboxPage() {
             </Pressable>
           ) : null}
         </View>
+      </View>
 
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: compact ? 12 : 16, paddingBottom: 16 }}
+      >
         <Card ui={ui} padded={false}>
           {itemsQuery.loading && items.length === 0 ? (
             <LoadingRow ui={ui} />
@@ -228,10 +249,10 @@ export function InboxPage() {
               description={tab === "inbox" ? "新的需求变更和智能体结果会出现在这里。" : undefined}
             />
           ) : (
-            <View style={{ paddingBottom: 6 }}>
+            <View>
               {filtered.map((item, index) => (
                 <View key={item.id}>
-                  {index > 0 ? <Divider ui={ui} style={{ marginHorizontal: 14 }} /> : null}
+                  {index > 0 ? <Divider ui={ui} style={{ marginHorizontal: 12 }} /> : null}
                   <InboxRow
                     ui={ui}
                     item={item}
@@ -298,13 +319,25 @@ export function InboxPage() {
             </View>
           )}
         </Card>
+      </ScrollView>
 
-        {filtered.length > 0 ? (
-          <Text style={[ui.s.tiny, { textAlign: "center" }]}>
+      {filtered.length > 0 ? (
+        <View
+          style={[
+            ui.s.row,
+            {
+              height: 28,
+              paddingHorizontal: compact ? 12 : 16,
+              borderTopWidth: StyleSheet.hairlineWidth,
+              borderTopColor: ui.c.line,
+            },
+          ]}
+        >
+          <Text style={ui.s.tiny}>
             共 {filtered.length} 条 · 最近一条 {relTime(filtered[0]?.created_at)}
           </Text>
-        ) : null}
-      </ScrollView>
+        </View>
+      ) : null}
 
       <Modal
         title="归档全部通知"

@@ -540,6 +540,7 @@ export function Chips<T extends string>({
             key={option.value}
             accessibilityLabel={option.label}
             accessibilityState={{ selected: active }}
+            aria-selected={active}
             onPress={() => onChange(option.value)}
             style={({ pressed }) => [ui.s.chip, active && ui.s.chipActive, pressed && ui.s.pressed]}
           >
