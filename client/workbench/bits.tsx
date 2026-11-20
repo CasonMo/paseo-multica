@@ -116,6 +116,9 @@ export function injectChrome(dark: boolean) {
     `[data-testid="multica"] * { scrollbar-color: ${t.scrollThumb} transparent; }
 [data-testid="multica"] ::-webkit-scrollbar-thumb { background-color: ${t.scrollThumb}; }
 [data-testid="multica"] ::-webkit-scrollbar-thumb:hover { background-color: ${t.scrollThumbHover}; }
+[data-testid="multica"] pre { overflow-x: auto; max-width: 100%; }
+[data-testid="multica"] table { display: block; overflow-x: auto; max-width: 100%; }
+[data-testid="multica"] p, [data-testid="multica"] li, [data-testid="multica"] code { overflow-wrap: anywhere; }
 `;
 }
 
@@ -280,7 +283,8 @@ export function useUi(theme: PluginTheme, compact: boolean) {
         fontFamily: "Menlo",
         fontSize: 12,
         color: t.fg,
-      },
+        overflowWrap: "anywhere",
+      } as TextStyle,
       bar: { borderRadius: 3, backgroundColor: t.brand, opacity: 0.9 },
       barTrack: { flex: 1, justifyContent: "flex-end" },
     });
@@ -607,7 +611,7 @@ export function Chips<T extends string>({
   onChange(value: T): void;
 }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[ui.s.row, ui.s.gap6]}>
+    <View style={[ui.s.row, ui.s.gap6, { flexWrap: "wrap" }]}>
       {options.map((option) => {
         const active = option.value === value;
         return (
@@ -625,7 +629,7 @@ export function Chips<T extends string>({
           </Pressable>
         );
       })}
-    </ScrollView>
+    </View>
   );
 }
 

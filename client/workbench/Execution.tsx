@@ -2,7 +2,7 @@ import { t } from "./i18n";
 import { Icon } from "@getpaseo/plugin/client/ui";
 import { useRpc } from "@getpaseo/plugin/client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View, type TextStyle } from "react-native";
 import { issueInsightsRpc, taskLogRpc } from "../../shared/contracts";
 import { asList, useQuery, type ApiFn } from "./api";
 import { Avatar, Btn, IconBtn, Tag, useUi, type Ui } from "./bits";
@@ -820,7 +820,7 @@ export function RunLogModal({
                   </Pressable>
                   {open && step.detail ? (
                     <ScrollView style={{ maxHeight: 180, marginLeft: 60, marginBottom: 6 }} nestedScrollEnabled>
-                      <Text selectable style={{ fontFamily: "Menlo", fontSize: 11, lineHeight: 16, color: ui.c.fg, backgroundColor: ui.c.fill, borderRadius: 6, padding: 8 }}>{step.detail.slice(0, 6000)}</Text>
+                      <Text selectable style={{ fontFamily: "Menlo", fontSize: 11, lineHeight: 16, color: ui.c.fg, backgroundColor: ui.c.fill, borderRadius: 6, padding: 8, overflowWrap: "anywhere" } as TextStyle}>{step.detail.slice(0, 6000)}</Text>
                     </ScrollView>
                   ) : null}
                 </View>

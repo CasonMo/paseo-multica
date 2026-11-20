@@ -1,7 +1,7 @@
 import { t } from "../i18n";
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, Text, TextInput, View, type TextStyle } from "react-native";
 import { asList, useQuery } from "../api";
 import { Avatar, Btn, Card, Dot, Empty, ErrorNote, LoadingRow, useUi, type Ui } from "../bits";
 import { useWorkbench } from "../context";
@@ -421,6 +421,7 @@ function Bubble({ ui, message, agentName }: { ui: Ui; message: ChatMessage; agen
       <View
         style={{
           maxWidth: "88%",
+          minWidth: 0,
           paddingHorizontal: 12,
           paddingVertical: 9,
           borderRadius: 12,
@@ -440,7 +441,7 @@ function Bubble({ ui, message, agentName }: { ui: Ui; message: ChatMessage; agen
           </View>
         ) : null}
         {mine ? (
-          <Text style={{ color: ui.c.accentFg, fontSize: 14, lineHeight: 21 }}>{message.content}</Text>
+          <Text style={{ color: ui.c.accentFg, fontSize: 14, lineHeight: 21, overflowWrap: "anywhere" } as TextStyle}>{message.content}</Text>
         ) : message.content ? (
           <Markdown>{message.content}</Markdown>
         ) : (

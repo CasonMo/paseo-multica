@@ -1,7 +1,7 @@
 import { t } from "../i18n";
 import { Icon, Modal, copyText } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, Text, TextInput, View, type TextStyle } from "react-native";
 import {
   API_ROUTES,
   domainLabel,
@@ -103,7 +103,7 @@ export function ApiExplorerPage() {
             </Pressable>
           ) : null}
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+        <View style={[ui.s.row, { gap: 6, flexWrap: "wrap" }]}>
           {METHODS.map((item) => {
             const active = method === item;
             const color = item === "ALL" ? ui.c.accent : METHOD_COLOR[item];
@@ -130,8 +130,8 @@ export function ApiExplorerPage() {
               </Pressable>
             );
           })}
-        </ScrollView>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+        </View>
+        <View style={[ui.s.row, { gap: 6, flexWrap: "wrap" }]}>
           <DomainChip ui={ui} active={domain === "all"} label={t("ApiExplorer.4")} count={visibleRoutes.length} onPress={() => setDomain("all")} />
           {domains.map(([key, count]) => (
             <DomainChip
@@ -143,7 +143,7 @@ export function ApiExplorerPage() {
               onPress={() => setDomain(key)}
             />
           ))}
-        </ScrollView>
+        </View>
         <Text style={ui.s.tiny}>{countLabel} {t("ApiExplorer.5")}</Text>
       </View>
 
@@ -345,7 +345,7 @@ function RouteDetail({ ui, route }: { ui: Ui; route: ApiRouteTuple }) {
           <Text style={{ fontFamily: "Menlo", fontSize: 12, fontWeight: "700", color: METHOD_COLOR[route[0]] }}>
             {route[0]}
           </Text>
-          <Text selectable style={{ fontFamily: "Menlo", fontSize: 12, color: ui.c.fg, flex: 1 }}>
+          <Text selectable style={{ fontFamily: "Menlo", fontSize: 12, color: ui.c.fg, flex: 1, overflowWrap: "anywhere" } as TextStyle}>
             {route[1]}
           </Text>
         </View>

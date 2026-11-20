@@ -307,7 +307,6 @@ export function IssuesPage() {
       ) : mode === "board" ? (
         <ScrollView
           horizontal
-          showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ flexGrow: 1, gap: narrow ? 12 : 16, padding: compact || narrow ? 12 : 16 }}
         >
           {visibleColumns.map((column) => (

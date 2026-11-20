@@ -806,7 +806,7 @@ function EditAgentModal({
           </View>
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("AgentDetail.16")}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+            <View style={[ui.s.row, { gap: 6, flexWrap: "wrap" }]}>
               <ChipButton ui={ui} active={!runtimeId} label={t("AgentDetail.108")} onPress={() => setRuntimeId("")} />
               {runtimes.map((runtime) => (
                 <ChipButton
@@ -817,7 +817,7 @@ function EditAgentModal({
                   onPress={() => setRuntimeId(runtime.id)}
                 />
               ))}
-            </ScrollView>
+            </View>
           </View>
           <Field ui={ui} label={t("AgentDetail.31")} value={instructions} onChangeText={setInstructions} multiline placeholder={t("AgentDetail.110")} hint={t("AgentDetail.111")} />
           {error ? <ErrorNote ui={ui} message={error} /> : null}
