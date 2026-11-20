@@ -1,5 +1,5 @@
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Btn, Card, Chips, Divider, Empty, ErrorNote, LoadingRow, Tag, useUi } from "../bits";
 import { asList, asRecord, num, useQuery } from "../api";
@@ -49,7 +49,7 @@ export function InboxPage() {
     { query: { limit: 50 } },
     `${key}:${tab}`,
   );
-  const unreadQuery = useQuery(api, "/api/inbox/unread-count", {}, key);
+  const unreadQuery = useQuery(api, "/api/inbox/unread-count", { pollMs: 8000 }, key);
   const snoozedIssuesQuery = useQuery(
     api,
     tab === "snoozed" ? "/api/issues" : null,
@@ -107,13 +107,24 @@ export function InboxPage() {
     } else toast.error(result.error ?? "操作失败");
   };
 
-  const markAllRead = async () => {
+  const markAllRead = async (silent = false) => {
     const result = await api({ method: "POST", path: "/api/inbox/mark-all-read" });
     if (result.ok) {
-      toast.show("收件箱已全部标记为已读", { variant: "success" });
+      if (!silent) toast.show("收件箱已全部标记为已读", { variant: "success" });
       refreshAll();
-    } else toast.error(result.error ?? "操作失败");
+    } else if (!silent) toast.error(result.error ?? "操作失败");
   };
+
+  // 进入收件箱即视为已读：自动清未读，避免侧栏小徽章必须手动点才消失。
+  const autoReading = useRef(false);
+  useEffect(() => {
+    if (tab !== "inbox" || unreadCount <= 0 || autoReading.current) return;
+    autoReading.current = true;
+    void markAllRead(true).finally(() => {
+      autoReading.current = false;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, unreadCount]);
 
   const archiveAll = async () => {
     setBusy(true);
