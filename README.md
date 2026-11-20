@@ -51,7 +51,9 @@ cloud (`https://api.multica.ai`) and any self-hosted Multica server.
 
 ## Internationalization
 
-The UI follows the Paseo app language (English / 中文). All strings live in a bilingual
+The UI follows the Paseo app language (English / 中文) by default. A plugin-level override
+in **Settings → Language** (Follow Paseo / English / 中文, persisted locally) lets you pin
+either language regardless of the host setting. All strings live in a bilingual
 catalog (`tools/i18n-zh.json` + `tools/i18n-en.json`, 900+ keys) compiled into
 `client/workbench/i18n-resources.ts` by `node tools/i18n-build.mjs`; call sites use `t()`
 from `client/workbench/i18n.ts`, and persistent registrations (command center, settings

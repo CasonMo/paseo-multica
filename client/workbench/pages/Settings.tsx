@@ -1,4 +1,4 @@
-import { t } from "../i18n";
+import { t, useLocaleOverride, setLocaleOverride, type LocaleOverride } from "../i18n";
 import { Icon, Modal, copyText, useToast } from "@getpaseo/plugin/client/ui";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -26,6 +26,7 @@ import { openExternalUrl } from "@getpaseo/plugin/client";
 export function SettingsPage({ initialTab }: { initialTab?: "connection" | "workspace" | "account" | "api" }) {
   const ctx = useWorkbench();
   const { theme, compact, connections, server, servers, user, workspaces, workspaceId, toast, locale } = ctx;
+  const override = useLocaleOverride();
   const ui = useUi(theme, compact);
   const saveRpc = useRpc(connectionsSaveRpc);
   const removeRpc = useRpc(connectionsRemoveRpc);
@@ -106,6 +107,19 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
           value={tab}
           onChange={(next) => setTab(next as typeof tab)}
         />
+        <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
+          <Text style={ui.s.label}>{t("Settings.68")}</Text>
+          <Chips
+            ui={ui}
+            options={[
+              { value: "auto", label: t("Settings.69") },
+              { value: "en", label: t("Settings.70") },
+              { value: "zh-CN", label: t("Settings.71") },
+            ] as const}
+            value={override}
+            onChange={(next) => setLocaleOverride(next as LocaleOverride)}
+          />
+        </View>
       </View>
 
       {tab === "api" ? (

@@ -64,7 +64,7 @@ Paseo 左侧「Multica」菜单项带未读通知徽章：由 daemon 侧 `workbe
 
 - 网络目的地仅有两个：用户配置的 Multica base URL（默认 `https://api.multica.ai`，或任意自建服务器）；无遥测、无隐藏网络调用、无动态代码执行。
 - listing 媒体（assets/screenshots/{en,zh}/*.png、assets/icon.png）为虚构种子数据（tools/demo-data.mjs）经 tools/render-media.mjs 构造的脱敏渲染图（英/中两语），不含任何真实工作区数据；tools/demo-server.mjs 提供同一种子数据的本地演示 API。
-- 国际化：UI 跟随 Paseo 宿主语言（English/中文）。902 条双语 catalog（tools/i18n-zh.json / i18n-en.json）经 tools/i18n-build.mjs 编译为 i18n-resources.ts；调用点统一 t()，命令面板/设置页标题等持久注册用 SDK PluginMessage 由宿主按呈现语言解析；设置页显示当前 locale。
+- 国际化：UI 默认跟随 Paseo 宿主语言（English/中文）；设置→语言提供插件级_override（跟随 Paseo/English/中文，本机持久化，默认跟随）。906 条双语 catalog（tools/i18n-zh.json / i18n-en.json）经 tools/i18n-build.mjs 编译为 i18n-resources.ts；调用点统一 t()，命令面板/设置页标题等持久注册用 SDK PluginMessage 由宿主按呈现语言解析；设置页显示当前生效 locale。
 - API Key 只保存在本机 Paseo 后台：`~/.paseo/multica/connections.json`（权限 `0600`）。
 - Key 不会下发到客户端界面，设置页只显示 `mul_…abcd` 形式的掩码。
 - 所有请求由 daemon 侧发起，客户端通过 RPC 间接调用，浏览器标签页里拿不到明文 Key。

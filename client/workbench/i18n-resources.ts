@@ -848,7 +848,11 @@ export const resources = {
     "61": "Verified",
     "62": "Default workspace",
     "66": "Please enter a server address",
-    "67": "Please enter an API key"
+    "67": "Please enter an API key",
+    "68": "Language",
+    "69": "Follow Paseo",
+    "70": "English",
+    "71": "中文"
   },
   "Team": {
     "5": "Create session failed",
@@ -1808,7 +1812,11 @@ export const resources = {
     "61": "已验证",
     "62": "默认工作区",
     "66": "请填写服务器地址",
-    "67": "请填写 API Key"
+    "67": "请填写 API Key",
+    "68": "语言",
+    "69": "跟随 Paseo",
+    "70": "English",
+    "71": "中文"
   },
   "Team": {
     "5": "创建会话失败",

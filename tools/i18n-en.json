@@ -900,5 +900,9 @@
   "index.client.19": "api",
   "index.client.20": "debug",
   "index.client.21": "Multica connection settings",
-  "index.client.24": "server"
+  "index.client.24": "server",
+  "Settings.68": "Language",
+  "Settings.69": "Follow Paseo",
+  "Settings.70": "English",
+  "Settings.71": "中文"
 }

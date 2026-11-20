@@ -1,4 +1,4 @@
-import { t, useI18n, bindTranslation } from "./i18n";
+import { t, useI18n, bindTranslation, useLocaleOverride, messagesFor } from "./i18n";
 import type { PluginTheme } from "@getpaseo/plugin";
 import { useRpc } from "@getpaseo/plugin/client";
 import { useToast } from "@getpaseo/plugin/client/ui";
@@ -107,8 +107,10 @@ export function WorkbenchProvider({
   children: ReactNode;
 }) {
   const api = useApi();
-  const { locale, t: translate } = useI18n();
+  const override = useLocaleOverride();
+  const { locale: hostLocale, t: translate } = useI18n(messagesFor(override));
   bindTranslation((key, args) => translate(key as never, args as never));
+  const locale = override === "auto" ? hostLocale : override;
   const toast = useToast();
   const listRpc = useRpc(connectionsListRpc);
   const bootstrapRpcFn = useRpc(bootstrapRpc);
