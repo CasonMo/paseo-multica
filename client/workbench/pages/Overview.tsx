@@ -1,7 +1,7 @@
 import { Icon } from "@getpaseo/plugin/client/ui";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { Btn, Card, Divider, Empty, ErrorNote, LoadingRow, SectionHeader, Stat, Tag, useUi } from "../bits";
-import { asList, asRecord, num, useQuery } from "../api";
+import { Btn, Card, Divider, Empty, ErrorNote, LoadingRow, LoadMore, nearBottom, SectionHeader, Stat, Tag, useUi } from "../bits";
+import { asList, asRecord, num, usePagedQuery, useQuery } from "../api";
 import { useWorkbench } from "../context";
 import { relTime, type Agent, type AgentRuntime, type InboxItem, type Issue, type Project } from "../model";
 import { AgentRow, InboxRow, IssueRow } from "../parts";
@@ -13,26 +13,32 @@ export function OverviewPage() {
   const ui = useUi(theme, compact);
   const key = `${workspaceId}:${bump}`;
 
-  const recent = useQuery(api, "/api/issues", { query: { limit: 8, sort: "updated_at", direction: "desc" } }, key);
+  const recent = usePagedQuery<Issue>(
+    api,
+    "/api/issues",
+    { query: { sort: "updated_at", direction: "desc" }, pageSize: 12 },
+    key,
+    "issues",
+  );
   const started = useQuery(api, "/api/issues", { query: { limit: 1, status_category: "started" } }, key);
   const unread = useQuery(api, "/api/inbox/unread-count", {}, key);
-  const agents = useQuery(api, "/api/agents", { query: { limit: 6 } }, key);
+  const agents = usePagedQuery<Agent>(api, "/api/agents", { pageSize: 8 }, key, "agents");
   const runtimes = useQuery(api, "/api/runtimes", { query: { limit: 50 } }, key);
   const inbox = useQuery(api, "/api/inbox", { query: { limit: 20 } }, key);
   const projects = useQuery(api, "/api/projects", { query: { limit: 5 } }, key);
 
-  const recentList = asList<Issue>(recent.data, "issues");
-  const totalIssues = num(asRecord(recent.data).total, recentList.length);
+  const recentList = recent.items;
+  const totalIssues = recent.total;
   const startedTotal = num(asRecord(started.data).total, 0);
   const unreadCount =
     typeof unread.data === "number" ? unread.data : num(asRecord(unread.data).count ?? asRecord(unread.data).unread, 0);
-  const agentList = asList<Agent>(agents.data, "agents");
+  const agentList = agents.items;
   const runtimeList = asList<AgentRuntime>(runtimes.data, "runtimes", "devices");
   const inboxList = asList<InboxItem>(inbox.data, "items", "inbox");
   const inboxTotal = num(asRecord(inbox.data).total, inboxList.length);
   const projectList = asList<Project>(projects.data, "projects");
   const onlineRuntimes = runtimeList.filter((runtime) => runtime.status === "online");
-  const agentsTotal = num(asRecord(agents.data).total, agentList.length);
+  const agentsTotal = agents.total;
 
   const markRead = async (item: InboxItem) => {
     const result = await api({ method: "POST", path: `/api/inbox/${item.id}/read` });
@@ -119,9 +125,9 @@ export function OverviewPage() {
 
       <UsageCard />
 
-      <View style={{ flexDirection: compact ? "column" : "row", gap: 14, alignItems: "flex-start" }}>
-        <View style={{ flex: compact ? undefined : 1.5, gap: 14, width: compact ? "100%" : undefined }}>
-          <Card ui={ui} padded={false}>
+      <View style={{ flexDirection: compact ? "column" : "row", gap: 14, alignItems: "stretch", height: compact ? undefined : 700 }}>
+        <View style={{ flex: compact ? undefined : 1.5, gap: 14, width: compact ? "100%" : undefined, height: compact ? undefined : 700 }}>
+          <Card ui={ui} padded={false} style={{ flex: 1, overflow: "hidden" }}>
             <View style={{ paddingHorizontal: 14, paddingTop: 14 }}>
               <SectionHeader
                 ui={ui}
@@ -138,18 +144,38 @@ export function OverviewPage() {
             ) : recentList.length === 0 ? (
               <Empty ui={ui} icon="Inbox" title="还没有需求" description="创建第一条需求，让智能体开始协作。" action={<Btn ui={ui} label="新建需求" tone="primary" icon="Plus" onPress={() => navigate("issues", { create: "1" })} />} />
             ) : (
-              <View style={{ paddingBottom: 6 }}>
-                {recentList.map((issue, index) => (
-                  <View key={issue.id}>
-                    {index > 0 ? <Divider ui={ui} style={{ marginHorizontal: 14 }} /> : null}
-                    <IssueRow ui={ui} issue={issue} statuses={statuses} onPress={() => navigate("issue", { id: issue.id })} />
-                  </View>
-                ))}
+              <View style={{ flex: compact ? 0 : 1 }}>
+                <ScrollView
+                  style={{ flex: compact ? 0 : 1, height: compact ? 300 : undefined, minHeight: compact ? undefined : 240 }}
+                  contentContainerStyle={{ paddingBottom: 6 }}
+                  onScroll={(e) => {
+                    if (nearBottom(e)) recent.loadMore();
+                  }}
+                  scrollEventThrottle={200}
+                >
+                  {recentList.map((issue, index) => (
+                    <View key={issue.id}>
+                      {index > 0 ? <Divider ui={ui} style={{ marginHorizontal: 14 }} /> : null}
+                      <IssueRow ui={ui} issue={issue} statuses={statuses} onPress={() => navigate("issue", { id: issue.id })} />
+                    </View>
+                  ))}
+                </ScrollView>
+                <View style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: ui.c.line }}>
+                  <LoadMore
+                    ui={ui}
+                    loaded={recentList.length}
+                    total={totalIssues}
+                    hasMore={recent.hasMore}
+                    loadingMore={recent.loadingMore}
+                    loading={recent.loading}
+                    onLoadMore={recent.loadMore}
+                  />
+                </View>
               </View>
             )}
           </Card>
 
-          <Card ui={ui} padded={false}>
+          <Card ui={ui} padded={false} style={{ flexShrink: 0 }}>
             <View style={{ paddingHorizontal: 14, paddingTop: 14 }}>
               <SectionHeader
                 ui={ui}
@@ -169,8 +195,8 @@ export function OverviewPage() {
           </Card>
         </View>
 
-        <View style={{ flex: compact ? undefined : 1, gap: 14, width: compact ? "100%" : undefined }}>
-          <Card ui={ui} padded={false} style={{ overflow: "hidden" }}>
+        <View style={{ flex: compact ? undefined : 1, gap: 14, width: compact ? "100%" : undefined, height: compact ? undefined : 700 }}>
+          <Card ui={ui} padded={false} style={{ overflow: "hidden", flexShrink: 0 }}>
             <View style={{ paddingHorizontal: 14, paddingTop: 14 }}>
               <SectionHeader
                 ui={ui}
@@ -225,7 +251,7 @@ export function OverviewPage() {
             )}
           </Card>
 
-          <Card ui={ui} padded={false}>
+          <Card ui={ui} padded={false} style={{ flex: 1, overflow: "hidden" }}>
             <View style={{ paddingHorizontal: 14, paddingTop: 14 }}>
               <SectionHeader
                 ui={ui}
@@ -238,23 +264,38 @@ export function OverviewPage() {
             ) : agentList.length === 0 ? (
               <Empty ui={ui} icon="Bot" title="还没有智能体" description="在 Multica 后台创建智能体后会显示在这里。" />
             ) : (
-              <View style={{ paddingBottom: 6 }}>
-                {agentList.slice(0, 5).map((agent, index) => (
-                  <View key={agent.id}>
-                    {index > 0 ? <Divider ui={ui} style={{ marginHorizontal: 14 }} /> : null}
-                    <AgentRow
-                      ui={ui}
-                      agent={agent}
-                      runtimeLabel={runtimeLabelFor(agent, runtimeList)}
-                      onPress={() => navigate("team", { agent: agent.id })}
-                    />
-                  </View>
-                ))}
-                {agentsTotal > 0 ? (
-                  <Text style={[ui.s.tiny, { paddingHorizontal: 14, paddingTop: 6 }]}>
-                    共 {agentsTotal} 个智能体
-                  </Text>
-                ) : null}
+              <View style={{ flex: compact ? 0 : 1 }}>
+                <ScrollView
+                  style={{ flex: compact ? 0 : 1, height: compact ? 260 : undefined, minHeight: compact ? undefined : 140 }}
+                  contentContainerStyle={{ paddingBottom: 6 }}
+                  onScroll={(e) => {
+                    if (nearBottom(e)) agents.loadMore();
+                  }}
+                  scrollEventThrottle={200}
+                >
+                  {agentList.map((agent, index) => (
+                    <View key={agent.id}>
+                      {index > 0 ? <Divider ui={ui} style={{ marginHorizontal: 14 }} /> : null}
+                      <AgentRow
+                        ui={ui}
+                        agent={agent}
+                        runtimeLabel={runtimeLabelFor(agent, runtimeList)}
+                        onPress={() => navigate("team", { agent: agent.id })}
+                      />
+                    </View>
+                  ))}
+                </ScrollView>
+                <View style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: ui.c.line }}>
+                  <LoadMore
+                    ui={ui}
+                    loaded={agentList.length}
+                    total={agentsTotal}
+                    hasMore={agents.hasMore}
+                    loadingMore={agents.loadingMore}
+                    loading={agents.loading}
+                    onLoadMore={agents.loadMore}
+                  />
+                </View>
               </View>
             )}
           </Card>
