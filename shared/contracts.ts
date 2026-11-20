@@ -161,7 +161,10 @@ export const inboxBadgeRpc = defineRpc({
   }),
 });
 
-export const wecomViewSchema = z.object({
+export const wecomBotViewSchema = z.object({
+  id: z.string(),
+  serverId: z.string(),
+  workspaceId: z.string().nullable(),
   enabled: z.boolean(),
   botId: z.string(),
   secretMasked: z.string(),
@@ -191,11 +194,20 @@ export const wecomViewSchema = z.object({
     }),
   ),
   pushedCount: z.number(),
+  updatedAt: z.string(),
+});
+export type WecomBotView = z.infer<typeof wecomBotViewSchema>;
+
+export const wecomListViewSchema = z.object({
+  bots: z.array(wecomBotViewSchema),
   storePath: z.string(),
 });
-export type WecomView = z.infer<typeof wecomViewSchema>;
+export type WecomListView = z.infer<typeof wecomListViewSchema>;
 
 export const wecomSaveInput = z.object({
+  id: z.string().optional(),
+  serverId: z.string().optional(),
+  workspaceId: z.string().nullable().optional(),
   enabled: z.boolean().optional(),
   botId: z.string().optional(),
   secret: z.string().optional(),
@@ -207,32 +219,38 @@ export const wecomSaveInput = z.object({
 });
 export type WecomSaveInput = z.infer<typeof wecomSaveInput>;
 
-export const wecomGetRpc = defineRpc({
-  name: "wecom.get",
+export const wecomListRpc = defineRpc({
+  name: "wecom.list",
   input: z.object({}),
-  output: wecomViewSchema,
+  output: wecomListViewSchema,
 });
 
 export const wecomSaveRpc = defineRpc({
   name: "wecom.save",
   input: wecomSaveInput,
-  output: wecomViewSchema,
+  output: wecomListViewSchema,
+});
+
+export const wecomRemoveRpc = defineRpc({
+  name: "wecom.remove",
+  input: z.object({ id: z.string() }),
+  output: wecomListViewSchema,
 });
 
 export const wecomTestRpc = defineRpc({
   name: "wecom.test",
-  input: z.object({}),
+  input: z.object({ id: z.string() }),
   output: z.object({ ok: z.boolean(), error: z.string().nullable() }),
 });
 
 export const wecomPushRpc = defineRpc({
   name: "wecom.push",
-  input: z.object({}),
+  input: z.object({ id: z.string() }),
   output: z.object({ ok: z.boolean(), pushed: z.number(), error: z.string().nullable() }),
 });
 
 export const wecomUnbindRpc = defineRpc({
   name: "wecom.unbind",
-  input: z.object({ chatid: z.string() }),
-  output: wecomViewSchema,
+  input: z.object({ id: z.string(), chatid: z.string() }),
+  output: wecomListViewSchema,
 });

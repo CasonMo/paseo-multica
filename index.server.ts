@@ -10,8 +10,9 @@ import {
   inboxBadgeRpc,
   preferencesSaveRpc,
   workspaceSelectRpc,
-  wecomGetRpc,
+  wecomListRpc,
   wecomPushRpc,
+  wecomRemoveRpc,
   wecomSaveRpc,
   wecomTestRpc,
   wecomUnbindRpc,
@@ -32,8 +33,9 @@ export default function contribute(server: PluginServerContext) {
   server.handle(bootstrapRpc, handlers.bootstrap);
   server.handle(apiRequestRpc, handlers.request);
   server.handle(inboxBadgeRpc, handlers.inboxBadge);
-  server.handle(wecomGetRpc, handlers.wecomGet);
+  server.handle(wecomListRpc, handlers.wecomList);
   server.handle(wecomSaveRpc, handlers.wecomSave);
+  server.handle(wecomRemoveRpc, handlers.wecomRemove);
   server.handle(wecomTestRpc, handlers.wecomTest);
   server.handle(wecomPushRpc, handlers.wecomPush);
   server.handle(wecomUnbindRpc, handlers.wecomUnbind);
