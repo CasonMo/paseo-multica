@@ -134,7 +134,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const activeTask = (activeTaskQuery.data ?? []).find((task) => task.status === "running") ?? null;
   const activeAgent = activeTask ? agents.find((agent) => agent.id === activeTask.agent_id) ?? null : null;
 
-  const insights = useIssueInsights(issueId, bump);
+  const insights = useIssueInsights(issueId, bump, !ctx.loading);
   const runs = insights.runs;
   const [runsOpen, setRunsOpen] = useState(false);
   const [runLogId, setRunLogId] = useState<string | null>(null);

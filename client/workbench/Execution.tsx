@@ -152,7 +152,7 @@ export interface IssueInsights {
 }
 
 /** 服务端聚合 task-runs / usage / timeline / comments，避免客户端逐条查询的不稳定。 */
-export function useIssueInsights(issueId: string, bump: number): IssueInsights & { loading: boolean; refresh: () => void } {
+export function useIssueInsights(issueId: string, bump: number, ready = true): IssueInsights & { loading: boolean; refresh: () => void } {
   const fetchRpc = useRpc(issueInsightsRpc);
   const fetchRef = useRef(fetchRpc);
   fetchRef.current = fetchRpc;
@@ -161,18 +161,22 @@ export function useIssueInsights(issueId: string, bump: number): IssueInsights &
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    if (!issueId) return;
+    if (!issueId || !ready) return;
     let alive = true;
     const load = async () => {
       try {
         const result = await fetchRef.current({ issueId });
         if (!alive) return;
-        setData({
-          runs: (result.runs ?? []) as unknown as TaskRun[],
-          usage: (result.usage ?? null) as IssueUsage | null,
-          timeline: (result.timeline ?? []) as unknown as TimelineEntry[],
-          comments: (result.comments ?? []) as unknown as Comment[],
-        });
+        const runs = (result.runs ?? []) as unknown as TaskRun[];
+        const timeline = (result.timeline ?? []) as unknown as TimelineEntry[];
+        const comments = (result.comments ?? []) as unknown as Comment[];
+        const usage = (result.usage ?? null) as IssueUsage | null;
+        setData((prev) => ({
+          runs: runs.length > 0 ? runs : prev.runs,
+          usage: usage && Object.keys(usage).length > 0 ? usage : prev.usage,
+          timeline: timeline.length > 0 ? timeline : prev.timeline,
+          comments: comments.length > 0 ? comments : prev.comments,
+        }));
         setLoading(false);
       } catch {
         //  保留上一次数据，下一轮轮询自愈
@@ -184,7 +188,7 @@ export function useIssueInsights(issueId: string, bump: number): IssueInsights &
       alive = false;
       clearInterval(timer);
     };
-  }, [issueId, bump, tick]);
+  }, [issueId, bump, tick, ready]);
 
   return { ...data, loading, refresh: () => setTick((v) => v + 1) };
 }

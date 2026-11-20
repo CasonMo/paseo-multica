@@ -287,8 +287,9 @@ export function createHandlers() {
   ): Promise<RpcOutput<typeof issueInsightsRpc>> => {
     const server = await resolveServer();
     const call = async (path: string) => {
-      const result = await requestMultica({ server, method: "GET", path, workspaceId: server.workspaceId, allowInternal: server.allowInternal });
-      return result.ok ? result.data : null;
+      const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 12000));
+      const fetch = requestMultica({ server, method: "GET", path, workspaceId: server.workspaceId, allowInternal: server.allowInternal }).then((r) => (r.ok ? r.data : null));
+      return Promise.race([fetch, timeout]);
     };
     const [runsRaw, usageRaw, timelineRaw, commentsRaw] = await Promise.all([
       call(`/api/issues/${input.issueId}/task-runs`),
