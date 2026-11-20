@@ -43,7 +43,6 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const [childOpen, setChildOpen] = useState(false);
   const [childTitle, setChildTitle] = useState("");
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
-  const [composerFor, setComposerFor] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [threadBusy, setThreadBusy] = useState<string | null>(null);
 
@@ -146,7 +145,6 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
 
   const closeComposer = () => {
     setReplyTo(null);
-    setComposerFor(null);
     setMentionFor(null);
   };
 
@@ -314,7 +312,6 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   };
   const openReply = (rootId: string, item: Comment) => {
     setReplyTo(item);
-    setComposerFor(rootId);
     setCollapsed((prev) => ({ ...prev, [rootId]: false }));
     setMentionFor(null);
   };
@@ -502,17 +499,40 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
               const replies = threadOf(root.id);
               const folded = collapsed[root.id] === true;
               const target = replyTo && (replyTo.id === root.id || replies.some((item) => item.id === replyTo.id)) ? replyTo : null;
-              const open = composerFor === root.id;
-              const inlineFor = open ? (target?.id ?? root.id) : null;
-              const threadComposer = (
-                <>
-                  <Divider ui={ui} color={half} />
-                  <View style={{ padding: 12 }}>
-                    <CommentComposer
+              return (
+                <View key={root.id}>
+                  <View style={[ui.s.panel, mentionFor === root.id && { overflow: "visible" }]}>
+                    <CommentCard
+                      ui={ui}
+                      item={root}
+                      agents={agents}
+                      members={members}
+                      busy={threadBusy === root.id}
+                      onReply={() => openReply(root.id, root)}
+                      onResolve={() => void toggleResolve(root)}
+                    />
+                    {folded
+                      ? null
+                      : replies.map((reply) => (
+                          <View key={reply.id}>
+                            <Divider ui={ui} color={half} />
+                            <CommentCard
+                              ui={ui}
+                              item={reply}
+                              agents={agents}
+                              members={members}
+                              replyToName={commentAuthor(commentById.get(reply.parent_id ?? "") ?? null, agents, members).name}
+                              busy={threadBusy === reply.id}
+                              onReply={() => openReply(root.id, reply)}
+                              onResolve={() => void toggleResolve(reply)}
+                            />
+                          </View>
+                        ))}
+                    <Divider ui={ui} color={half} />
+                    <ReplyBand
                       ui={ui}
                       value={drafts[root.id] ?? ""}
                       onChangeText={(text) => setDrafts((prev) => ({ ...prev, [root.id]: text }))}
-                      placeholder="回复这条评论，@ 智能体可指定执行者…"
                       chip={target ? replyChip(target) : null}
                       busy={sendingKey === root.id}
                       agents={agents}
@@ -520,64 +540,24 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                       onMention={() => setMentionFor((prev) => (prev === root.id ? null : root.id))}
                       onCloseMention={() => setMentionFor(null)}
                       onPickAgent={insertMention}
-                      onCancel={closeComposer}
                       onSend={() => void sendComment(root.id, target ? target.id : root.id)}
                     />
                   </View>
-                </>
-              );
-              return (
-                <View
-                  key={root.id}
-                  style={[ui.s.panel, (open || mentionFor === root.id) && { overflow: "visible" }]}
-                >
-                  <CommentCard
-                    ui={ui}
-                    item={root}
-                    agents={agents}
-                    members={members}
-                    busy={threadBusy === root.id}
-                    onReply={() => openReply(root.id, root)}
-                    onResolve={() => void toggleResolve(root)}
-                  />
-                  {inlineFor === root.id ? threadComposer : null}
                   {replies.length > 0 ? (
-                    <>
-                      <Divider ui={ui} color={half} />
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={folded ? `展开 ${replies.length} 条回复` : "收起回复"}
-                        onPress={() => setCollapsed((prev) => ({ ...prev, [root.id]: !folded }))}
-                        style={({ pressed }) => [
-                          ui.s.row,
-                          { gap: 5, paddingHorizontal: 16, paddingVertical: 7 },
-                          pressed && ui.s.pressed,
-                        ]}
-                      >
-                        <Icon name={folded ? "ChevronDown" : "ChevronUp"} size={13} color={ui.c.muted} />
-                        <Text style={{ fontSize: 12, color: ui.c.muted }}>
-                          {folded ? `展开 ${replies.length} 条回复` : "收起讨论"}
-                        </Text>
-                      </Pressable>
-                      {folded
-                        ? null
-                        : replies.map((reply) => (
-                            <View key={reply.id}>
-                              <Divider ui={ui} color={half} />
-                              <CommentCard
-                                ui={ui}
-                                item={reply}
-                                agents={agents}
-                                members={members}
-                                replyToName={commentAuthor(commentById.get(reply.parent_id ?? "") ?? null, agents, members).name}
-                                busy={threadBusy === reply.id}
-                                onReply={() => openReply(root.id, reply)}
-                                onResolve={() => void toggleResolve(reply)}
-                              />
-                              {inlineFor === reply.id ? threadComposer : null}
-                            </View>
-                          ))}
-                    </>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={folded ? `展开 ${replies.length} 条动态` : `收起 ${replies.length} 条动态`}
+                      accessibilityState={{ expanded: !folded }}
+                      onPress={() => setCollapsed((prev) => ({ ...prev, [root.id]: !folded }))}
+                      style={({ pressed }) => [
+                        ui.s.row,
+                        { gap: 5, paddingHorizontal: 4, paddingVertical: 7 },
+                        pressed && ui.s.pressed,
+                      ]}
+                    >
+                      <Icon name={folded ? "ChevronRight" : "ChevronDown"} size={13} color={ui.c.muted} />
+                      <Text style={{ fontSize: 12, color: ui.c.muted }}>{replies.length} 条动态</Text>
+                    </Pressable>
                   ) : null}
                 </View>
               );
@@ -1026,11 +1006,81 @@ function commentAuthor(
   };
 }
 
-function CommentComposer({
+function MentionPopover({
+  ui,
+  agents,
+  onPickAgent,
+  onClose,
+}: {
+  ui: Ui;
+  agents: Agent[];
+  onPickAgent(agent: Agent): void;
+  onClose(): void;
+}) {
+  return (
+    <View
+      style={{
+        position: "absolute",
+        bottom: "100%",
+        left: 0,
+        marginBottom: 6,
+        width: 288,
+        maxHeight: 300,
+        zIndex: 30,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: ui.c.border,
+        backgroundColor: ui.c.card,
+        boxShadow: ui.c.shadowLift,
+        paddingVertical: 4,
+        overflow: "hidden",
+      }}
+    >
+      <View style={[ui.s.row, { paddingHorizontal: 12, paddingVertical: 5 }]}>
+        <Text style={{ flex: 1, fontSize: 11, fontWeight: "500", color: ui.c.muted }}>智能体</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="关闭提及选择"
+          onPress={onClose}
+          style={({ pressed }) => [pressed && ui.s.pressed]}
+        >
+          <Icon name="X" size={12} color={ui.c.muted} />
+        </Pressable>
+      </View>
+      <ScrollView style={{ maxHeight: 252 }} keyboardShouldPersistTaps="handled">
+        {agents.length === 0 ? (
+          <Text style={[ui.s.tiny, { paddingHorizontal: 12, paddingVertical: 8 }]}>暂无智能体</Text>
+        ) : (
+          agents.map((agent) => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`提及 ${agent.name}`}
+              key={`mention-${agent.id}`}
+              onPress={() => onPickAgent(agent)}
+              style={({ pressed }) => [
+                ui.s.row,
+                { gap: 10, height: 32, paddingHorizontal: 12, paddingVertical: 6 },
+                pressed && ui.s.pressed,
+              ]}
+            >
+              <Avatar ui={ui} name={agent.name} url={agent.avatar_url} size={20} />
+              <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, color: ui.c.fg }}>
+                {agent.name}
+              </Text>
+              <Icon name="AtSign" size={12} color={ui.c.faint} />
+            </Pressable>
+          ))
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+/** 每个评论模块底部常驻的细回复条，对齐官方「回复...」band。 */
+function ReplyBand({
   ui,
   value,
   onChangeText,
-  placeholder,
   chip,
   busy,
   agents,
@@ -1038,13 +1088,11 @@ function CommentComposer({
   onMention,
   onCloseMention,
   onPickAgent,
-  onCancel,
   onSend,
 }: {
   ui: Ui;
   value: string;
   onChangeText(text: string): void;
-  placeholder: string;
   chip?: React.ReactNode;
   busy?: boolean;
   agents: Agent[];
@@ -1052,7 +1100,83 @@ function CommentComposer({
   onMention(): void;
   onCloseMention(): void;
   onPickAgent(agent: Agent): void;
-  onCancel?: () => void;
+  onSend(): void;
+}) {
+  return (
+    <View
+      style={{
+        position: "relative",
+        backgroundColor: ui.c.dark ? `${ui.c.fill}59` : ui.c.canvas,
+      }}
+    >
+      {chip ? <View style={{ paddingHorizontal: 12, paddingTop: 8 }}>{chip}</View> : null}
+      <View style={[ui.s.row, { gap: 8, paddingHorizontal: 12, paddingVertical: 7 }]}>
+        <Icon name="Bot" size={14} color={ui.c.faint} />
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder="回复..."
+          placeholderTextColor={ui.c.faint}
+          multiline
+          onSubmitEditing={onSend}
+          style={{
+            flex: 1,
+            minHeight: 24,
+            maxHeight: 120,
+            color: ui.c.fg,
+            fontSize: 13,
+            lineHeight: 19,
+            paddingVertical: 2,
+          }}
+        />
+        <IconBtn
+          ui={ui}
+          icon="AtSign"
+          label="提及智能体"
+          size={15}
+          color={mentionOpen ? ui.c.brand : ui.c.muted}
+          onPress={onMention}
+        />
+        <IconBtn
+          ui={ui}
+          icon="Send"
+          label="发送回复"
+          size={15}
+          color={value.trim() ? ui.c.primary : ui.c.faint}
+          busy={busy}
+          onPress={onSend}
+        />
+      </View>
+      {mentionOpen ? (
+        <MentionPopover ui={ui} agents={agents} onPickAgent={onPickAgent} onClose={onCloseMention} />
+      ) : null}
+    </View>
+  );
+}
+
+function CommentComposer({
+  ui,
+  value,
+  onChangeText,
+  placeholder,
+  busy,
+  agents,
+  mentionOpen,
+  onMention,
+  onCloseMention,
+  onPickAgent,
+  onSend,
+}: {
+  ui: Ui;
+  value: string;
+  onChangeText(text: string): void;
+  placeholder: string;
+  busy?: boolean;
+  agents: Agent[];
+  mentionOpen: boolean;
+  onMention(): void;
+  onCloseMention(): void;
+  onPickAgent(agent: Agent): void;
   onSend(): void;
 }) {
   return (
@@ -1068,7 +1192,6 @@ function CommentComposer({
         boxShadow: ui.c.shadow,
       }}
     >
-      {chip}
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -1088,7 +1211,6 @@ function CommentComposer({
       <View style={[ui.s.row, { gap: 2 }]}>
         <IconBtn ui={ui} icon="AtSign" label="提及智能体" onPress={onMention} color={mentionOpen ? ui.c.brand : ui.c.muted} />
         <View style={ui.s.grow} />
-        {onCancel ? <Btn ui={ui} label="取消" onPress={onCancel} /> : null}
         <IconBtn
           ui={ui}
           icon="Send"
@@ -1098,63 +1220,8 @@ function CommentComposer({
           onPress={onSend}
         />
       </View>
-
       {mentionOpen ? (
-        <View
-          style={{
-            position: "absolute",
-            bottom: "100%",
-            left: 0,
-            marginBottom: 6,
-            width: 288,
-            maxHeight: 300,
-            zIndex: 30,
-            borderRadius: 6,
-            borderWidth: 1,
-            borderColor: ui.c.border,
-            backgroundColor: ui.c.card,
-            boxShadow: ui.c.shadowLift,
-            paddingVertical: 4,
-            overflow: "hidden",
-          }}
-        >
-          <View style={[ui.s.row, { paddingHorizontal: 12, paddingVertical: 5 }]}>
-            <Text style={{ flex: 1, fontSize: 11, fontWeight: "500", color: ui.c.muted }}>智能体</Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="关闭提及选择"
-              onPress={onCloseMention}
-              style={({ pressed }) => [pressed && ui.s.pressed]}
-            >
-              <Icon name="X" size={12} color={ui.c.muted} />
-            </Pressable>
-          </View>
-          <ScrollView style={{ maxHeight: 252 }} keyboardShouldPersistTaps="handled">
-            {agents.length === 0 ? (
-              <Text style={[ui.s.tiny, { paddingHorizontal: 12, paddingVertical: 8 }]}>暂无智能体</Text>
-            ) : (
-              agents.map((agent) => (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`提及 ${agent.name}`}
-                  key={`mention-${agent.id}`}
-                  onPress={() => onPickAgent(agent)}
-                  style={({ pressed }) => [
-                    ui.s.row,
-                    { gap: 10, height: 32, paddingHorizontal: 12, paddingVertical: 6 },
-                    pressed && ui.s.pressed,
-                  ]}
-                >
-                  <Avatar ui={ui} name={agent.name} url={agent.avatar_url} size={20} />
-                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, color: ui.c.fg }}>
-                    {agent.name}
-                  </Text>
-                  <Icon name="AtSign" size={12} color={ui.c.faint} />
-                </Pressable>
-              ))
-            )}
-          </ScrollView>
-        </View>
+        <MentionPopover ui={ui} agents={agents} onPickAgent={onPickAgent} onClose={onCloseMention} />
       ) : null}
     </View>
   );
