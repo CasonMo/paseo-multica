@@ -1,6 +1,6 @@
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, Text, TextInput, View, type ViewStyle } from "react-native";
 import { Avatar, Btn, Divider, Empty, ErrorNote, Field, LoadingRow, Tag, useUi } from "../bits";
 import { asList, asRecord, useQuery } from "../api";
 import { useWorkbench } from "../context";
@@ -19,6 +19,14 @@ import {
 import { PriorityTag, StatusPill } from "../parts";
 
 const PRIORITIES = ["urgent", "high", "medium", "low", "none"] as const;
+
+const groupStyle = (ui: ReturnType<typeof useUi>): ViewStyle => ({
+  borderWidth: 1,
+  borderColor: ui.c.border,
+  borderRadius: 10,
+  overflow: "hidden",
+  backgroundColor: ui.c.surface2,
+});
 
 export function IssueDetailPage({ issueId }: { issueId: string }) {
   const ctx = useWorkbench();
@@ -422,15 +430,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
               ) : null}
 
               {parent || children.length > 0 ? (
-                <View
-                  style={{
-                    borderWidth: 1,
-                    borderColor: ui.c.border,
-                    borderRadius: 10,
-                    overflow: "hidden",
-                    backgroundColor: ui.c.surface2,
-                  }}
-                >
+                <View style={groupStyle(ui)}>
                   {parent ? (
                     <Pressable
                       accessibilityRole="button"
@@ -487,27 +487,22 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
 
             <View style={{ gap: 6 }}>
               <Text style={ui.s.label}>评论 · {comments.length}</Text>
-              <View
-                style={{
-                  borderWidth: 1,
-                  borderColor: ui.c.border,
-                  borderRadius: 10,
-                  overflow: "hidden",
-                  backgroundColor: ui.c.surface2,
-                }}
-              >
-                {commentsQuery.loading && comments.length === 0 ? (
+              {commentsQuery.loading && comments.length === 0 ? (
+                <View style={groupStyle(ui)}>
                   <View style={{ padding: 12 }}>
                     <LoadingRow ui={ui} />
                   </View>
-                ) : comments.length === 0 ? (
+                </View>
+              ) : comments.length === 0 ? (
+                <View style={groupStyle(ui)}>
                   <Text style={[ui.s.tiny, { padding: 12 }]}>还没有评论，@ 智能体即可触发协作。</Text>
-                ) : (
-                  roots.map((root, rootIndex) => {
+                </View>
+              ) : (
+                <View style={{ gap: 10 }}>
+                  {roots.map((root) => {
                     const replies = threadOf(root.id);
                     return (
-                      <View key={root.id}>
-                        {rootIndex > 0 ? <Divider ui={ui} color={`${ui.c.fg}1f`} /> : null}
+                      <View key={root.id} style={groupStyle(ui)}>
                         <CommentCard
                           ui={ui}
                           item={root}
@@ -518,35 +513,38 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                           onResolve={() => void toggleResolve(root)}
                         />
                         {replies.length > 0 ? (
-                          <View
-                            style={{
-                              marginLeft: 16,
-                              borderLeftWidth: 1,
-                              borderLeftColor: `${ui.c.fg}1f`,
-                            }}
-                          >
-                            {replies.map((reply, replyIndex) => (
-                              <View key={reply.id}>
-                                {replyIndex > 0 ? <Divider ui={ui} color={`${ui.c.fg}1f`} /> : null}
-                                <CommentCard
-                                  ui={ui}
-                                  item={reply}
-                                  agents={agents}
-                                  members={members}
-                                  replyToName={commentAuthor(commentById.get(reply.parent_id ?? "") ?? null, agents, members).name}
-                                  busy={threadBusy === reply.id}
-                                  onReply={() => setReplyTo(reply)}
-                                  onResolve={() => void toggleResolve(reply)}
-                                />
-                              </View>
-                            ))}
+                          <View>
+                            <Divider ui={ui} color={`${ui.c.fg}1f`} />
+                            <View
+                              style={{
+                                marginLeft: 16,
+                                borderLeftWidth: 1,
+                                borderLeftColor: `${ui.c.fg}1f`,
+                              }}
+                            >
+                              {replies.map((reply, replyIndex) => (
+                                <View key={reply.id}>
+                                  {replyIndex > 0 ? <Divider ui={ui} color={`${ui.c.fg}1f`} /> : null}
+                                  <CommentCard
+                                    ui={ui}
+                                    item={reply}
+                                    agents={agents}
+                                    members={members}
+                                    replyToName={commentAuthor(commentById.get(reply.parent_id ?? "") ?? null, agents, members).name}
+                                    busy={threadBusy === reply.id}
+                                    onReply={() => setReplyTo(reply)}
+                                    onResolve={() => void toggleResolve(reply)}
+                                  />
+                                </View>
+                              ))}
+                            </View>
                           </View>
                         ) : null}
                       </View>
                     );
-                  })
-                )}
-              </View>
+                  })}
+                </View>
+              )}
               <View style={{ gap: 8, paddingTop: 6 }}>
                 {replyTo ? (
                   <View
