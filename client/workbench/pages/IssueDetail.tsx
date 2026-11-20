@@ -1,6 +1,15 @@
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
-import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from "react-native";
 import { Avatar, Btn, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, Tag, useUi, type Ui } from "../bits";
 import { asList, asRecord, useQuery } from "../api";
 import { refreshInboxBadge } from "../badge";
@@ -45,6 +54,10 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [threadBusy, setThreadBusy] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView | null>(null);
+  const metrics = useRef({ y: 0, viewH: 0, contentH: 0 });
+  const [scrollState, setScrollState] = useState({ canScroll: false, atBottom: true });
+  const [seenCount, setSeenCount] = useState(0);
 
   const issueQuery = useQuery(api, issueId ? `/api/issues/${issueId}` : null, {}, key);
   const issue = issueQuery.data && typeof issueQuery.data === "object" ? (issueQuery.data as Issue) : null;
@@ -53,7 +66,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const commentsQuery = useQuery(
     api,
     issueId ? `/api/issues/${issueId}/comments` : null,
-    { select: (data) => asList<Comment>(data, "comments") },
+    { select: (data) => asList<Comment>(data, "comments"), pollMs: 8000 },
     key,
   );
   const childrenQuery = useQuery(
@@ -114,6 +127,43 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     const member = members.find((item) => item.id === issue.assignee_id);
     return { name: member?.name || "成员", url: member?.avatar_url ?? null, kind: "成员" };
   }, [issue, agents, members]);
+
+  const commentCount = commentsQuery.data?.length ?? 0;
+
+  const applyMetrics = () => {
+    const { y, viewH, contentH } = metrics.current;
+    const canScroll = contentH > viewH + 24;
+    const atBottom = y + viewH >= contentH - 24;
+    setScrollState((prev) => (prev.canScroll === canScroll && prev.atBottom === atBottom ? prev : { canScroll, atBottom }));
+  };
+
+  const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    metrics.current = { y: contentOffset.y, viewH: layoutMeasurement.height, contentH: contentSize.height };
+    applyMetrics();
+  };
+
+  const onContentSizeChange = (_width: number, height: number) => {
+    metrics.current.contentH = height;
+    applyMetrics();
+  };
+
+  const onScrollLayout = (event: { nativeEvent: { layout: { height: number } } }) => {
+    metrics.current.viewH = event.nativeEvent.layout.height;
+    applyMetrics();
+  };
+
+  useEffect(() => {
+    if (scrollState.atBottom) setSeenCount(commentCount);
+  }, [scrollState.atBottom, commentCount]);
+
+  const newCount = Math.max(0, commentCount - seenCount);
+
+  const jump = () => {
+    if (scrollState.atBottom) scrollRef.current?.scrollTo({ y: 0, animated: true });
+    else scrollRef.current?.scrollToEnd({ animated: true });
+    setSeenCount(commentCount);
+  };
 
   const updateIssue = async (body: Record<string, unknown>, success: string) => {
     if (!issue) return;
@@ -346,6 +396,38 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
 
   const pad = compact || stacked ? 16 : narrow ? 20 : 28;
   const half = `${ui.c.line}80`;
+  const hasNew = newCount > 0 && !scrollState.atBottom;
+  const jumpButton = scrollState.canScroll ? (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={scrollState.atBottom ? "回到顶部" : hasNew ? `到底部，有 ${newCount} 条新评论` : "到底部"}
+      onPress={jump}
+      style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+        ui.s.row,
+        {
+          position: "absolute",
+          right: 14,
+          bottom: 14,
+          gap: 6,
+          paddingHorizontal: 12,
+          paddingVertical: 7,
+          borderRadius: 999,
+          borderWidth: 1,
+          borderColor: hasNew ? `${ui.c.brand}66` : ui.c.border,
+          backgroundColor: hasNew ? `${ui.c.brand}1f` : ui.c.card,
+          boxShadow: ui.c.shadowLift,
+          zIndex: 20,
+        },
+        hovered && { borderColor: ui.c.brand },
+        pressed && ui.s.pressed,
+      ]}
+    >
+      <Icon name={scrollState.atBottom ? "ArrowUp" : "ArrowDown"} size={14} color={hasNew ? ui.c.brand : ui.c.muted} />
+      <Text style={{ fontSize: 12, fontWeight: "500", color: hasNew ? ui.c.brand : ui.c.fg }}>
+        {scrollState.atBottom ? "回顶部" : hasNew ? `${newCount} 条新评论` : "到底部"}
+      </Text>
+    </Pressable>
+  ) : null;
 
   const content = (
     <>
@@ -711,17 +793,39 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
       </View>
 
       {compact || stacked ? (
-        <ScrollView contentContainerStyle={{ padding: pad, paddingBottom: 32, gap: 20 }}>
-          {content}
-          {composer}
-          <View style={{ gap: 16 }}>{panel}</View>
-        </ScrollView>
+        <View style={{ flex: 1, position: "relative" }}>
+          <ScrollView
+            ref={scrollRef}
+            onScroll={onScroll}
+            onContentSizeChange={onContentSizeChange}
+            onLayout={onScrollLayout}
+            scrollEventThrottle={16}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: pad, paddingBottom: 32, gap: 20 }}
+          >
+            {content}
+            {composer}
+            <View style={{ gap: 16 }}>{panel}</View>
+          </ScrollView>
+          {jumpButton}
+        </View>
       ) : (
         <View style={{ flex: 1, flexDirection: "row", minHeight: 0 }}>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: pad, paddingBottom: 24 }}>
-              <View style={{ width: "100%", maxWidth: 896, alignSelf: "center", gap: 24 }}>{content}</View>
-            </ScrollView>
+            <View style={{ flex: 1, position: "relative" }}>
+              <ScrollView
+                ref={scrollRef}
+                onScroll={onScroll}
+                onContentSizeChange={onContentSizeChange}
+                onLayout={onScrollLayout}
+                scrollEventThrottle={16}
+                style={{ flex: 1 }}
+                contentContainerStyle={{ padding: pad, paddingBottom: 24 }}
+              >
+                <View style={{ width: "100%", maxWidth: 896, alignSelf: "center", gap: 24 }}>{content}</View>
+              </ScrollView>
+              {jumpButton}
+            </View>
             <View style={{ paddingHorizontal: pad, paddingBottom: 16 }}>
               <View style={{ width: "100%", maxWidth: 896, alignSelf: "center" }}>{composer}</View>
             </View>
