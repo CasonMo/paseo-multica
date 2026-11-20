@@ -159,7 +159,7 @@ function WorkbenchSidebarRow({ currentScreen, openScreen, theme }: PluginSidebar
   return (
     <SidebarRow
       icon={{ svg: MULTICA_LOGO_SVG }}
-      label="Multica"
+      label={unread > 0 ? `Multica，${unread > 99 ? "99+" : unread} 条未读通知` : "Multica"}
       active={open}
       trailing={trailing}
       onPress={() => {

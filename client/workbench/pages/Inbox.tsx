@@ -116,9 +116,15 @@ export function InboxPage() {
   };
 
   // 进入收件箱即视为已读：自动清未读，避免侧栏小徽章必须手动点才消失。
+  // 但停留期间手动「标记未读」优先：本次停留不再自动已读，离开后再进入恢复自动。
   const autoReading = useRef(false);
+  const manualUnread = useRef(false);
   useEffect(() => {
-    if (tab !== "inbox" || unreadCount <= 0 || autoReading.current) return;
+    if (tab !== "inbox") {
+      manualUnread.current = false;
+      return;
+    }
+    if (unreadCount <= 0 || autoReading.current || manualUnread.current) return;
     autoReading.current = true;
     void markAllRead(true).finally(() => {
       autoReading.current = false;
@@ -282,7 +288,10 @@ export function InboxPage() {
                             ui={ui}
                             icon="MailOpen"
                             label="标记未读"
-                            onPress={() => void action(`/api/inbox/${item.id}/unread`, "POST", "已标记为未读")}
+                            onPress={() => {
+                              manualUnread.current = true;
+                              void action(`/api/inbox/${item.id}/unread`, "POST", "已标记为未读");
+                            }}
                           />
                         ) : null}
                         {tab === "inbox" ? (
