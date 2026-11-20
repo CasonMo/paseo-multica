@@ -96,7 +96,7 @@ export default function contribute(client: PluginClientContext) {
       icon: "Boxes",
       Component: ConnectionsScreen,
     }),
-    client.addSidebarFooterItem({
+    client.addSidebarHeaderItem({
       id: "multica-sidebar",
       title: "Multica",
       Component: WorkbenchSidebarRow,
