@@ -192,8 +192,8 @@ export function Card({
   return <View style={[ui.s.card, padded && ui.s.cardPad, style]}>{children}</View>;
 }
 
-export function Divider({ ui, style }: { ui: Ui; style?: StyleProp<ViewStyle> }) {
-  return <View style={[ui.s.divider, style]} />;
+export function Divider({ ui, style, color }: { ui: Ui; style?: StyleProp<ViewStyle>; color?: string }) {
+  return <View style={[ui.s.divider, color ? { backgroundColor: color } : null, style]} />;
 }
 
 export function Btn({

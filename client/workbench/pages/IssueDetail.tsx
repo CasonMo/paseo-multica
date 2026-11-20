@@ -339,36 +339,6 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
       <ScrollView contentContainerStyle={{ padding: compact ? 14 : 20, paddingBottom: 48 }}>
         <View style={{ flexDirection: compact ? "column" : "row", gap: compact ? 16 : 24, alignItems: "flex-start" }}>
           <View style={{ flex: 1, minWidth: 0, gap: 14 }}>
-            {parent ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`父任务 ${parent.identifier}`}
-                onPress={() => navigate("issue", { id: parent.id })}
-                style={({ pressed }) => [
-                  {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 7,
-                    alignSelf: "flex-start",
-                    maxWidth: "100%",
-                    paddingHorizontal: 8,
-                    paddingVertical: 4,
-                    borderRadius: 7,
-                    borderWidth: 1,
-                    borderColor: ui.c.border,
-                    backgroundColor: ui.c.surface2,
-                  },
-                  pressed && ui.s.pressed,
-                ]}
-              >
-                <Text style={{ fontSize: 10.5, color: ui.c.muted, fontWeight: "700" }}>父任务</Text>
-                <Text style={{ fontSize: 11.5, fontFamily: "Menlo", color: ui.c.muted }}>{parent.identifier}</Text>
-                <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 12, color: ui.c.fg }}>
-                  {parent.title}
-                </Text>
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: issueStatusColor(parent, statuses) }} />
-              </Pressable>
-            ) : null}
             <Text
               style={{
                 color: ui.c.fg,
@@ -397,7 +367,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
 
             <Divider ui={ui} />
 
-            <View style={{ gap: 2 }}>
+            <View style={{ gap: 6 }}>
               <View style={[ui.s.row, { gap: 8 }]}>
                 <Text style={[ui.s.label, { flex: 1 }]}>子任务 · {children.length}</Text>
                 <Pressable
@@ -451,52 +421,93 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                 </View>
               ) : null}
 
-              {children.length === 0 && !childOpen ? (
-                <Text style={[ui.s.tiny, { paddingVertical: 8 }]}>暂无子任务</Text>
-              ) : (
-                children.map((child) => {
-                  const owner = personOf(child.assignee_type, child.assignee_id);
-                  return (
+              {parent || children.length > 0 ? (
+                <View
+                  style={{
+                    borderWidth: 1,
+                    borderColor: ui.c.border,
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    backgroundColor: ui.c.surface2,
+                  }}
+                >
+                  {parent ? (
                     <Pressable
                       accessibilityRole="button"
-                      key={child.id}
-                      onPress={() => navigate("issue", { id: child.id })}
-                      style={({ pressed }) => [ui.s.listRow, pressed && ui.s.pressed]}
+                      accessibilityLabel={`父任务 ${parent.identifier}`}
+                      onPress={() => navigate("issue", { id: parent.id })}
+                      style={({ pressed }) => [
+                        { flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 12, paddingVertical: 10 },
+                        pressed && ui.s.pressed,
+                      ]}
                     >
-                      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: issueStatusColor(child, statuses) }} />
-                      <Text style={[ui.s.tiny, { fontFamily: "Menlo" }]}>{child.identifier}</Text>
+                      <Text style={{ fontSize: 10.5, color: ui.c.muted, fontWeight: "700" }}>父任务</Text>
+                      <Text style={{ fontSize: 11.5, fontFamily: "Menlo", color: ui.c.muted }}>{parent.identifier}</Text>
                       <Text numberOfLines={1} style={[ui.s.body, { flex: 1 }]}>
-                        {child.title}
+                        {parent.title}
                       </Text>
-                      {owner ? (
-                        <View style={[ui.s.row, { gap: 4 }]}>
-                          <Avatar ui={ui} name={owner.name} url={owner.url} size={16} />
-                          <Text numberOfLines={1} style={[ui.s.tiny, { maxWidth: 90 }]}>
-                            {owner.name}
-                          </Text>
-                        </View>
-                      ) : null}
-                      <Text style={ui.s.tiny}>{issueStatusLabel(child, statuses)}</Text>
+                      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: issueStatusColor(parent, statuses) }} />
                     </Pressable>
-                  );
-                })
-              )}
+                  ) : null}
+                  {children.map((child, index) => {
+                    const owner = personOf(child.assignee_type, child.assignee_id);
+                    return (
+                      <View key={child.id}>
+                        {index > 0 || parent ? <Divider ui={ui} color={`${ui.c.fg}1f`} /> : null}
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={() => navigate("issue", { id: child.id })}
+                          style={({ pressed }) => [ui.s.listRow, pressed && ui.s.pressed]}
+                        >
+                          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: issueStatusColor(child, statuses) }} />
+                          <Text style={[ui.s.tiny, { fontFamily: "Menlo" }]}>{child.identifier}</Text>
+                          <Text numberOfLines={1} style={[ui.s.body, { flex: 1 }]}>
+                            {child.title}
+                          </Text>
+                          {owner ? (
+                            <View style={[ui.s.row, { gap: 4 }]}>
+                              <Avatar ui={ui} name={owner.name} url={owner.url} size={16} />
+                              <Text numberOfLines={1} style={[ui.s.tiny, { maxWidth: 90 }]}>
+                                {owner.name}
+                              </Text>
+                            </View>
+                          ) : null}
+                          <Text style={ui.s.tiny}>{issueStatusLabel(child, statuses)}</Text>
+                        </Pressable>
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : !childOpen ? (
+                <Text style={[ui.s.tiny, { paddingVertical: 4 }]}>暂无子任务</Text>
+              ) : null}
             </View>
 
             <Divider ui={ui} />
 
-            <View style={{ gap: 2 }}>
-              <Text style={[ui.s.label, { paddingBottom: 4 }]}>评论 · {comments.length}</Text>
-              {commentsQuery.loading && comments.length === 0 ? (
-                <LoadingRow ui={ui} />
-              ) : comments.length === 0 ? (
-                <Text style={[ui.s.tiny, { paddingVertical: 8 }]}>还没有评论，@ 智能体即可触发协作。</Text>
-              ) : (
-                <View style={{ gap: 10, paddingTop: 4 }}>
-                  {roots.map((root) => {
+            <View style={{ gap: 6 }}>
+              <Text style={ui.s.label}>评论 · {comments.length}</Text>
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: ui.c.border,
+                  borderRadius: 10,
+                  overflow: "hidden",
+                  backgroundColor: ui.c.surface2,
+                }}
+              >
+                {commentsQuery.loading && comments.length === 0 ? (
+                  <View style={{ padding: 12 }}>
+                    <LoadingRow ui={ui} />
+                  </View>
+                ) : comments.length === 0 ? (
+                  <Text style={[ui.s.tiny, { padding: 12 }]}>还没有评论，@ 智能体即可触发协作。</Text>
+                ) : (
+                  roots.map((root, rootIndex) => {
                     const replies = threadOf(root.id);
                     return (
-                      <View key={root.id} style={{ gap: 8 }}>
+                      <View key={root.id}>
+                        {rootIndex > 0 ? <Divider ui={ui} color={`${ui.c.fg}1f`} /> : null}
                         <CommentCard
                           ui={ui}
                           item={root}
@@ -509,34 +520,34 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                         {replies.length > 0 ? (
                           <View
                             style={{
-                              marginLeft: 14,
-                              paddingLeft: 14,
-                              gap: 8,
+                              marginLeft: 16,
                               borderLeftWidth: 1,
-                              borderLeftColor: ui.c.border,
+                              borderLeftColor: `${ui.c.fg}1f`,
                             }}
                           >
-                            {replies.map((reply) => (
-                              <CommentCard
-                                key={reply.id}
-                                ui={ui}
-                                item={reply}
-                                agents={agents}
-                                members={members}
-                                replyToName={commentAuthor(commentById.get(reply.parent_id ?? "") ?? null, agents, members).name}
-                                busy={threadBusy === reply.id}
-                                onReply={() => setReplyTo(reply)}
-                                onResolve={() => void toggleResolve(reply)}
-                              />
+                            {replies.map((reply, replyIndex) => (
+                              <View key={reply.id}>
+                                {replyIndex > 0 ? <Divider ui={ui} color={`${ui.c.fg}1f`} /> : null}
+                                <CommentCard
+                                  ui={ui}
+                                  item={reply}
+                                  agents={agents}
+                                  members={members}
+                                  replyToName={commentAuthor(commentById.get(reply.parent_id ?? "") ?? null, agents, members).name}
+                                  busy={threadBusy === reply.id}
+                                  onReply={() => setReplyTo(reply)}
+                                  onResolve={() => void toggleResolve(reply)}
+                                />
+                              </View>
                             ))}
                           </View>
                         ) : null}
                       </View>
                     );
-                  })}
-                </View>
-              )}
-              <View style={{ gap: 8, paddingTop: 10 }}>
+                  })
+                )}
+              </View>
+              <View style={{ gap: 8, paddingTop: 6 }}>
                 {replyTo ? (
                   <View
                     style={[
@@ -982,16 +993,7 @@ function CommentCard({
   const author = commentAuthor(item, agents, members);
   const resolved = Boolean(item.resolved_at);
   return (
-    <View
-      style={{
-        gap: 6,
-        padding: 10,
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: resolved ? `${ui.c.success}44` : ui.c.border,
-        backgroundColor: resolved ? `${ui.c.success}0f` : ui.c.surface2,
-      }}
-    >
+    <View style={{ gap: 6, padding: 12, backgroundColor: resolved ? `${ui.c.success}0f` : "transparent" }}>
       <View style={[ui.s.row, { gap: 7, flexWrap: "wrap" }]}>
         <Avatar ui={ui} name={author.name} url={author.url} size={22} />
         <Text style={[ui.s.body, { fontWeight: "600" }]}>{author.name}</Text>
