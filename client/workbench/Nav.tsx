@@ -466,6 +466,7 @@ const GENERIC: Record<string, { title: string; desc: string; links: { label: str
     links: [
       { label: "服务器连接", icon: "Plug", page: "settings", params: { tab: "connection" } },
       { label: "工作区", icon: "Layers", page: "settings", params: { tab: "workspace" } },
+      { label: "企业微信", icon: "MessagesSquare", page: "settings", params: { tab: "wecom" } },
       { label: "账户", icon: "CircleUser", page: "settings", params: { tab: "account" } },
       { label: "接口调试", icon: "Plug", page: "api" },
     ],

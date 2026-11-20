@@ -10,9 +10,15 @@ import {
   inboxBadgeRpc,
   preferencesSaveRpc,
   workspaceSelectRpc,
+  wecomGetRpc,
+  wecomPushRpc,
+  wecomSaveRpc,
+  wecomTestRpc,
+  wecomUnbindRpc,
 } from "./shared/contracts";
 import { createHandlers } from "./server/handlers";
 import { connectionsStorePath } from "./server/store";
+import { wecomBridge } from "./server/wecomBridge";
 
 export default function contribute(server: PluginServerContext) {
   const handlers = createHandlers();
@@ -26,7 +32,16 @@ export default function contribute(server: PluginServerContext) {
   server.handle(bootstrapRpc, handlers.bootstrap);
   server.handle(apiRequestRpc, handlers.request);
   server.handle(inboxBadgeRpc, handlers.inboxBadge);
+  server.handle(wecomGetRpc, handlers.wecomGet);
+  server.handle(wecomSaveRpc, handlers.wecomSave);
+  server.handle(wecomTestRpc, handlers.wecomTest);
+  server.handle(wecomPushRpc, handlers.wecomPush);
+  server.handle(wecomUnbindRpc, handlers.wecomUnbind);
+
+  void wecomBridge.apply().catch((cause) => console.error("[multica] wecom start failed", cause));
 
   console.log(`[multica] server ready, connections: ${connectionsStorePath()}`);
-  return () => {};
+  return () => {
+    wecomBridge.shutdown();
+  };
 }

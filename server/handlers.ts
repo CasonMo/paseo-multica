@@ -11,6 +11,11 @@ import {
   inboxBadgeRpc,
   preferencesSaveRpc,
   workspaceSelectRpc,
+  wecomGetRpc,
+  wecomPushRpc,
+  wecomSaveRpc,
+  wecomTestRpc,
+  wecomUnbindRpc,
 } from "../shared/contracts";
 import { normalizeBaseUrl, probeConnection, requestMultica } from "./multica";
 import {
@@ -24,6 +29,8 @@ import {
   updateWorkspaceMeta,
   type ResolvedServer,
 } from "./store";
+import { mutateWecom } from "./wecomStore";
+import { wecomBridge } from "./wecomBridge";
 
 export function createHandlers() {
   const list = async () => readConnections();
@@ -171,5 +178,68 @@ export function createHandlers() {
     _input: RpcInput<typeof connectionsListRpc>,
   ): Promise<RpcOutput<typeof connectionsListRpc>> => list();
 
-  return { list: listHandler, save, remove, activate, test, bootstrap, request, selectWorkspace: selectWorkspaceHandler, preferences, inboxBadge };
+  const wecomGet = async (): Promise<RpcOutput<typeof wecomGetRpc>> => wecomBridge.view();
+
+  const wecomSave = async (
+    input: RpcInput<typeof wecomSaveRpc>,
+  ): Promise<RpcOutput<typeof wecomSaveRpc>> => {
+    await mutateWecom((state) => {
+      if (typeof input.enabled === "boolean") state.enabled = input.enabled;
+      if (typeof input.botId === "string") state.botId = input.botId.trim();
+      if (typeof input.secret === "string" && input.secret.trim()) state.secret = input.secret.trim();
+      if (input.agentId !== undefined) state.agentId = input.agentId;
+      if (typeof input.pushUnread === "boolean") state.pushUnread = input.pushUnread;
+      if (typeof input.delegate === "boolean") state.delegate = input.delegate;
+      if (typeof input.pushIntervalSec === "number") state.pushIntervalSec = Math.max(15, Math.min(600, Math.round(input.pushIntervalSec)));
+      if (typeof input.targetChatId === "string") state.targetChatId = input.targetChatId.trim();
+    });
+    await wecomBridge.apply();
+    return wecomBridge.view();
+  };
+
+  const wecomTest = async (): Promise<RpcOutput<typeof wecomTestRpc>> => {
+    try {
+      await wecomBridge.test();
+      return { ok: true, error: null };
+    } catch (cause) {
+      return { ok: false, error: cause instanceof Error ? cause.message : String(cause) };
+    }
+  };
+
+  const wecomPush = async (): Promise<RpcOutput<typeof wecomPushRpc>> => {
+    try {
+      const pushed = await wecomBridge.pushCycle(true);
+      return { ok: true, pushed, error: null };
+    } catch (cause) {
+      return { ok: false, pushed: 0, error: cause instanceof Error ? cause.message : String(cause) };
+    }
+  };
+
+  const wecomUnbind = async (
+    input: RpcInput<typeof wecomUnbindRpc>,
+  ): Promise<RpcOutput<typeof wecomUnbindRpc>> => {
+    await mutateWecom((state) => {
+      delete state.bindings[input.chatid];
+      if (state.targetChatId === input.chatid) state.targetChatId = Object.keys(state.bindings)[0] ?? "";
+    });
+    return wecomBridge.view();
+  };
+
+  return {
+    list: listHandler,
+    save,
+    remove,
+    activate,
+    test,
+    bootstrap,
+    request,
+    selectWorkspace: selectWorkspaceHandler,
+    preferences,
+    inboxBadge,
+    wecomGet,
+    wecomSave,
+    wecomTest,
+    wecomPush,
+    wecomUnbind,
+  };
 }

@@ -160,3 +160,79 @@ export const inboxBadgeRpc = defineRpc({
     fetchedAt: z.string(),
   }),
 });
+
+export const wecomViewSchema = z.object({
+  enabled: z.boolean(),
+  botId: z.string(),
+  secretMasked: z.string(),
+  configured: z.boolean(),
+  agentId: z.string().nullable(),
+  pushUnread: z.boolean(),
+  delegate: z.boolean(),
+  pushIntervalSec: z.number(),
+  targetChatId: z.string(),
+  status: z.enum(["idle", "connecting", "connected", "error"]),
+  error: z.string(),
+  bindings: z.array(
+    z.object({
+      chatid: z.string(),
+      sessionId: z.string(),
+      agentId: z.string(),
+      label: z.string(),
+      updatedAt: z.string(),
+    }),
+  ),
+  activity: z.array(
+    z.object({
+      id: z.string(),
+      at: z.string(),
+      kind: z.enum(["in", "out", "push", "error", "system"]),
+      text: z.string(),
+    }),
+  ),
+  pushedCount: z.number(),
+  storePath: z.string(),
+});
+export type WecomView = z.infer<typeof wecomViewSchema>;
+
+export const wecomSaveInput = z.object({
+  enabled: z.boolean().optional(),
+  botId: z.string().optional(),
+  secret: z.string().optional(),
+  agentId: z.string().nullable().optional(),
+  pushUnread: z.boolean().optional(),
+  delegate: z.boolean().optional(),
+  pushIntervalSec: z.number().optional(),
+  targetChatId: z.string().optional(),
+});
+export type WecomSaveInput = z.infer<typeof wecomSaveInput>;
+
+export const wecomGetRpc = defineRpc({
+  name: "wecom.get",
+  input: z.object({}),
+  output: wecomViewSchema,
+});
+
+export const wecomSaveRpc = defineRpc({
+  name: "wecom.save",
+  input: wecomSaveInput,
+  output: wecomViewSchema,
+});
+
+export const wecomTestRpc = defineRpc({
+  name: "wecom.test",
+  input: z.object({}),
+  output: z.object({ ok: z.boolean(), error: z.string().nullable() }),
+});
+
+export const wecomPushRpc = defineRpc({
+  name: "wecom.push",
+  input: z.object({}),
+  output: z.object({ ok: z.boolean(), pushed: z.number(), error: z.string().nullable() }),
+});
+
+export const wecomUnbindRpc = defineRpc({
+  name: "wecom.unbind",
+  input: z.object({ chatid: z.string() }),
+  output: wecomViewSchema,
+});
