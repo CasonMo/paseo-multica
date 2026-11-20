@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { Btn, Card, Dot, Empty, ErrorNote, IconBtn, useUi } from "./bits";
 import { useWorkbench, type PageKey } from "./context";
+import { MulticaLogo } from "./Logo";
 import { initials } from "./model";
 import { ApiExplorerPage } from "./pages/ApiExplorer";
 import { AutomationPage } from "./pages/Automation";
@@ -69,18 +70,7 @@ export function Shell() {
         }}
       >
         <View style={[ui.s.row, { gap: 10 }]}>
-          <View
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 9,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: ui.c.accent,
-            }}
-          >
-            <Icon name="Boxes" size={18} color={ui.c.accentFg} />
-          </View>
+          <MulticaLogo size={32} color={ui.c.accent} />
           <View style={ui.s.grow}>
             <Text numberOfLines={1} style={{ color: ui.c.fg, fontSize: compact ? 15 : 16, fontWeight: "700" }}>
               Multica 工作台

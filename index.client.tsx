@@ -5,6 +5,7 @@ import type {
   PluginSurfaceProps,
 } from "@getpaseo/plugin/client";
 import { SidebarRow } from "@getpaseo/plugin/client/ui";
+import { MULTICA_LOGO_SVG } from "./client/workbench/Logo";
 import { useEffect, useRef, useState } from "react";
 import { WorkbenchProvider, type PageKey } from "./client/workbench/context";
 import { Shell } from "./client/workbench/Shell";
@@ -76,7 +77,7 @@ function ConnectionsScreen({ theme, layout }: PluginSurfaceProps) {
 function WorkbenchSidebarRow({ currentScreen, openScreen }: PluginSidebarItemProps) {
   return (
     <SidebarRow
-      icon="Boxes"
+      icon={{ svg: MULTICA_LOGO_SVG }}
       label="Multica"
       active={currentScreen?.screenId === SCREEN_ID}
       onPress={() => {
@@ -93,7 +94,7 @@ export default function contribute(client: PluginClientContext) {
     client.addSettingsScreen({
       id: SETTINGS_ID,
       title: "Multica 连接",
-      icon: "Boxes",
+      icon: { svg: MULTICA_LOGO_SVG },
       Component: ConnectionsScreen,
     }),
     client.addSidebarHeaderItem({
@@ -104,7 +105,7 @@ export default function contribute(client: PluginClientContext) {
     client.addCommandCenterItem({
       id: "multica-open",
       title: "打开 Multica 工作台",
-      icon: "Boxes",
+      icon: { svg: MULTICA_LOGO_SVG },
       keywords: ["multica", "工作台", "issuance", "issue", "任务", "智能体"],
       context: "global",
       onSelect({ openScreen }) {
