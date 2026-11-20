@@ -49,7 +49,7 @@ export function PriorityMark({ ui, priority }: { ui: Ui; priority?: string | nul
   return (
     <View style={[ui.s.row, { gap: 4 }]}>
       <Icon name={meta.icon} size={14} color={color} />
-      <Text style={{ fontSize: 12, color: ui.c.muted }}>{t(meta.label)}</Text>
+      <Text style={{ fontSize: 12, color: ui.c.muted }}>{meta.label}</Text>
     </View>
   );
 }

@@ -55,7 +55,13 @@ export function bindTranslation(fn: (key: string, args?: Args) => string): void 
 }
 
 export function t(key: string, args?: Args): string {
-  if (runtime) return runtime(key, args);
+  if (runtime) {
+    try {
+      return runtime(key, args);
+    } catch {
+      // 未知 key（如误传已翻译文本）会抛错并炸掉整个插件表面；回退嵌套表/原串降级
+    }
+  }
   const table = (resources as unknown as Record<string, unknown>)[override === "en" ? "en" : "zh-CN"];
   let node: unknown = table;
   for (const part of key.split(".")) node = (node as Record<string, unknown> | undefined)?.[part];
