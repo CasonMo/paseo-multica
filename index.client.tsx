@@ -8,7 +8,7 @@ import { useRpc } from "@getpaseo/plugin/client";
 import { SidebarRow } from "@getpaseo/plugin/client/ui";
 import { MULTICA_LOGO_SVG } from "./client/workbench/Logo";
 import { useEffect, useRef, useState } from "react";
-import { Text, View } from "react-native";
+import { Pressable, Text } from "react-native";
 import { WorkbenchProvider, type PageKey } from "./client/workbench/context";
 import { useInboxBadgeVersion } from "./client/workbench/badge";
 import { Shell } from "./client/workbench/Shell";
@@ -37,6 +37,29 @@ function asPage(value: string | undefined): PageKey | null {
   return value && (PAGE_KEYS as string[]).includes(value) ? (value as PageKey) : null;
 }
 
+const LAST_SCREEN_KEY = "multica.lastScreen";
+type LocalStore = { getItem(key: string): string | null; setItem(key: string, value: string): void };
+function localStore(): LocalStore | null {
+  return (globalThis as { localStorage?: LocalStore }).localStorage ?? null;
+}
+function readLastScreen(): Record<string, string> | null {
+  try {
+    const raw = localStore()?.getItem(LAST_SCREEN_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, string>) : null;
+  } catch {
+    return null;
+  }
+}
+function writeLastScreen(params: Record<string, string>) {
+  try {
+    localStore()?.setItem(LAST_SCREEN_KEY, JSON.stringify(params));
+  } catch {
+    //  写不进去就退回到默认概览
+  }
+}
+
 function WorkbenchScreen({ theme, layout, params }: PluginScreenProps) {
   const [page, setPage] = useState<PageKey>(asPage(params.page) ?? "overview");
   const [pageParams, setPageParams] = useState<Record<string, string>>(params);
@@ -56,6 +79,10 @@ function WorkbenchScreen({ theme, layout, params }: PluginScreenProps) {
     setPage(next);
     setPageParams(nextParams);
   };
+
+  useEffect(() => {
+    writeLastScreen({ page, ...pageParams });
+  }, [page, pageParams]);
 
   return (
     <WorkbenchProvider
@@ -106,33 +133,39 @@ function WorkbenchSidebarRow({ currentScreen, openScreen, theme }: PluginSidebar
   const open = currentScreen?.screenId === SCREEN_ID;
   const trailing =
     unread > 0 ? (
-      <View
-        style={{
-          minWidth: 18,
-          height: 18,
-          borderRadius: 9,
-          paddingHorizontal: 5,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: theme.colors.accent,
-        }}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`查看 ${unread} 条未读通知`}
+        onPress={() => openScreen({ screenId: SCREEN_ID, params: { page: "inbox" } })}
+        style={({ pressed }) => [
+          {
+            minWidth: 18,
+            height: 18,
+            borderRadius: 9,
+            paddingHorizontal: 5,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: theme.colors.accent,
+          },
+          pressed && { opacity: 0.7 },
+        ]}
       >
         <Text style={{ color: theme.colors.accentForeground, fontSize: 10, fontWeight: "600" }}>
           {unread > 99 ? "99+" : unread}
         </Text>
-      </View>
+      </Pressable>
     ) : undefined;
 
   return (
     <SidebarRow
       icon={{ svg: MULTICA_LOGO_SVG }}
-      label={unread > 0 ? `Multica，${unread} 条未读通知` : "Multica"}
+      label="Multica"
       active={open}
       trailing={trailing}
       onPress={() => {
         openScreen({
           screenId: SCREEN_ID,
-          params: open ? currentScreen.params : unread > 0 ? { page: "inbox" } : undefined,
+          params: open ? currentScreen.params : (readLastScreen() ?? { page: "overview" }),
         });
       }}
     />
