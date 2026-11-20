@@ -18,9 +18,10 @@ import { Avatar, Btn, Card, Chips, Divider, Empty, ErrorNote, Field, Tag, useUi 
 import { useWorkbench } from "../context";
 import { relTime } from "../model";
 import { AccountSettings, WorkspaceMembersSettings } from "../SettingsSections";
+import { ApiExplorerPage } from "./ApiExplorer";
 import { openExternalUrl } from "@getpaseo/plugin/client";
 
-export function SettingsPage({ initialTab }: { initialTab?: "connection" | "workspace" | "account" }) {
+export function SettingsPage({ initialTab }: { initialTab?: "connection" | "workspace" | "account" | "api" }) {
   const ctx = useWorkbench();
   const { theme, compact, connections, server, servers, user, workspaces, workspaceId, toast } = ctx;
   const ui = useUi(theme, compact);
@@ -30,7 +31,7 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
   const testRpc = useRpc(connectionsTestRpc);
   const prefRpc = useRpc(preferencesSaveRpc);
 
-  const [tab, setTab] = useState<"connection" | "workspace" | "account">(initialTab ?? "connection");
+  const [tab, setTab] = useState<"connection" | "workspace" | "account" | "api">(initialTab ?? "connection");
   const [editing, setEditing] = useState<ServerView | "new" | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<ServerView | null>(null);
@@ -83,24 +84,34 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
   };
 
   return (
-    <ScrollView contentContainerStyle={{ padding: compact ? 12 : 20, gap: 14 }}>
-      <View>
-        <Text style={ui.s.title}>设置</Text>
-        <Text style={ui.s.muted}>服务器连接、工作区与安全选项</Text>
+    <View style={{ flex: 1 }}>
+      <View style={{ paddingHorizontal: compact ? 12 : 20, paddingTop: compact ? 12 : 20, gap: 14 }}>
+        <View>
+          <Text style={ui.s.title}>设置</Text>
+          <Text style={ui.s.muted}>服务器连接、工作区、安全选项与接口调试</Text>
+        </View>
+
+        {ctx.bootstrapError && server ? <ErrorNote ui={ui} message={ctx.bootstrapError} onRetry={() => void ctx.reloadBootstrap()} /> : null}
+
+        <Chips
+          ui={ui}
+          options={[
+            { value: "connection", label: "连接", icon: "Plug" },
+            { value: "workspace", label: "工作区", icon: "Users" },
+            { value: "api", label: "接口调试", icon: "Terminal" },
+            { value: "account", label: "账户", icon: "User" },
+          ] as const}
+          value={tab}
+          onChange={(next) => setTab(next as typeof tab)}
+        />
       </View>
 
-      {ctx.bootstrapError && server ? <ErrorNote ui={ui} message={ctx.bootstrapError} onRetry={() => void ctx.reloadBootstrap()} /> : null}
-
-      <Chips
-        ui={ui}
-        options={[
-          { value: "connection", label: "连接", icon: "Plug" },
-          { value: "workspace", label: "工作区", icon: "Users" },
-          { value: "account", label: "账户", icon: "User" },
-        ] as const}
-        value={tab}
-        onChange={(next) => setTab(next as typeof tab)}
-      />
+      {tab === "api" ? (
+        <View style={{ flex: 1, minHeight: 0 }}>
+          <ApiExplorerPage />
+        </View>
+      ) : (
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: compact ? 12 : 20, paddingTop: 14, gap: 14 }}>
 
       {tab === "connection" ? (
       <Card ui={ui} style={{ gap: 10 }}>
@@ -300,6 +311,7 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
         <View style={[ui.s.row, { gap: 6, flexWrap: "wrap" }]}>
           <Btn ui={ui} label="访问 Multica" icon="Globe" onPress={() => void openExternalUrl(OFFICIAL_WEB_URL)} />
           <Btn ui={ui} label="API 文档" icon="BookOpen" onPress={() => void openExternalUrl(`${OFFICIAL_WEB_URL}/docs`)} />
+          <Btn ui={ui} label="去调试" icon="Terminal" onPress={() => setTab("api")} />
         </View>
         <Text style={ui.s.tiny}>
           已内置 {API_ROUTES.filter((route) => !isInternalRoute(route[1]) || connections?.allowInternal).length} 个接口入口 · 支持官方云与自建服务器
@@ -307,6 +319,8 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
       </Card>
       </>
       ) : null}
+      </ScrollView>
+      )}
 
       <ConnectionModal
         ui={ui}
@@ -339,7 +353,7 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
           </View>
         </Modal.Content>
       </Modal>
-    </ScrollView>
+    </View>
   );
 }
 

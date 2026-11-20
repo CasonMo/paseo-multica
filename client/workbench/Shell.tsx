@@ -5,7 +5,6 @@ import { Btn, Card, Empty, ErrorNote, injectChrome, useUi } from "./bits";
 import { useWorkbench } from "./context";
 import { initials } from "./model";
 import { RailNav, SectionSidebar } from "./Nav";
-import { ApiExplorerPage } from "./pages/ApiExplorer";
 import { AutomationPage, type Filter } from "./pages/Automation";
 import { ChatPage } from "./pages/Chat";
 import { InboxPage } from "./pages/Inbox";
@@ -65,10 +64,8 @@ export function Shell() {
           <ChatPage sessionId={params.sessionId} agentId={params.agentId} />
         ) : page === "autopilot" ? (
           <AutomationPage key={params.filter ?? "all"} initialFilter={params.filter as Filter} />
-        ) : page === "api" ? (
-          <ApiExplorerPage />
         ) : (
-          <SettingsPage key={params.tab ?? "connection"} initialTab={params.tab as "connection" | "workspace" | "account"} />
+          <SettingsPage key={params.tab ?? "connection"} initialTab={params.tab as "connection" | "workspace" | "account" | "api"} />
         )}
       </View>
 

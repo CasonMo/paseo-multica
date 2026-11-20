@@ -66,7 +66,6 @@ export function OverviewPage() {
     <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
       <Btn ui={ui} label="新建需求" icon="Plus" tone="primary" onPress={() => navigate("issues", { create: "1" })} />
       <Btn ui={ui} label="团队" icon="Users" onPress={() => navigate("team")} />
-      <Btn ui={ui} label="接口调试" icon="Terminal" onPress={() => navigate("api")} />
     </View>
   );
 
@@ -180,7 +179,7 @@ export function OverviewPage() {
               <SectionHeader
                 ui={ui}
                 title="项目进展"
-                trailing={<LinkBtn ui={ui} label="接口" onPress={() => navigate("api", { q: "projects" })} />}
+                trailing={<LinkBtn ui={ui} label="全部" onPress={() => navigate("projects")} />}
               />
             </View>
             {projectList.length === 0 ? (

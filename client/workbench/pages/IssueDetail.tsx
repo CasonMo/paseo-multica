@@ -861,7 +861,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
         <View style={{ gap: 6, paddingHorizontal: 7 }}>
           <Btn ui={ui} label="标记已读" icon="CheckCheck" onPress={() => void quick("read", "已标记为已读")} />
           <Btn ui={ui} label="强制重跑" icon="RotateCw" busy={busy} onPress={() => void rerun()} />
-          <Btn ui={ui} label="打开接口视图" icon="Plug" onPress={() => navigate("api", { q: "issues" })} />
+          <Btn ui={ui} label="打开接口视图" icon="Plug" onPress={() => navigate("settings", { tab: "api" })} />
         </View>
       </PanelSection>
     </>

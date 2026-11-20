@@ -31,7 +31,7 @@ function paramNames(path: string): string[] {
 
 export function ApiExplorerPage() {
   const ctx = useWorkbench();
-  const { theme, compact } = ctx;
+  const { theme, compact, narrow } = ctx;
   const allowInternal = ctx.connections?.allowInternal ?? false;
   const ui = useUi(theme, compact);
   const [search, setSearch] = useState("");
@@ -207,7 +207,7 @@ export function ApiExplorerPage() {
 
   return (
     <View style={{ flex: 1, flexDirection: "row" }}>
-      <View style={{ width: 380, borderRightWidth: 1, borderRightColor: ui.c.border, padding: 14 }}>
+      <View style={{ width: narrow ? 280 : 380, borderRightWidth: 1, borderRightColor: ui.c.border, padding: 14 }}>
         <ScrollView contentContainerStyle={{ gap: 10 }}>{list}</ScrollView>
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>

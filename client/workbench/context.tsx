@@ -27,7 +27,6 @@ export type PageKey =
   | "team"
   | "chat"
   | "autopilot"
-  | "api"
   | "settings";
 
 export interface WorkbenchValue {

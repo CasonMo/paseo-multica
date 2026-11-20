@@ -29,7 +29,6 @@ const PAGE_KEYS: PageKey[] = [
   "team",
   "chat",
   "autopilot",
-  "api",
   "settings",
 ];
 
@@ -229,11 +228,11 @@ export default function contribute(client: PluginClientContext) {
     client.addCommandCenterItem({
       id: "multica-api",
       title: "Multica 接口调试",
-      icon: "Plug",
+      icon: "Terminal",
       keywords: ["multica", "api", "接口", "调试"],
       context: "global",
       onSelect({ openScreen }) {
-        openScreen({ screenId: SCREEN_ID, params: { page: "api" } });
+        openScreen({ screenId: SCREEN_ID, params: { page: "settings", tab: "api" } });
       },
     }),
     client.addCommandCenterItem({

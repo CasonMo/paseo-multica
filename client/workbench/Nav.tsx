@@ -18,7 +18,6 @@ const RAIL: { key: PageKey; label: string; icon: string }[] = [
   { key: "autopilot", label: "自动化", icon: "Bot" },
   { key: "workflows", label: "工作流", icon: "Workflow" },
   { key: "labels", label: "标签", icon: "Tags" },
-  { key: "api", label: "接口", icon: "Plug" },
 ];
 
 export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
@@ -502,6 +501,7 @@ function SettingsNav() {
   const links = [
     { label: "服务器连接", icon: "Plug", tab: "connection" },
     { label: "工作区", icon: "Layers", tab: "workspace" },
+    { label: "接口调试", icon: "Terminal", tab: "api" },
     { label: "账户", icon: "CircleUser", tab: "account" },
   ];
   return (
@@ -518,7 +518,6 @@ function SettingsNav() {
             onPress={() => navigate("settings", { tab: entry.tab })}
           />
         ))}
-        <NavRow ui={ui} icon="Terminal" label="接口调试" onPress={() => navigate("api")} />
       </Group>
     </View>
   );
