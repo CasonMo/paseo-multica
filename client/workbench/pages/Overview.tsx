@@ -5,6 +5,7 @@ import { asList, asRecord, num, useQuery } from "../api";
 import { useWorkbench } from "../context";
 import { relTime, type Agent, type AgentRuntime, type InboxItem, type Issue, type Project } from "../model";
 import { AgentRow, InboxRow, IssueRow } from "../parts";
+import { UsageCard } from "../UsageCard";
 
 export function OverviewPage() {
   const ctx = useWorkbench();
@@ -114,6 +115,8 @@ export function OverviewPage() {
           />
         </View>
       </Card>
+
+      <UsageCard />
 
       <View style={{ flexDirection: compact ? "column" : "row", gap: 14, alignItems: "flex-start" }}>
         <View style={{ flex: compact ? undefined : 1.5, gap: 14, width: compact ? "100%" : undefined }}>
