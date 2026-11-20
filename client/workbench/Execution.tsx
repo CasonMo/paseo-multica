@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { issueInsightsRpc, taskLogRpc } from "../../shared/contracts";
 import { asList, useQuery, type ApiFn } from "./api";
-import { Avatar, Btn, Tag, useUi, type Ui } from "./bits";
+import { Avatar, Btn, IconBtn, Tag, useUi, type Ui } from "./bits";
 import { relTime, type Agent, type Comment, type IssueStatusEntry } from "./model";
 
 export interface TaskRun {
@@ -49,6 +49,99 @@ export function RunningChip({ ui, agent, compact }: { ui: Ui; agent: { name: str
         {agent.name} 在工作
       </Text>
       <ActivityIndicator size="small" color={ui.c.success} />
+    </View>
+  );
+}
+
+/** 触发评论下的「智能体正在响应」行：实时步骤文本 + 计时 + 展开日志 + 停止。 */
+export function RunningResponseRow({
+  ui,
+  task,
+  agent,
+  onOpenLog,
+  onStop,
+}: {
+  ui: Ui;
+  task: TaskRun;
+  agent: Agent | null;
+  onOpenLog(id: string): void;
+  onStop(task: TaskRun): void;
+}) {
+  const logRpc = useRpc(taskLogRpc);
+  const logRef = useRef(logRpc);
+  logRef.current = logRpc;
+  const [step, setStep] = useState<string | null>(null);
+  const [, setTick] = useState(0);
+  const taskId = task.id;
+
+  useEffect(() => {
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const load = async () => {
+      try {
+        const result = await logRef.current({ taskId });
+        if (!alive) return;
+        const msgs = (result.messages ?? []) as { type?: string; tool?: string; input?: Record<string, unknown>; content?: string }[];
+        for (let i = msgs.length - 1; i >= 0; i--) {
+          const m = msgs[i];
+          const input = m.input ?? {};
+          const text =
+            m.type === "tool_use"
+              ? str(input.description) || str(input.command).split("\n")[0] || str(input.file_path) || str(input.pattern) || (m.tool ? `调用 ${m.tool}` : "")
+              : m.type === "text" || m.type === "assistant" || m.type === "thinking" || m.type === "think"
+                ? (m.content ?? "").split("\n")[0]
+                : "";
+          if (text.trim()) {
+            setStep(text.trim().slice(0, 140));
+            return;
+          }
+        }
+        setStep(null);
+      } catch {
+        // 取步骤失败保留上一次文本，下一轮轮询自愈
+      } finally {
+        // messages 运行中可能长轮询：串行续 poll，避免请求堆积堵死 RPC 通道
+        if (alive) timer = setTimeout(() => void load(), 4000);
+      }
+    };
+    void load();
+    return () => {
+      alive = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [taskId]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(timer);
+  }, [taskId]);
+
+  const name = agent?.name ?? "智能体";
+  return (
+    <View style={[ui.s.row, { gap: 4, paddingLeft: 32, paddingRight: 8, paddingVertical: 6 }]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`查看 ${name} 的运行日志`}
+        onPress={() => onOpenLog(task.id)}
+        style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+          ui.s.row,
+          { flex: 1, gap: 8, borderRadius: 6, paddingVertical: 2 },
+          hovered && { backgroundColor: ui.c.fillHover },
+          pressed && ui.s.pressed,
+        ]}
+      >
+        <Avatar ui={ui} name={name} url={agent?.avatar_url} size={16} />
+        <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: "500", color: ui.c.fg, flexShrink: 0 }}>
+          {name}
+        </Text>
+        <ActivityIndicator size="small" color={ui.c.brand} />
+        <Text numberOfLines={1} style={{ fontSize: 13, color: ui.c.muted, flex: 1 }}>
+          {step ?? "等待智能体响应。"}
+        </Text>
+        <Text style={ui.s.tiny}>{fmtDuration(runDurationMs(task))}</Text>
+        <Icon name="ChevronRight" size={12} color={ui.c.faint} />
+      </Pressable>
+      <IconBtn ui={ui} icon="Square" label="停止运行" onPress={() => onStop(task)} />
     </View>
   );
 }
@@ -579,6 +672,7 @@ export function RunLogModal({
   useEffect(() => {
     if (!runId) return;
     let alive = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
     setLogLoading(true);
     const load = async () => {
       try {
@@ -588,13 +682,15 @@ export function RunLogModal({
         setLogLoading(false);
       } catch {
         if (alive) setLogLoading(false);
+      } finally {
+        // 运行中 messages 可能长轮询：串行续 poll，避免请求堆积堵死 RPC 通道
+        if (alive && runStatus === "running") timer = setTimeout(() => void load(), 4000);
       }
     };
     void load();
-    const timer = runStatus === "running" ? setInterval(() => void load(), 4000) : null;
     return () => {
       alive = false;
-      if (timer) clearInterval(timer);
+      if (timer) clearTimeout(timer);
     };
   }, [runId, runStatus]);
   const started = run?.started_at ? Date.parse(run.started_at) : 0;

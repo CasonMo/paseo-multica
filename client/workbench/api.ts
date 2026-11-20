@@ -62,6 +62,7 @@ export function useQuery<T = unknown>(
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const seq = useRef(0);
+  const inFlight = useRef(false);
   const mounted = useRef(true);
   const manualRefresh = useRef(false);
   const selectRef = useRef(select);
@@ -77,6 +78,9 @@ export function useQuery<T = unknown>(
   const run = useCallback(
     async (isManual: boolean) => {
       if (!path || !enabled) return;
+      // 慢接口（如运行中 messages 长轮询）时跳过本轮自动轮询，避免请求堆积堵死 RPC 通道
+      if (!isManual && inFlight.current) return;
+      inFlight.current = true;
       const ticket = ++seq.current;
       if (isManual) setRefreshing(true);
       else setLoading(true);
@@ -103,6 +107,7 @@ export function useQuery<T = unknown>(
         if (!mounted.current || ticket !== seq.current) return;
         setError(cause instanceof Error ? cause.message : String(cause));
       } finally {
+        inFlight.current = false;
         if (mounted.current && ticket === seq.current) {
           setLoading(false);
           setRefreshing(false);

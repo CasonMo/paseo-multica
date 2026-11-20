@@ -36,6 +36,7 @@ import { mutateWecom, newBotId } from "./wecomStore";
 import { wecomBridge } from "./wecomBridge";
 
 export function createHandlers() {
+  const logInflight = new Map<string, Promise<RpcOutput<typeof taskLogRpc>>>();
   const list = async () => readConnections();
 
   const save = async (
@@ -288,7 +289,7 @@ export function createHandlers() {
     const server = await resolveServer();
     const call = async (path: string) => {
       const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 12000));
-      const fetch = requestMultica({ server, method: "GET", path, workspaceId: server.workspaceId, allowInternal: server.allowInternal }).then((r) => (r.ok ? r.data : null));
+      const fetch = requestMultica({ server, method: "GET", path, workspaceId: server.workspaceId, allowInternal: server.allowInternal, timeoutMs: 12000 }).then((r) => (r.ok ? r.data : null));
       return Promise.race([fetch, timeout]);
     };
     const [runsRaw, usageRaw, timelineRaw, commentsRaw] = await Promise.all([
@@ -323,30 +324,39 @@ export function createHandlers() {
   const taskLog = async (
     input: RpcInput<typeof taskLogRpc>,
   ): Promise<RpcOutput<typeof taskLogRpc>> => {
-    const server = await resolveServer();
-    const result = await requestMultica({ server, method: "GET", path: `/api/tasks/${input.taskId}/messages`, workspaceId: server.workspaceId, allowInternal: server.allowInternal });
-    const data = result.ok ? result.data : null;
-    const raw = Array.isArray(data) ? data : data && typeof data === "object" && Array.isArray((data as Record<string, unknown>).messages) ? (data as Record<string, unknown>).messages : [];
-    const clip = (v: unknown, n: number) => (typeof v === "string" ? v.slice(0, n) : undefined);
-    const messages = (raw as Record<string, unknown>[]).slice(-300).map((m) => {
-      const input = (m.input ?? {}) as Record<string, unknown>;
-      return {
-        call_id: m.call_id,
-        seq: m.seq,
-        type: m.type,
-        tool: m.tool,
-        created_at: m.created_at,
-        input: {
-          command: clip(input.command, 1500),
-          description: clip(input.description, 300),
-          file_path: clip(input.file_path, 300),
-          pattern: clip(input.pattern, 300),
-        },
-        output: clip(m.output, 1500),
-        content: clip(m.content, 1500),
-      };
-    });
-    return { messages: messages as Record<string, unknown>[], error: result.ok ? null : result.error ?? "读取步骤失败" };
+    // 运行中 messages 可能长轮询：同 task 的并发请求合并为一次上游 fetch，避免占满连接池
+    const existing = logInflight.get(input.taskId);
+    if (existing) return existing;
+    const promise = (async (): Promise<RpcOutput<typeof taskLogRpc>> => {
+      const server = await resolveServer();
+      const result = await requestMultica({ server, method: "GET", path: `/api/tasks/${input.taskId}/messages`, workspaceId: server.workspaceId, allowInternal: server.allowInternal });
+      const data = result.ok ? result.data : null;
+      const raw = Array.isArray(data) ? data : data && typeof data === "object" && Array.isArray((data as Record<string, unknown>).messages) ? (data as Record<string, unknown>).messages : [];
+      const clip = (v: unknown, n: number) => (typeof v === "string" ? v.slice(0, n) : undefined);
+      const messages = (raw as Record<string, unknown>[]).slice(-300).map((m) => {
+        const input = (m.input ?? {}) as Record<string, unknown>;
+        return {
+          call_id: m.call_id,
+          seq: m.seq,
+          type: m.type,
+          tool: m.tool,
+          created_at: m.created_at,
+          input: {
+            command: clip(input.command, 1500),
+            description: clip(input.description, 300),
+            file_path: clip(input.file_path, 300),
+            pattern: clip(input.pattern, 300),
+          },
+          output: clip(m.output, 1500),
+          content: clip(m.content, 1500),
+        };
+      });
+      return { messages: messages as Record<string, unknown>[], error: result.ok ? null : result.error ?? "读取步骤失败" };
+    })();
+    logInflight.set(input.taskId, promise);
+    const clear = () => logInflight.delete(input.taskId);
+    promise.then(clear, clear);
+    return promise;
   };
 
   return {

@@ -35,6 +35,7 @@ import {
   ExecutionLogSection,
   RunLogModal,
   RunningChip,
+  RunningResponseRow,
   RunsModal,
   activitiesByRoot,
   fmtDuration,
@@ -133,12 +134,31 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   );
   const activeTask = (activeTaskQuery.data ?? []).find((task) => task.status === "running") ?? null;
   const activeAgent = activeTask ? agents.find((agent) => agent.id === activeTask.agent_id) ?? null : null;
+  const [stopTask, setStopTask] = useState<TaskRun | null>(null);
+  const [stopBusy, setStopBusy] = useState(false);
 
   const insights = useIssueInsights(issueId, bump, !ctx.loading);
   const runs = insights.runs;
+  const activeAttribution =
+    (activeTask ? runs.find((run) => run.id === activeTask.id)?.attribution : null) ?? activeTask?.attribution ?? null;
+  const triggerCommentId =
+    activeAttribution?.evidence?.kind === "comment" ? (activeAttribution.evidence.ref_id ?? null) : null;
   const [runsOpen, setRunsOpen] = useState(false);
   const [runLogId, setRunLogId] = useState<string | null>(null);
   const [openActivity, setOpenActivity] = useState<Record<string, boolean>>({});
+
+  const confirmStop = async () => {
+    if (!stopTask) return;
+    setStopBusy(true);
+    const result = await api({ method: "POST", path: `/api/tasks/${stopTask.id}/cancel` });
+    setStopBusy(false);
+    if (result.ok) {
+      toast.show("已停止该运行", { variant: "success" });
+      setStopTask(null);
+      activeTaskQuery.refresh();
+      insights.refresh();
+    } else toast.error(result.error ?? "停止失败");
+  };
 
   const assignee = useMemo(() => {
     if (!issue?.assignee_id) return null;
@@ -599,12 +619,18 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
         ) : comments.length === 0 ? (
           <View style={ui.s.panel}>
             <Text style={[ui.s.tiny, { padding: 16 }]}>还没有评论，@ 智能体即可触发协作。</Text>
+            {activeTask ? (
+              <RunningResponseRow ui={ui} task={activeTask} agent={activeAgent} onOpenLog={setRunLogId} onStop={setStopTask} />
+            ) : null}
           </View>
         ) : (
           <View style={{ gap: 12 }}>
             {roots.map((root) => {
               const replies = threadOf(root.id);
-              const folded = collapsed[root.id] === true;
+              const hasRunning = Boolean(
+                activeTask && triggerCommentId && (triggerCommentId === root.id || replies.some((item) => item.id === triggerCommentId)),
+              );
+              const folded = collapsed[root.id] === true && !hasRunning;
               const target = replyTo && (replyTo.id === root.id || replies.some((item) => item.id === replyTo.id)) ? replyTo : null;
               const activities = activityMap.get(root.id) ?? [];
               const actOpen = openActivity[root.id] === true;
@@ -621,6 +647,8 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                       busy={threadBusy === root.id}
                       onReply={() => openReply(root.id, root)}
                       onResolve={() => void toggleResolve(root)}
+                      runningTask={activeTask && triggerCommentId === root.id ? activeTask : null}
+                      onStopRun={setStopTask}
                     />
                     {folded
                       ? null
@@ -638,6 +666,8 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                               busy={threadBusy === reply.id}
                               onReply={() => openReply(root.id, reply)}
                               onResolve={() => void toggleResolve(reply)}
+                              runningTask={activeTask && triggerCommentId === reply.id ? activeTask : null}
+                              onStopRun={setStopTask}
                             />
                           </View>
                         ))}
@@ -700,6 +730,11 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                 </View>
               );
             })}
+            {activeTask && (!triggerCommentId || !commentById.has(triggerCommentId)) ? (
+              <View style={[ui.s.panel, { paddingVertical: 4 }]}>
+                <RunningResponseRow ui={ui} task={activeTask} agent={activeAgent} onOpenLog={setRunLogId} onStop={setStopTask} />
+              </View>
+            ) : null}
           </View>
         )}
       </View>
@@ -1116,6 +1151,26 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
         comments={comments}
         onClose={() => setRunLogId(null)}
       />
+      <Modal
+        title="停止运行"
+        icon={<Icon name="Square" size={16} color={ui.c.danger} />}
+        open={Boolean(stopTask)}
+        onOpenChange={(next) => {
+          if (!next) setStopTask(null);
+        }}
+      >
+        <Modal.Content>
+          <View style={{ gap: 12 }}>
+            <Text style={ui.s.body}>
+              停止 {stopTask ? (agents.find((agent) => agent.id === stopTask.agent_id)?.name ?? "智能体") : ""} 的这次运行？已产生的步骤与输出会保留，任务标记为已取消。
+            </Text>
+            <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8 }]}>
+              <Btn ui={ui} label="取消" onPress={() => setStopTask(null)} />
+              <Btn ui={ui} label="停止运行" tone="danger" busy={stopBusy} onPress={() => void confirmStop()} />
+            </View>
+          </View>
+        </Modal.Content>
+      </Modal>
     </View>
   );
 }
@@ -1429,6 +1484,8 @@ function CommentCard({
   busy,
   onReply,
   onResolve,
+  runningTask,
+  onStopRun,
 }: {
   ui: Ui;
   item: Comment;
@@ -1440,12 +1497,14 @@ function CommentCard({
   busy?: boolean;
   onReply(): void;
   onResolve(): void;
+  runningTask?: TaskRun | null;
+  onStopRun(task: TaskRun): void;
 }) {
   const author = commentAuthor(item, agents, members);
   const resolved = Boolean(item.resolved_at);
   const sourceTask = item.source_task_id ? runs.find((run) => run.id === item.source_task_id) ?? null : null;
   const running = sourceTask?.status === "running";
-  const elapsed = sourceTask ? runDurationMs(sourceTask) : 0;
+  const liveTask = runningTask ?? (running ? sourceTask : null);
   return (
     <View style={{ gap: 8, padding: 16, backgroundColor: resolved ? `${ui.c.success}0f` : "transparent" }}>
       <View style={[ui.s.row, { gap: 12 }]}>
@@ -1472,31 +1531,22 @@ function CommentCard({
           onPress={onResolve}
         />
       </View>
-      {running ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="查看智能体运行日志"
-          onPress={() => sourceTask && onOpenRun(sourceTask.id)}
-          style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
-            ui.s.row,
-            { gap: 8, paddingLeft: 32, paddingVertical: 4, borderRadius: 6 },
-            hovered && { backgroundColor: ui.c.fillHover },
-            pressed && ui.s.pressed,
-          ]}
-        >
-          <ActivityIndicator size="small" color={ui.c.brand} />
-          <Text style={{ fontSize: 13, color: ui.c.muted }}>等待智能体响应。</Text>
-          <View style={ui.s.grow} />
-          <Text style={ui.s.tiny}>{fmtDuration(elapsed)}</Text>
-          <Icon name="ScrollText" size={14} color={ui.c.muted} />
-        </Pressable>
-      ) : item.content ? (
+      {item.content ? (
         <View style={{ paddingLeft: 32 }}>
           <Markdown>{item.content}</Markdown>
         </View>
-      ) : (
+      ) : liveTask ? null : (
         <Text style={[ui.s.tiny, { paddingLeft: 32, fontStyle: "italic" }]}>（空评论）</Text>
       )}
+      {liveTask ? (
+        <RunningResponseRow
+          ui={ui}
+          task={liveTask}
+          agent={agents.find((agent) => agent.id === liveTask.agent_id) ?? null}
+          onOpenLog={onOpenRun}
+          onStop={onStopRun}
+        />
+      ) : null}
       {sourceTask && !running ? (
         <Pressable
           accessibilityRole="button"
