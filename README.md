@@ -49,6 +49,22 @@ cloud (`https://api.multica.ai`) and any self-hosted Multica server.
 - Switch between several Multica servers (official cloud + self-hosted) from the workspace
   picker; each connection keeps its own key, workspace and internal-route preference.
 
+## Media & provenance
+
+Listing screenshots and the icon are **synthetic renderings built from fictional seed
+data** (`tools/demo-data.mjs`), not captures of any real workspace:
+
+```bash
+node tools/render-media.mjs                 # writes assets/screenshots/*.svg + assets/icon.svg
+rsvg-convert -w 1600 -h 900 assets/screenshots/overview.svg -o assets/screenshots/overview.png
+rsvg-convert -w 256 -h 256 assets/icon.svg -o assets/icon.png
+```
+
+`node tools/demo-server.mjs` serves the same seed data as a local Multica-compatible API
+for hands-on demos; point a throwaway connection at `http://127.0.0.1:4173`, then delete
+that connection and stop the server when done. No real names, IDs, tokens or hostnames
+appear in any committed asset.
+
 ## Security & data flow
 
 - Reads by default; every mutation hangs off an explicit user gesture, destructive ones

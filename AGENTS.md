@@ -46,10 +46,11 @@ Paseo plugin requirements we must follow when developing, reviewing, and releasi
   item IDs, tokens, cookies, internal hostnames, or customer data in code, comments, docs,
   fixtures, examples, screenshots, or commit messages.
 - Use obvious placeholders such as `<workspace-id>`, `<token>`, `example.com`, `12345678`.
-- Screenshots and media: agents must never capture, generate, edit, replace, or push
-  images themselves. Only screenshots supplied by the author may be committed, and only
-  after the author confirms they are desensitized. Never push an image change the author
-  did not provide.
+- Screenshots and media: never capture or commit images of real workspace data. Listing
+  media are synthetic renderings constructed exclusively from the fictional seed data in
+  `tools/demo-data.mjs` via `tools/render-media.mjs` (author-approved desensitized media);
+  regenerate with `node tools/render-media.mjs` then `rsvg-convert`. Any other image change
+  must be supplied and confirmed desensitized by the author.
 
 ## Code safety
 
@@ -88,5 +89,5 @@ Checklist before pushing:
 - Grep the change for secrets and real identifiers; confirm none.
 - README, OVERVIEW, and the manifest are updated together (see above).
 - Bump `package.json` and `shared/version.ts` together; the update check compares the registry pin against `shared/version.ts`.
-- For visual changes, ship a refreshed screenshot only when the author provides one
-  (desensitized); never capture or generate screenshots yourself.
+- For visual changes, regenerate the synthetic media from `tools/demo-data.mjs`
+  (author-approved desensitized renderings); never capture real workspace data.
