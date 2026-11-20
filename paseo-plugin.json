@@ -1,6 +1,6 @@
 {
-  "id": "multica-workbench",
-  "name": "Multica 工作台 / Multica Workbench",
+  "id": "multica",
+  "name": "Multica",
   "description": "在 Paseo 中原生复刻 Multica 管理后台：任务、项目、团队、运行时、技能、聊天、自动化与工作区设置，支持官方云与自建 Multica 服务器",
   "media": [],
   "requirements": {

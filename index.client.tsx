@@ -15,7 +15,7 @@ import { Shell } from "./client/workbench/Shell";
 import { SettingsPage } from "./client/workbench/pages/Settings";
 import { inboxBadgeRpc } from "./shared/contracts";
 
-const SCREEN_ID = "multica-workbench";
+const SCREEN_ID = "multica";
 const SETTINGS_ID = "multica-connections";
 
 const PAGE_KEYS: PageKey[] = [
@@ -141,7 +141,7 @@ function WorkbenchSidebarRow({ currentScreen, openScreen, theme }: PluginSidebar
 
 export default function contribute(client: PluginClientContext) {
   const cleanups = [
-    client.addScreen({ id: SCREEN_ID, title: "Multica 工作台", Component: WorkbenchScreen }),
+    client.addScreen({ id: SCREEN_ID, title: "Multica", Component: WorkbenchScreen }),
     client.addSettingsScreen({
       id: SETTINGS_ID,
       title: "Multica 连接",
@@ -155,7 +155,7 @@ export default function contribute(client: PluginClientContext) {
     }),
     client.addCommandCenterItem({
       id: "multica-open",
-      title: "打开 Multica 工作台",
+      title: "打开 Multica",
       icon: { svg: MULTICA_LOGO_SVG },
       keywords: ["multica", "工作台", "issuance", "issue", "任务", "智能体"],
       context: "global",

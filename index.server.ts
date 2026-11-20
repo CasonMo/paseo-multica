@@ -27,6 +27,6 @@ export default function contribute(server: PluginServerContext) {
   server.handle(apiRequestRpc, handlers.request);
   server.handle(inboxBadgeRpc, handlers.inboxBadge);
 
-  console.log(`[multica-workbench] server ready, connections: ${connectionsStorePath()}`);
+  console.log(`[multica] server ready, connections: ${connectionsStorePath()}`);
   return () => {};
 }

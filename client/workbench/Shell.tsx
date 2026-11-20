@@ -38,7 +38,7 @@ export function Shell() {
   };
 
   return (
-    <View testID="multica-workbench" style={{ flex: 1, flexDirection: "row", backgroundColor: ui.c.shell }}>
+    <View testID="multica" style={{ flex: 1, flexDirection: "row", backgroundColor: ui.c.shell }}>
       <RailNav onWorkspacePicker={() => setPickerOpen(true)} />
       <SectionSidebar />
 

@@ -25,6 +25,7 @@ const LIGHT = {
   canvas: "#fbfbfb",
   card: "#ffffff",
   fill: "#f4f4f5",
+  fillHover: "#efeff1",
   fillStrong: "#e9e9eb",
   border: "#e4e4e7",
   line: "#ececef",
@@ -51,7 +52,8 @@ const DARK: typeof LIGHT = {
   canvas: "#282c34",
   card: "#2f333d",
   fill: "#383c48",
-  fillStrong: "#4a4f5e",
+  fillHover: "#292d34",
+  fillStrong: "#31353c",
   border: "#3f4454",
   line: "#454b5b",
   primary: "#fafafa",
@@ -78,13 +80,13 @@ function isDark(surface: string): boolean {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.5;
 }
 
-const CHROME_ID = "multica-workbench-chrome";
+const CHROME_ID = "multica-chrome";
 const CHROME_CSS = `
-[data-testid="multica-workbench"] * { scrollbar-width: thin; }
-[data-testid="multica-workbench"] ::-webkit-scrollbar { width: 10px; height: 10px; }
-[data-testid="multica-workbench"] ::-webkit-scrollbar-track { background: transparent; }
-[data-testid="multica-workbench"] ::-webkit-scrollbar-corner { background: transparent; }
-[data-testid="multica-workbench"] ::-webkit-scrollbar-thumb {
+[data-testid="multica"] * { scrollbar-width: thin; }
+[data-testid="multica"] ::-webkit-scrollbar { width: 10px; height: 10px; }
+[data-testid="multica"] ::-webkit-scrollbar-track { background: transparent; }
+[data-testid="multica"] ::-webkit-scrollbar-corner { background: transparent; }
+[data-testid="multica"] ::-webkit-scrollbar-thumb {
   border: 3px solid transparent; background-clip: content-box; border-radius: 999px;
 }
 `;
@@ -110,9 +112,9 @@ export function injectChrome(dark: boolean) {
   const t = dark ? DARK : LIGHT;
   style.textContent =
     CHROME_CSS +
-    `[data-testid="multica-workbench"] * { scrollbar-color: ${t.scrollThumb} transparent; }
-[data-testid="multica-workbench"] ::-webkit-scrollbar-thumb { background-color: ${t.scrollThumb}; }
-[data-testid="multica-workbench"] ::-webkit-scrollbar-thumb:hover { background-color: ${t.scrollThumbHover}; }
+    `[data-testid="multica"] * { scrollbar-color: ${t.scrollThumb} transparent; }
+[data-testid="multica"] ::-webkit-scrollbar-thumb { background-color: ${t.scrollThumb}; }
+[data-testid="multica"] ::-webkit-scrollbar-thumb:hover { background-color: ${t.scrollThumbHover}; }
 `;
 }
 

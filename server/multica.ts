@@ -51,7 +51,7 @@ function buildUrl(server: ResolvedServer, path: string, query?: Record<string, s
 function authHeaders(server: ResolvedServer, workspaceId?: string | null): Record<string, string> {
   const headers: Record<string, string> = {
     Accept: "application/json",
-    "User-Agent": "paseo-multica-workbench/0.1",
+    "User-Agent": "paseo-multica/0.2",
   };
   if (server.token) headers.Authorization = `Bearer ${server.token}`;
   if (workspaceId) headers["X-Workspace-ID"] = workspaceId;
@@ -93,7 +93,7 @@ export async function requestMultica(
     };
   }
   if (!server.token) {
-    return { ok: false, status: 0, error: "尚未配置 API Key，请到 Multica 工作台设置中填写", code: "no_token", durationMs: 0 };
+    return { ok: false, status: 0, error: "尚未配置 API Key，请到 Multica 设置中填写", code: "no_token", durationMs: 0 };
   }
 
   const headers = authHeaders(server, options.workspaceId ?? server.workspaceId);

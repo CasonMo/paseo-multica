@@ -25,7 +25,7 @@ const PRIORITIES = ["urgent", "high", "medium", "low", "none"] as const;
 
 export function IssueDetailPage({ issueId }: { issueId: string }) {
   const ctx = useWorkbench();
-  const { theme, compact, api, statuses, workspaceId, navigate, toast, invalidate, bump } = ctx;
+  const { theme, compact, narrow, stacked, api, statuses, workspaceId, navigate, toast, invalidate, bump } = ctx;
   const ui = useUi(theme, compact);
   const key = `${workspaceId}:${bump}`;
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -344,7 +344,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     </View>
   );
 
-  const pad = compact ? 16 : 32;
+  const pad = compact || stacked ? 16 : narrow ? 20 : 28;
   const half = `${ui.c.line}80`;
 
   const content = (
@@ -710,7 +710,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
         <IconBtn ui={ui} icon="Trash2" label="删除任务" color={ui.c.danger} onPress={() => setConfirmDelete(true)} />
       </View>
 
-      {compact ? (
+      {compact || stacked ? (
         <ScrollView contentContainerStyle={{ padding: pad, paddingBottom: 32, gap: 20 }}>
           {content}
           {composer}
@@ -722,13 +722,13 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: pad, paddingBottom: 24 }}>
               <View style={{ width: "100%", maxWidth: 896, alignSelf: "center", gap: 24 }}>{content}</View>
             </ScrollView>
-            <View style={{ paddingHorizontal: pad, paddingBottom: 20 }}>
+            <View style={{ paddingHorizontal: pad, paddingBottom: 16 }}>
               <View style={{ width: "100%", maxWidth: 896, alignSelf: "center" }}>{composer}</View>
             </View>
           </View>
           <ScrollView
-            style={{ width: 300, flexGrow: 0, flexShrink: 0 }}
-            contentContainerStyle={{ padding: 20, paddingBottom: 32, gap: 16 }}
+            style={{ width: narrow ? 224 : 248, flexGrow: 0, flexShrink: 0 }}
+            contentContainerStyle={{ padding: 14, paddingBottom: 28, gap: 14 }}
           >
             {panel}
           </ScrollView>
@@ -975,7 +975,7 @@ function PropRow({
         pressed && ui.s.pressed,
       ]}
     >
-      <Text style={{ width: 56, fontSize: 13, color: ui.c.muted }}>{label}</Text>
+      <Text style={{ width: 48, fontSize: 13, color: ui.c.muted }}>{label}</Text>
       <View style={[ui.s.row, { flex: 1, gap: 6, minWidth: 0 }]}>{children}</View>
     </Pressable>
   );
@@ -984,7 +984,7 @@ function PropRow({
 function DetailLine({ ui, label, value }: { ui: Ui; label: string; value: string }) {
   return (
     <View style={[ui.s.row, { gap: 8 }]}>
-      <Text style={{ width: 56, fontSize: 12, color: ui.c.muted }}>{label}</Text>
+      <Text style={{ width: 48, fontSize: 12, color: ui.c.muted }}>{label}</Text>
       <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, color: ui.c.fg }}>
         {value}
       </Text>

@@ -50,7 +50,7 @@ function bucketOf(issue: Issue, statuses: IssueStatusEntry[]): string {
 
 export function IssuesPage() {
   const ctx = useWorkbench();
-  const { theme, compact, api, statuses, bump, workspaceId, navigate, params, toast, invalidate, user } = ctx;
+  const { theme, compact, narrow, api, statuses, bump, workspaceId, navigate, params, toast, invalidate, user } = ctx;
   const ui = useUi(theme, compact);
 
   const view = params.view ?? "all";
@@ -266,13 +266,13 @@ export function IssuesPage() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1, gap: 16, padding: compact ? 12 : 16 }}
+          contentContainerStyle={{ flexGrow: 1, gap: narrow ? 12 : 16, padding: compact || narrow ? 12 : 16 }}
         >
           {columns.map((column) => (
             <View
               key={column.key}
               style={{
-                width: compact ? 240 : 280,
+                width: compact ? 232 : narrow ? 252 : 272,
                 flexGrow: 1,
                 borderRadius: 12,
                 backgroundColor: `${ui.c.fill}66`,

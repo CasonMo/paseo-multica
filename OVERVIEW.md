@@ -1,20 +1,20 @@
-# Multica 工作台 / Multica Workbench
+# Multica
 
 在 Paseo 里原生复刻 Multica 管理后台：需求、团队、聊天、自动化、接口调试与工作区设置，全部直接调用 Multica 后端 API。同时支持 `https://api.multica.ai` 官方云与任意自建 Multica 服务器。
 
 ## 安装
 
 ```bash
-cd /path/to/multica-workbench
+cd /path/to/paseo-multica
 npm install
-paseo plugin install /path/to/multica-workbench --id multica-workbench
+paseo plugin install /path/to/paseo-multica
 ```
 
-开发模式改完代码执行 `paseo plugin reload multica-workbench` 即可生效。
+开发模式改完代码执行 `paseo plugin reload multica` 即可生效。
 
 ## 配置连接
 
-1. 打开侧边栏底部 `Multica`，或命令面板搜索「Multica 工作台」。
+1. 打开侧边栏底部 `Multica`，或命令面板搜索「Multica」。
 2. 首次进入会自动跳到「设置」，点击「添加」：
    - 服务器地址：官方云填 `https://api.multica.ai`；自建填自己的 API 根地址
    - API Key：在 Multica 后台「个人设置 → API Key」创建，形如 `mul_...`
@@ -39,13 +39,13 @@ paseo plugin install /path/to/multica-workbench --id multica-workbench
 | 接口 | 内置 524 个公开接口（开启内部接口后 568 个），支持路径/查询/请求体编辑、实际调用并查看状态码、耗时与响应 JSON |
 | 设置 | 连接 / 工作区 / 账户三个标签：多服务器管理、工作区切换、成员与邀请、个人资料、访问令牌（仅显示一次）、通知偏好、内部接口开关 |
 
-界面按官方后台还原：最左图标栏（工作区、新建、搜索、各分区、刷新/设置/账户）、对应分区的二级侧栏（收件箱、视图计数、项目；团队与自动化的分类）、右侧主区域承载看板或详情。侧边栏与命令面板都可以直接跳到指定页面。
+界面按官方后台还原：最左图标栏（工作区、新建、搜索、各分区、刷新/设置/账户）、对应分区的二级侧栏（收件箱、视图计数、项目；团队与自动化的分类）、右侧主区域承载看板或详情。侧边栏与命令面板都可以直接跳到指定页面。两侧栏宽度随面板实测宽度收窄（图标栏 48、二级侧栏 224/196、详情右栏 248/224），面板不足 820px 时二级侧栏隐藏、详情右栏改为堆叠在正文下方，优先保证主内容可读面积。
 
 Paseo 左侧「Multica」菜单项带未读通知徽章：由 daemon 侧 `workbench.inbox_badge` 读取当前连接的 `/api/inbox/unread-count`，客户端每 20 秒轮询，工作台里标记已读/归档后立即重取；徽章配色跟随宿主主题，与相邻插件的徽章同规格。有未读时点击该菜单项直接落到收件箱，已打开工作台时保留当前页面不打断。
 
 ## 安全
 
-- API Key 只保存在本机 Paseo 后台：`~/.paseo/multica-workbench/connections.json`（权限 `0600`）。
+- API Key 只保存在本机 Paseo 后台：`~/.paseo/multica/connections.json`（权限 `0600`）。
 - Key 不会下发到客户端界面，设置页只显示 `mul_…abcd` 形式的掩码。
 - 所有请求由 daemon 侧发起，客户端通过 RPC 间接调用，浏览器标签页里拿不到明文 Key。
 - `/api/internal`、`/api/daemon` 默认隐藏，需在设置里显式开启。

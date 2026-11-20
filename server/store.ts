@@ -24,7 +24,7 @@ interface StoredState {
   servers: StoredServer[];
 }
 
-const storeDir = path.join(process.env.PASEO_HOME?.trim() || path.join(os.homedir(), ".paseo"), "multica-workbench");
+const storeDir = path.join(process.env.PASEO_HOME?.trim() || path.join(os.homedir(), ".paseo"), "multica");
 const storeFile = path.join(storeDir, "connections.json");
 
 let cached: StoredState | null = null;

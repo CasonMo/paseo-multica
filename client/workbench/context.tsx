@@ -3,6 +3,7 @@ import { useRpc } from "@getpaseo/plugin/client";
 import { useToast } from "@getpaseo/plugin/client/ui";
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { View } from "react-native";
 import {
   bootstrapRpc,
   connectionsListRpc,
@@ -32,6 +33,10 @@ export type PageKey =
 export interface WorkbenchValue {
   theme: PluginTheme;
   compact: boolean;
+  /** 插件面板实测宽度；两侧栏与详情右栏按它收窄，保证主内容优先。 */
+  width: number;
+  narrow: boolean;
+  stacked: boolean;
   api: ApiFn;
   toast: ReturnType<typeof useToast>;
   page: PageKey;
@@ -92,6 +97,7 @@ export function WorkbenchProvider({
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [bump, setBump] = useState(0);
+  const [width, setWidth] = useState(0);
   const alive = useRef(true);
 
   useEffect(() => {
@@ -177,6 +183,9 @@ export function WorkbenchProvider({
   const value: WorkbenchValue = {
     theme,
     compact,
+    width,
+    narrow: width > 0 && width < 1000,
+    stacked: width > 0 && width < 820,
     api,
     toast,
     page,
@@ -199,5 +208,11 @@ export function WorkbenchProvider({
     invalidate,
   };
 
-  return <WorkbenchContext.Provider value={value}>{children}</WorkbenchContext.Provider>;
+  return (
+    <WorkbenchContext.Provider value={value}>
+      <View style={{ flex: 1 }} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
+        {children}
+      </View>
+    </WorkbenchContext.Provider>
+  );
 }

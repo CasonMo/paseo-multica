@@ -6,6 +6,9 @@ import { useUi } from "./bits";
 import { useWorkbench, type PageKey } from "./context";
 import { initials, type Project } from "./model";
 
+/** RN-web 的 Pressable 会带 hovered，但 RN 0.81 的类型里没有声明。 */
+type NavPressState = { pressed: boolean; hovered?: boolean };
+
 const RAIL: { key: PageKey; label: string; icon: string }[] = [
   { key: "overview", label: "概览", icon: "LayoutDashboard" },
   { key: "issues", label: "工作", icon: "ListTodo" },
@@ -42,7 +45,7 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
   ) => {
     const selected = options?.selected === true;
     const plain = options?.plain === true;
-    const box = compact ? 38 : 48;
+    const box = compact ? 36 : 40;
     return (
       <Pressable
         accessibilityRole="button"
@@ -50,15 +53,16 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
         accessibilityState={{ selected }}
         key={key}
         onPress={onPress}
-        style={({ pressed }) => [
+        style={({ pressed, hovered }: NavPressState) => [
           {
-            width: plain ? 32 : box,
-            height: plain ? 32 : box,
-            borderRadius: plain ? 8 : 12,
+            width: plain ? 30 : box,
+            height: plain ? 30 : box,
+            borderRadius: plain ? 8 : 10,
             alignItems: "center",
             justifyContent: "center",
-            gap: 2,
+            gap: 1,
           },
+          hovered && !selected && { backgroundColor: ui.c.fillHover },
           selected && { backgroundColor: ui.c.fillStrong },
           pressed && ui.s.pressed,
         ]}
@@ -72,8 +76,8 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
           <Text
             numberOfLines={1}
             style={{
-              fontSize: compact ? 10 : 11,
-              lineHeight: compact ? 12 : 14,
+              fontSize: compact ? 9 : 10,
+              lineHeight: compact ? 11 : 12,
               color: selected ? ui.c.fg : ui.c.muted,
               fontWeight: selected ? "500" : "400",
             }}
@@ -88,10 +92,10 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
   return (
     <View
       style={{
-        width: compact ? 48 : 56,
+        width: compact ? 44 : 48,
         backgroundColor: ui.c.shell,
-        paddingTop: 15,
-        paddingBottom: 10,
+        paddingTop: 12,
+        paddingBottom: 8,
         alignItems: "center",
         gap: 2,
       }}
@@ -100,15 +104,15 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
         accessibilityRole="button"
         accessibilityLabel="切换工作区"
         onPress={onWorkspacePicker}
-        style={({ pressed }) => [
+        style={({ pressed, hovered }: NavPressState) => [
           {
-            width: 32,
-            height: 32,
-            borderRadius: 10,
+            width: 30,
+            height: 30,
+            borderRadius: 9,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: ui.c.fillStrong,
-            marginBottom: 8,
+            backgroundColor: hovered ? ui.c.fillStrong : ui.c.fillHover,
+            marginBottom: 6,
           },
           pressed && ui.s.pressed,
         ]}
@@ -161,11 +165,11 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
 }
 
 export function SectionSidebar() {
-  const { compact, page } = useWorkbench();
-  if (compact || page === "chat" || page === "api") return null;
+  const { compact, stacked, narrow, page } = useWorkbench();
+  if (compact || stacked || page === "chat" || page === "api") return null;
   return (
-    <View style={{ width: 280 }}>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 14, paddingBottom: 28 }}>
+    <View style={{ width: narrow ? 196 : 224 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 8, paddingTop: 12, paddingBottom: 24 }}>
         {page === "issues" || page === "issue" ? (
           <WorkNav />
         ) : page === "team" ? (
@@ -182,8 +186,8 @@ export function SectionSidebar() {
 
 function SectionTitle({ ui, title, action }: { ui: ReturnType<typeof useUi>; title: string; action?: React.ReactNode }) {
   return (
-    <View style={[ui.s.row, { paddingHorizontal: 8, paddingTop: 2, paddingBottom: 8 }]}>
-      <Text style={{ flex: 1, color: ui.c.fg, fontSize: 16, fontWeight: "600" }}>{title}</Text>
+    <View style={[ui.s.row, { paddingHorizontal: 8, paddingTop: 2, paddingBottom: 6 }]}>
+      <Text style={{ flex: 1, color: ui.c.fg, fontSize: 15, fontWeight: "600" }}>{title}</Text>
       {action}
     </View>
   );
@@ -221,26 +225,27 @@ function NavRow({
       accessibilityLabel={label}
       accessibilityState={{ selected: selected === true }}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={({ pressed, hovered }: NavPressState) => [
         {
           flexDirection: "row",
           alignItems: "center",
-          gap: 8,
-          height: 32,
-          paddingHorizontal: 12,
-          paddingLeft: indent ? 22 : 12,
-          borderRadius: 8,
+          gap: 7,
+          height: 30,
+          paddingHorizontal: 8,
+          paddingLeft: indent ? 18 : 8,
+          borderRadius: 7,
         },
+        hovered && selected !== true && { backgroundColor: ui.c.fillHover },
         selected && { backgroundColor: ui.c.fillStrong },
         pressed && ui.s.pressed,
       ]}
     >
       {icon ? (
-        <Icon name={icon} size={15} color={selected ? ui.c.fg : ui.c.muted} />
+        <Icon name={icon} size={14} color={selected ? ui.c.fg : ui.c.muted} />
       ) : (
-        <View style={{ width: 15 }} />
+        <View style={{ width: 14 }} />
       )}
-      <Text numberOfLines={1} style={{ flex: 1, fontSize: 14, color: ui.c.fg, fontWeight: selected ? "500" : "400" }}>
+      <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, color: ui.c.fg, fontWeight: selected ? "500" : "400" }}>
         {label}
       </Text>
       {count != null ? <Text style={{ fontSize: 12, color: ui.c.muted }}>{count}</Text> : null}
@@ -307,19 +312,20 @@ function WorkNav() {
       <GroupLabel ui={ui} label="收件箱" />
       <NavRow ui={ui} icon="Bell" label="收件箱" count={unreadCount} onPress={() => navigate("inbox")} />
       {previewList.length === 0 ? (
-        <Text style={[ui.s.tiny, { paddingHorizontal: 12, paddingVertical: 6 }]}>暂无通知</Text>
+        <Text style={[ui.s.tiny, { paddingHorizontal: 8, paddingVertical: 6 }]}>暂无通知</Text>
       ) : (
         previewList.map((item) => (
           <Pressable
             accessibilityRole="button"
             key={item.id}
             onPress={() => navigate("inbox")}
-            style={({ pressed }) => [
-              { minHeight: 32, justifyContent: "center", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+            style={({ pressed, hovered }: NavPressState) => [
+              { minHeight: 28, justifyContent: "center", paddingHorizontal: 8, paddingVertical: 5, borderRadius: 7 },
+              hovered && { backgroundColor: ui.c.fillHover },
               pressed && ui.s.pressed,
             ]}
           >
-            <Text numberOfLines={1} style={{ fontSize: 13, color: ui.c.muted }}>
+            <Text numberOfLines={1} style={{ fontSize: 12, color: ui.c.muted }}>
               {item.title || "通知"}
             </Text>
           </Pressable>
@@ -341,7 +347,7 @@ function WorkNav() {
 
       <GroupLabel ui={ui} label="项目" action={<Icon name="Plus" size={13} color={ui.c.muted} />} />
       {list.length === 0 ? (
-        <Text style={[ui.s.tiny, { paddingHorizontal: 12, paddingVertical: 6 }]}>暂无项目</Text>
+        <Text style={[ui.s.tiny, { paddingHorizontal: 8, paddingVertical: 6 }]}>暂无项目</Text>
       ) : (
         list.map((project) => (
           <NavRow
