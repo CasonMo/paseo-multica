@@ -64,6 +64,8 @@ export async function requestMultica(
   const started = Date.now();
   const { server, method, path } = options;
   const upper = method.toUpperCase();
+  // 路由白名单按端点匹配，query 不属于路由；内嵌 query 的 path 需剥离后再校验
+  const routePath = path.split("?")[0];
 
   if (!path.startsWith("/api/")) {
     return { ok: false, status: 0, error: "仅支持 /api 下的 Multica 接口", code: "invalid_path", durationMs: 0 };
@@ -71,19 +73,19 @@ export async function requestMultica(
   if (path.includes("..") || path.includes("//") || path.length > 2000) {
     return { ok: false, status: 0, error: "接口路径不合法", code: "invalid_path", durationMs: 0 };
   }
-  if (isBlockedRoute(path)) {
+  if (isBlockedRoute(routePath)) {
     return { ok: false, status: 0, error: "该接口不接受个人访问令牌，已阻止", code: "blocked_route", durationMs: 0 };
   }
-  if (!options.skipRouteCheck && !routeMatches(upper, path)) {
+  if (!options.skipRouteCheck && !routeMatches(upper, routePath)) {
     return {
       ok: false,
       status: 0,
-      error: `未在路由表中找到 ${upper} ${path}，请检查参数占位符`,
+      error: `未在路由表中找到 ${upper} ${routePath}，请检查参数占位符`,
       code: "unknown_route",
       durationMs: 0,
     };
   }
-  if (isInternalRoute(path) && !options.allowInternal && !server.allowInternal) {
+  if (isInternalRoute(routePath) && !options.allowInternal && !server.allowInternal) {
     return {
       ok: false,
       status: 0,
