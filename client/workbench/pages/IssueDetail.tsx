@@ -1,7 +1,7 @@
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View, type ViewStyle } from "react-native";
-import { Avatar, Btn, Divider, Empty, ErrorNote, Field, LoadingRow, Tag, useUi } from "../bits";
+import { Avatar, Btn, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, Tag, useUi } from "../bits";
 import { asList, asRecord, useQuery } from "../api";
 import { useWorkbench } from "../context";
 import {
@@ -33,8 +33,10 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const { theme, compact, api, statuses, workspaceId, navigate, toast, invalidate, bump } = ctx;
   const ui = useUi(theme, compact);
   const key = `${workspaceId}:${bump}`;
-  const [comment, setComment] = useState("");
-  const [sending, setSending] = useState(false);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [mentions, setMentions] = useState<Record<string, { id: string; name: string }[]>>({});
+  const [sendingKey, setSendingKey] = useState<string | null>(null);
+  const [mentionFor, setMentionFor] = useState<string | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -145,19 +147,37 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     await updateIssue({ title: editTitle.trim(), description: editDescription }, "任务已更新");
   };
 
-  const sendComment = async () => {
-    if (!issue || !comment.trim()) return;
-    setSending(true);
-    const body: Record<string, unknown> = { content: comment.trim() };
-    if (replyTo) body.parent_id = replyTo.id;
+  const sendComment = async (key: string, parentId: string | null) => {
+    if (!issue) return;
+    const draft = (drafts[key] ?? "").trim();
+    if (!draft) return;
+    const content = (mentions[key] ?? []).reduce(
+      (text, item) => text.split(`@${item.name}`).join(`[@${item.name}](mention://agent/${item.id})`),
+      draft,
+    );
+    setSendingKey(key);
+    const body: Record<string, unknown> = { content };
+    if (parentId) body.parent_id = parentId;
     const result = await api({ method: "POST", path: `/api/issues/${issue.id}/comments`, body });
-    setSending(false);
+    setSendingKey(null);
     if (result.ok) {
-      setComment("");
+      setDrafts((prev) => ({ ...prev, [key]: "" }));
+      setMentions((prev) => ({ ...prev, [key]: [] }));
       setReplyTo(null);
       commentsQuery.refresh();
-      toast.show(replyTo ? "回复已发送" : "评论已发送", { variant: "success" });
+      toast.show(parentId ? "回复已发送" : "评论已发送", { variant: "success" });
     } else toast.error(result.error ?? "发送失败");
+  };
+
+  const insertMention = (agent: Agent) => {
+    const key = mentionFor ?? "root";
+    setDrafts((prev) => {
+      const current = prev[key] ?? "";
+      const sep = current && !current.endsWith(" ") ? " " : "";
+      return { ...prev, [key]: `${current}${sep}@${agent.name} ` };
+    });
+    setMentions((prev) => ({ ...prev, [key]: [...(prev[key] ?? []).filter((item) => item.id !== agent.id), { id: agent.id, name: agent.name }] }));
+    setMentionFor(null);
   };
 
   const toggleResolve = async (item: Comment) => {
@@ -288,6 +308,35 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     const member = members.find((item) => item.id === id);
     return { name: member?.name || "成员", url: member?.avatar_url ?? null };
   };
+  const replyChip = (item: Comment) => (
+    <View
+      style={[
+        ui.s.row,
+        {
+          gap: 6,
+          paddingHorizontal: 8,
+          paddingVertical: 5,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: `${ui.c.accent}55`,
+          backgroundColor: `${ui.c.accent}14`,
+        },
+      ]}
+    >
+      <Icon name="CornerDownRight" size={12} color={ui.c.accent} />
+      <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, color: ui.c.fg }}>
+        回复 {commentAuthor(item, agents, members).name}：{item.content.replace(/\s+/g, " ").slice(0, 40)}
+      </Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="取消回复"
+        onPress={() => setReplyTo(null)}
+        style={({ pressed }) => [pressed && ui.s.pressed]}
+      >
+        <Icon name="X" size={12} color={ui.c.muted} />
+      </Pressable>
+    </View>
+  );
 
   return (
     <View style={{ flex: 1 }}>
@@ -493,107 +542,82 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                     <LoadingRow ui={ui} />
                   </View>
                 </View>
-              ) : comments.length === 0 ? (
-                <View style={groupStyle(ui)}>
-                  <Text style={[ui.s.tiny, { padding: 12 }]}>还没有评论，@ 智能体即可触发协作。</Text>
-                </View>
               ) : (
-                <View style={{ gap: 10 }}>
-                  {roots.map((root) => {
-                    const replies = threadOf(root.id);
-                    return (
-                      <View key={root.id} style={groupStyle(ui)}>
-                        <CommentCard
-                          ui={ui}
-                          item={root}
-                          agents={agents}
-                          members={members}
-                          busy={threadBusy === root.id}
-                          onReply={() => setReplyTo(root)}
-                          onResolve={() => void toggleResolve(root)}
-                        />
-                        {replies.length > 0 ? (
-                          <View>
-                            <Divider ui={ui} color={`${ui.c.fg}1f`} />
-                            <View
-                              style={{
-                                marginLeft: 16,
-                                borderLeftWidth: 1,
-                                borderLeftColor: `${ui.c.fg}1f`,
-                              }}
-                            >
-                              {replies.map((reply, replyIndex) => (
-                                <View key={reply.id}>
-                                  {replyIndex > 0 ? <Divider ui={ui} color={`${ui.c.fg}1f`} /> : null}
-                                  <CommentCard
-                                    ui={ui}
-                                    item={reply}
-                                    agents={agents}
-                                    members={members}
-                                    replyToName={commentAuthor(commentById.get(reply.parent_id ?? "") ?? null, agents, members).name}
-                                    busy={threadBusy === reply.id}
-                                    onReply={() => setReplyTo(reply)}
-                                    onResolve={() => void toggleResolve(reply)}
-                                  />
-                                </View>
-                              ))}
+                <>
+                  {comments.length === 0 ? (
+                    <View style={groupStyle(ui)}>
+                      <Text style={[ui.s.tiny, { padding: 12 }]}>还没有评论，@ 智能体即可触发协作。</Text>
+                    </View>
+                  ) : null}
+                  <View style={{ gap: 10 }}>
+                    {roots.map((root) => {
+                      const replies = threadOf(root.id);
+                      const target = replyTo && (replyTo.id === root.id || replies.some((item) => item.id === replyTo.id)) ? replyTo : null;
+                      return (
+                        <View key={root.id} style={groupStyle(ui)}>
+                          <CommentCard
+                            ui={ui}
+                            item={root}
+                            agents={agents}
+                            members={members}
+                            busy={threadBusy === root.id}
+                            onReply={() => setReplyTo(root)}
+                            onResolve={() => void toggleResolve(root)}
+                          />
+                          {replies.length > 0 ? (
+                            <View>
+                              <Divider ui={ui} color={`${ui.c.fg}1f`} />
+                              <View
+                                style={{
+                                  marginLeft: 16,
+                                  borderLeftWidth: 1,
+                                  borderLeftColor: `${ui.c.fg}1f`,
+                                }}
+                              >
+                                {replies.map((reply, replyIndex) => (
+                                  <View key={reply.id}>
+                                    {replyIndex > 0 ? <Divider ui={ui} color={`${ui.c.fg}1f`} /> : null}
+                                    <CommentCard
+                                      ui={ui}
+                                      item={reply}
+                                      agents={agents}
+                                      members={members}
+                                      replyToName={commentAuthor(commentById.get(reply.parent_id ?? "") ?? null, agents, members).name}
+                                      busy={threadBusy === reply.id}
+                                      onReply={() => setReplyTo(reply)}
+                                      onResolve={() => void toggleResolve(reply)}
+                                    />
+                                  </View>
+                                ))}
+                              </View>
                             </View>
-                          </View>
-                        ) : null}
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
-              <View style={{ gap: 8, paddingTop: 6 }}>
-                {replyTo ? (
-                  <View
-                    style={[
-                      ui.s.row,
-                      {
-                        gap: 6,
-                        paddingHorizontal: 8,
-                        paddingVertical: 5,
-                        borderRadius: 8,
-                        borderWidth: 1,
-                        borderColor: `${ui.c.accent}55`,
-                        backgroundColor: `${ui.c.accent}14`,
-                      },
-                    ]}
-                  >
-                    <Icon name="CornerDownRight" size={12} color={ui.c.accent} />
-                    <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, color: ui.c.fg }}>
-                      回复 {commentAuthor(replyTo, agents, members).name}：{replyTo.content.replace(/\s+/g, " ").slice(0, 40)}
-                    </Text>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="取消回复"
-                      onPress={() => setReplyTo(null)}
-                      style={({ pressed }) => [pressed && ui.s.pressed]}
-                    >
-                      <Icon name="X" size={12} color={ui.c.muted} />
-                    </Pressable>
+                          ) : null}
+                          <Divider ui={ui} color={`${ui.c.fg}1f`} />
+                          <CommentComposer
+                            ui={ui}
+                            value={drafts[root.id] ?? ""}
+                            onChangeText={(text) => setDrafts((prev) => ({ ...prev, [root.id]: text }))}
+                            placeholder="回复这条评论，@ 智能体可指定执行者…"
+                            chip={target ? replyChip(target) : null}
+                            busy={sendingKey === root.id}
+                            onMention={() => setMentionFor(root.id)}
+                            onSend={() => void sendComment(root.id, target ? target.id : root.id)}
+                          />
+                        </View>
+                      );
+                    })}
                   </View>
-                ) : null}
-                <Field
-                  ui={ui}
-                  value={comment}
-                  onChangeText={setComment}
-                  placeholder={replyTo ? "写下回复，支持 Markdown 与 @智能体…" : "写下评论，支持 Markdown 与 @智能体…"}
-                  multiline
-                />
-                <View style={[ui.s.row, { justifyContent: "flex-end" }]}>
-                  <Btn
+                  <CommentComposer
                     ui={ui}
-                    label={replyTo ? "发送回复" : "发送评论"}
-                    icon="Send"
-                    tone="primary"
-                    busy={sending}
-                    disabled={!comment.trim()}
-                    onPress={() => void sendComment()}
+                    value={drafts.root ?? ""}
+                    onChangeText={(text) => setDrafts((prev) => ({ ...prev, root: text }))}
+                    placeholder="写下评论，支持 Markdown，@ 智能体可触发协作…"
+                    busy={sendingKey === "root"}
+                    onMention={() => setMentionFor("root")}
+                    onSend={() => void sendComment("root", null)}
                   />
-                </View>
-              </View>
+                </>
+              )}
             </View>
           </View>
 
@@ -817,6 +841,33 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
       </Modal>
 
       <Modal
+        title="提及智能体"
+        icon={<Icon name="AtSign" size={16} color={ui.c.muted} />}
+        open={mentionFor !== null}
+        onOpenChange={(next) => {
+          if (!next) setMentionFor(null);
+        }}
+      >
+        <Modal.Content>
+          <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 2 }}>
+            {agents.map((agent) => (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`提及 ${agent.name}`}
+                key={`mention-agent-${agent.id}`}
+                onPress={() => insertMention(agent)}
+                style={({ pressed }) => [ui.s.listRow, pressed && ui.s.pressed]}
+              >
+                <Avatar ui={ui} name={agent.name} url={agent.avatar_url} size={24} />
+                <Text style={[ui.s.body, { flex: 1 }]}>{agent.name}</Text>
+                <Icon name="AtSign" size={13} color={ui.c.muted} />
+              </Pressable>
+            ))}
+          </ScrollView>
+        </Modal.Content>
+      </Modal>
+
+      <Modal
         title="添加标签"
         icon={<Icon name="Tags" size={16} color={ui.c.muted} />}
         open={labelsOpen}
@@ -966,6 +1017,64 @@ function CommentAction({
       <Icon name={icon} size={12} color={ui.c.muted} />
       <Text style={{ fontSize: 11.5, color: ui.c.muted }}>{label}</Text>
     </Pressable>
+  );
+}
+
+function CommentComposer({
+  ui,
+  value,
+  onChangeText,
+  placeholder,
+  chip,
+  busy,
+  onMention,
+  onSend,
+}: {
+  ui: ReturnType<typeof useUi>;
+  value: string;
+  onChangeText(text: string): void;
+  placeholder: string;
+  chip?: React.ReactNode;
+  busy?: boolean;
+  onMention(): void;
+  onSend(): void;
+}) {
+  return (
+    <View style={{ gap: 6, padding: 8 }}>
+      {chip}
+      <View style={[ui.s.row, { gap: 2 }]}>
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={ui.c.muted}
+          multiline
+          style={{
+            flex: 1,
+            minHeight: 32,
+            maxHeight: 96,
+            color: ui.c.fg,
+            fontSize: 12.5,
+            paddingHorizontal: 9,
+            paddingVertical: 7,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: ui.c.border,
+            backgroundColor: ui.c.surface0,
+          }}
+        />
+        <IconBtn ui={ui} icon="AtSign" label="提及智能体" size={15} onPress={onMention} />
+        <IconBtn
+          ui={ui}
+          icon="Send"
+          label="发送"
+          size={15}
+          color={value.trim() ? ui.c.accent : ui.c.muted}
+          busy={busy}
+          onPress={onSend}
+        />
+      </View>
+    </View>
   );
 }
 
