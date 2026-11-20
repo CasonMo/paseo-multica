@@ -16,6 +16,7 @@ import {
 } from "../model";
 import { AgentRow } from "../parts";
 import { AgentDetailModal } from "../AgentDetail";
+import { RuntimeDetailModal } from "../RuntimeDetail";
 
 type Tab = "agents" | "squads" | "runtimes" | "skills";
 
@@ -35,6 +36,7 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
   const [search, setSearch] = useState("");
   const [agentId, setAgentId] = useState<string | null>(params.agent ?? null);
   const [squadId, setSquadId] = useState<string | null>(null);
+  const [runtimeId, setRuntimeId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
   const agentsQuery = useQuery(
@@ -236,7 +238,12 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
                   return (
                     <View key={runtime.id}>
                       {index > 0 ? <Divider ui={ui} style={{ marginHorizontal: 14 }} /> : null}
-                      <View style={[ui.s.listRow, { alignItems: "flex-start" }]}>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`查看运行时 ${runtimeName(runtime)}`}
+                        onPress={() => setRuntimeId(runtime.id)}
+                        style={({ pressed }) => [ui.s.listRow, { alignItems: "flex-start" }, pressed && ui.s.pressed]}
+                      >
                         <View style={{ marginTop: 4 }}>
                           <Dot color={online ? ui.c.success : ui.c.muted} size={8} />
                         </View>
@@ -250,7 +257,8 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
                           </Text>
                         </View>
                         <Tag ui={ui} label={runtime.visibility === "private" ? "私有" : "工作区"} tone="muted" />
-                      </View>
+                        <Icon name="ChevronRight" size={15} color={ui.c.muted} />
+                      </Pressable>
                     </View>
                   );
                 })}
@@ -311,6 +319,11 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
         runtimesLoading={runtimesQuery.loading}
       />
       <SquadDetailModal squadId={squadId} onClose={() => setSquadId(null)} />
+      <RuntimeDetailModal
+        runtime={runtimes.find((item) => item.id === runtimeId) ?? null}
+        agents={agents}
+        onClose={() => setRuntimeId(null)}
+      />
     </View>
   );
 }
