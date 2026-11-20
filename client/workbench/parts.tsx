@@ -49,7 +49,7 @@ export function PriorityMark({ ui, priority }: { ui: Ui; priority?: string | nul
   return (
     <View style={[ui.s.row, { gap: 4 }]}>
       <Icon name={meta.icon} size={14} color={color} />
-      <Text style={{ fontSize: 12, color: ui.c.muted }}>{meta.label}</Text>
+      <Text style={{ fontSize: 12, color: ui.c.muted }}>{t(meta.label)}</Text>
     </View>
   );
 }
@@ -108,22 +108,22 @@ export function IssueRow({
 }
 
 const INBOX_META: Record<string, { label: string; icon: string }> = {
-  issue_created: { label: t("parts.2"), icon: "FilePlus" },
-  issue_status_changed: { label: t("SettingsSections.94"), icon: "RefreshCw" },
-  status_changed: { label: t("SettingsSections.94"), icon: "RefreshCw" },
-  issue_assigned: { label: t("parts.5"), icon: "UserCheck" },
-  assignee_changed: { label: t("parts.6"), icon: "UserCheck" },
-  unassigned: { label: t("IssueDetail.100"), icon: "UserMinus" },
-  issue_comment: { label: t("parts.8"), icon: "MessageSquare" },
-  comment: { label: t("parts.8"), icon: "MessageSquare" },
-  new_comment: { label: t("parts.8"), icon: "MessageSquare" },
-  agent_started: { label: t("parts.11"), icon: "Bot" },
-  agent_completed: { label: t("parts.12"), icon: "Bot" },
-  agent_failed: { label: t("parts.13"), icon: "TriangleAlert" },
-  task_failed: { label: t("parts.14"), icon: "TriangleAlert" },
-  quick_create_done: { label: t("parts.15"), icon: "Sparkles" },
-  mention: { label: t("parts.16"), icon: "AtSign" },
-  workflow: { label: t("Nav.7"), icon: "Workflow" },
+  issue_created: { label: "parts.2", icon: "FilePlus" },
+  issue_status_changed: { label: "SettingsSections.94", icon: "RefreshCw" },
+  status_changed: { label: "SettingsSections.94", icon: "RefreshCw" },
+  issue_assigned: { label: "parts.5", icon: "UserCheck" },
+  assignee_changed: { label: "parts.6", icon: "UserCheck" },
+  unassigned: { label: "IssueDetail.100", icon: "UserMinus" },
+  issue_comment: { label: "parts.8", icon: "MessageSquare" },
+  comment: { label: "parts.8", icon: "MessageSquare" },
+  new_comment: { label: "parts.8", icon: "MessageSquare" },
+  agent_started: { label: "parts.11", icon: "Bot" },
+  agent_completed: { label: "parts.12", icon: "Bot" },
+  agent_failed: { label: "parts.13", icon: "TriangleAlert" },
+  task_failed: { label: "parts.14", icon: "TriangleAlert" },
+  quick_create_done: { label: "parts.15", icon: "Sparkles" },
+  mention: { label: "parts.16", icon: "AtSign" },
+  workflow: { label: "Nav.7", icon: "Workflow" },
 };
 
 const INBOX_ICON: Record<string, string> = Object.fromEntries(
@@ -179,7 +179,7 @@ export function InboxRow({
       </View>
       <View style={{ flex: 1, gap: 3 }}>
         {meta ? (
-          <Text style={[ui.s.tiny, { color: tone, fontWeight: "600" }]}>{meta.label}</Text>
+          <Text style={[ui.s.tiny, { color: tone, fontWeight: "600" }]}>{t(meta.label)}</Text>
         ) : null}
         <Text numberOfLines={2} style={[ui.s.body, { fontWeight: item.read ? "500" : "700" }]}>
           {item.title}

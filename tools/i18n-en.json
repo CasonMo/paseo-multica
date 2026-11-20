@@ -904,5 +904,8 @@
   "Settings.68": "Language",
   "Settings.69": "Follow Paseo",
   "Settings.70": "English",
-  "Settings.71": "中文"
+  "Settings.71": "中文",
+  "AgentDetail.112": "MCP",
+  "Automation.133": "Webhook",
+  "Automation.134": "API"
 }

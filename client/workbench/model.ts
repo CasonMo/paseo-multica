@@ -214,23 +214,24 @@ export interface Workflow {
 }
 
 export const PROJECT_STATUS_META: Record<string, { label: string; tone: Tone }> = {
-  planned: { label: t("model.1"), tone: "muted" },
-  in_progress: { label: t("Execution.60"), tone: "accent" },
-  paused: { label: t("Nav.43"), tone: "warning" },
-  completed: { label: t("AgentDetail.6"), tone: "success" },
-  cancelled: { label: t("AgentDetail.9"), tone: "danger" },
+  planned: { label: "model.1", tone: "muted" },
+  in_progress: { label: "Execution.60", tone: "accent" },
+  paused: { label: "Nav.43", tone: "warning" },
+  completed: { label: "AgentDetail.6", tone: "success" },
+  cancelled: { label: "AgentDetail.9", tone: "danger" },
 };
 
 export function projectStatusMeta(status?: string | null) {
-  return PROJECT_STATUS_META[status ?? "planned"] ?? { label: status ?? t("AgentDetail.57"), tone: "muted" as Tone };
+  const meta = PROJECT_STATUS_META[status ?? "planned"];
+  return meta ? { ...meta, label: t(meta.label) } : { label: status ?? t("AgentDetail.57"), tone: "muted" as Tone };
 }
 
 export const HANDLER_LABEL: Record<string, string> = {
-  none: t("model.7"),
-  project_lead: t("model.8"),
-  member: t("Execution.11"),
-  agent: t("AgentDetail.23"),
-  squad: t("Nav.36"),
+  none: "model.7",
+  project_lead: "model.8",
+  member: "Execution.11",
+  agent: "AgentDetail.23",
+  squad: "Nav.36",
 };
 
 export interface Comment {
@@ -250,10 +251,10 @@ export interface Comment {
 }
 
 export const CATEGORY_META: Record<IssueCategory, { label: string; tone: Tone }> = {
-  unstarted: { label: t("model.12"), tone: "muted" },
-  started: { label: t("Execution.60"), tone: "accent" },
-  done: { label: t("AgentDetail.6"), tone: "success" },
-  closed: { label: t("model.15"), tone: "danger" },
+  unstarted: { label: "model.12", tone: "muted" },
+  started: { label: "Execution.60", tone: "accent" },
+  done: { label: "AgentDetail.6", tone: "success" },
+  closed: { label: "model.15", tone: "danger" },
 };
 
 const BUILTIN_CATEGORY: Record<string, IssueCategory> = {
@@ -292,7 +293,8 @@ export function issueStatusLabel(issue: Issue, statuses: IssueStatusEntry[]): st
   const entry = issueStatusEntry(issue, statuses);
   if (entry) return entry.name;
   const category = issueCategory(issue, statuses);
-  return CATEGORY_META[category]?.label ?? issue.status;
+  const meta = CATEGORY_META[category];
+  return meta ? t(meta.label) : issue.status;
 }
 
 export function issueStatusColor(issue: Issue, statuses: IssueStatusEntry[]): string {
@@ -325,27 +327,29 @@ export function statusColor(status: IssueStatusEntry): string {
 }
 
 export const PRIORITY_META: Record<string, { label: string; tone: Tone; icon: string }> = {
-  urgent: { label: t("model.16"), tone: "danger", icon: "Flame" },
-  high: { label: t("model.17"), tone: "warning", icon: "SignalHigh" },
-  medium: { label: t("model.18"), tone: "accent", icon: "SignalMedium" },
-  low: { label: t("model.19"), tone: "muted", icon: "SignalLow" },
-  none: { label: t("model.20"), tone: "muted", icon: "Minus" },
+  urgent: { label: "model.16", tone: "danger", icon: "Flame" },
+  high: { label: "model.17", tone: "warning", icon: "SignalHigh" },
+  medium: { label: "model.18", tone: "accent", icon: "SignalMedium" },
+  low: { label: "model.19", tone: "muted", icon: "SignalLow" },
+  none: { label: "model.20", tone: "muted", icon: "Minus" },
 };
 
 export function priorityMeta(priority?: string | null) {
-  return PRIORITY_META[priority ?? "none"] ?? PRIORITY_META.none;
+  const meta = PRIORITY_META[priority ?? "none"] ?? PRIORITY_META.none;
+  return { ...meta, label: t(meta.label) };
 }
 
 export const AGENT_STATUS_META: Record<string, { label: string; tone: Tone }> = {
-  idle: { label: t("model.21"), tone: "success" },
-  working: { label: t("model.22"), tone: "accent" },
-  blocked: { label: t("model.23"), tone: "warning" },
-  error: { label: t("model.24"), tone: "danger" },
-  offline: { label: t("RuntimeDetail.4"), tone: "muted" },
+  idle: { label: "model.21", tone: "success" },
+  working: { label: "model.22", tone: "accent" },
+  blocked: { label: "model.23", tone: "warning" },
+  error: { label: "model.24", tone: "danger" },
+  offline: { label: "RuntimeDetail.4", tone: "muted" },
 };
 
 export function agentStatusMeta(status?: string | null) {
-  return AGENT_STATUS_META[status ?? "offline"] ?? { label: status ?? t("AgentDetail.57"), tone: "muted" as Tone };
+  const meta = AGENT_STATUS_META[status ?? "offline"];
+  return meta ? { ...meta, label: t(meta.label) } : { label: status ?? t("AgentDetail.57"), tone: "muted" as Tone };
 }
 
 export function runtimeName(runtime: AgentRuntime): string {

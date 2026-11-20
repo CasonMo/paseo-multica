@@ -30,8 +30,8 @@ interface MemberRow {
 
 type InviteRow = Record<string, unknown>;
 
-const ROLE_LABEL: Record<string, string> = { owner: t("SettingsSections.1"), admin: t("SettingsSections.2"), member: t("Execution.11") };
-const roleLabel = (role: string) => ROLE_LABEL[role] ?? role;
+const ROLE_LABEL: Record<string, string> = { owner: "SettingsSections.1", admin: "SettingsSections.2", member: "Execution.11" };
+const roleLabel = (role: string) => (ROLE_LABEL[role] ? t(ROLE_LABEL[role]) : role);
 
 export function AccountSettings() {
   const ctx = useWorkbench();

@@ -24,14 +24,14 @@ import { useWorkbench, type WorkbenchValue } from "../context";
 import { fmtDateTime, relTime, type Agent, type Autopilot, type Squad } from "../model";
 
 const RUN_STATUS: Record<string, { label: string; tone: "success" | "danger" | "muted" | "warning" | "accent" }> = {
-  issue_created: { label: t("Automation.1"), tone: "accent" },
-  running: { label: t("AgentDetail.10"), tone: "accent" },
-  completed: { label: t("AgentDetail.6"), tone: "success" },
-  failed: { label: t("AgentDetail.7"), tone: "danger" },
-  skipped: { label: t("Automation.5"), tone: "warning" },
+  issue_created: { label: "Automation.1", tone: "accent" },
+  running: { label: "AgentDetail.10", tone: "accent" },
+  completed: { label: "AgentDetail.6", tone: "success" },
+  failed: { label: "AgentDetail.7", tone: "danger" },
+  skipped: { label: "Automation.5", tone: "warning" },
 };
 
-const TRIGGER_LABEL: Record<string, string> = { schedule: t("Automation.6"), webhook: "Webhook", api: "API" };
+const TRIGGER_LABEL: Record<string, string> = { schedule: "Automation.6", webhook: "Automation.133", api: "Automation.134" };
 
 const TIMEZONES = [
   "Asia/Shanghai",
@@ -253,7 +253,7 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
                 icon={item.execution_mode === "create_issue" ? "ListTodo" : "Play"}
               />
               {(item.trigger_kinds ?? []).map((kind) => (
-                <Tag key={kind} ui={ui} label={TRIGGER_LABEL[kind] ?? kind} tone="accent" icon="Zap" />
+                <Tag key={kind} ui={ui} label={TRIGGER_LABEL[kind] ? t(TRIGGER_LABEL[kind]) : kind} tone="accent" icon="Zap" />
               ))}
             </View>
 
@@ -265,7 +265,7 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
               <View style={[ui.s.row, { justifyContent: "space-between" }]}>
                 <Text style={ui.s.tiny}>{t("Automation.36")}</Text>
                 <Text style={ui.s.tiny}>
-                  {item.last_run_status ? RUN_STATUS[item.last_run_status]?.label ?? item.last_run_status : "—"}
+                  {item.last_run_status ? (RUN_STATUS[item.last_run_status] ? t(RUN_STATUS[item.last_run_status].label) : item.last_run_status) : "—"}
                   {item.last_run_at ? ` · ${relTime(item.last_run_at)}` : ""}
                 </Text>
               </View>
@@ -726,7 +726,7 @@ function AutopilotDetailModal({
                 <View style={[ui.s.row, { gap: 6 }]}>
                   <Tag
                     ui={ui}
-                    label={TRIGGER_LABEL[item.kind] ?? item.kind}
+                    label={TRIGGER_LABEL[item.kind] ? t(TRIGGER_LABEL[item.kind]) : item.kind}
                     icon={item.kind === "webhook" ? "Webhook" : "Clock"}
                     tone="accent"
                   />
@@ -824,7 +824,7 @@ function AutopilotDetailModal({
           {live?.last_run_at ? (
             <Text style={ui.s.tiny}>
               {t("Automation.36")} {relTime(live.last_run_at)}
-              {live.last_run_status ? ` · ${RUN_STATUS[live.last_run_status]?.label ?? live.last_run_status}` : ""}
+              {live.last_run_status ? ` · ${RUN_STATUS[live.last_run_status] ? t(RUN_STATUS[live.last_run_status].label) : live.last_run_status}` : ""}
             </Text>
           ) : null}
         </ScrollView>
@@ -996,7 +996,8 @@ function RunsModal({
         >
           {query.items.map((run) => {
             const status = String(run.status ?? "");
-            const meta = RUN_STATUS[status] ?? { label: status || t("AgentDetail.57"), tone: "muted" as const };
+            const runMeta = RUN_STATUS[status];
+            const meta = runMeta ? { ...runMeta, label: t(runMeta.label) } : { label: status || t("AgentDetail.57"), tone: "muted" as const };
             const issueId = typeof run.issue_id === "string" ? run.issue_id : null;
             return (
               <View

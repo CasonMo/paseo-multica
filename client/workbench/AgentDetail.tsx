@@ -10,12 +10,12 @@ import { agentStatusMeta, fmtDateTime, relTime, type Agent, type AgentRuntime, t
 type DetailTab = "overview" | "skills" | "tasks" | "env" | "mcp" | "labels";
 
 const TABS: { key: DetailTab; label: string; icon: string }[] = [
-  { key: "overview", label: t("AgentDetail.1"), icon: "Info" },
-  { key: "skills", label: t("AgentDetail.2"), icon: "Blocks" },
-  { key: "tasks", label: t("AgentDetail.3"), icon: "ListChecks" },
-  { key: "env", label: t("AgentDetail.4"), icon: "KeyRound" },
-  { key: "mcp", label: "MCP", icon: "Plug" },
-  { key: "labels", label: t("AgentDetail.5"), icon: "Tags" },
+  { key: "overview", label: "AgentDetail.1", icon: "Info" },
+  { key: "skills", label: "AgentDetail.2", icon: "Blocks" },
+  { key: "tasks", label: "AgentDetail.3", icon: "ListChecks" },
+  { key: "env", label: "AgentDetail.4", icon: "KeyRound" },
+  { key: "mcp", label: "AgentDetail.112", icon: "Plug" },
+  { key: "labels", label: "AgentDetail.5", icon: "Tags" },
 ];
 
 type AgentTask = {
@@ -31,14 +31,14 @@ type AgentTask = {
 };
 
 const TASK_STATUS: Record<string, { label: string; tone: "success" | "danger" | "accent" | "warning" | "muted" }> = {
-  completed: { label: t("AgentDetail.6"), tone: "success" },
-  failed: { label: t("AgentDetail.7"), tone: "danger" },
-  error: { label: t("AgentDetail.7"), tone: "danger" },
-  cancelled: { label: t("AgentDetail.9"), tone: "muted" },
-  running: { label: t("AgentDetail.10"), tone: "accent" },
-  started: { label: t("AgentDetail.10"), tone: "accent" },
-  dispatched: { label: t("AgentDetail.12"), tone: "warning" },
-  claimed: { label: t("AgentDetail.13"), tone: "warning" },
+  completed: { label: "AgentDetail.6", tone: "success" },
+  failed: { label: "AgentDetail.7", tone: "danger" },
+  error: { label: "AgentDetail.7", tone: "danger" },
+  cancelled: { label: "AgentDetail.9", tone: "muted" },
+  running: { label: "AgentDetail.10", tone: "accent" },
+  started: { label: "AgentDetail.10", tone: "accent" },
+  dispatched: { label: "AgentDetail.12", tone: "warning" },
+  claimed: { label: "AgentDetail.13", tone: "warning" },
 };
 
 function runtimeLabelOf(agent: Agent, runtimes: AgentRuntime[]): string {
@@ -149,7 +149,7 @@ export function AgentDetailModal({
                       style={({ pressed }) => [ui.s.chip, active && ui.s.chipActive, pressed && ui.s.pressed]}
                     >
                       <Icon name={entry.icon} size={12} color={active ? ui.c.accentFg : ui.c.muted} />
-                      <Text style={[ui.s.chipText, active && ui.s.chipTextActive]}>{entry.label}</Text>
+                      <Text style={[ui.s.chipText, active && ui.s.chipTextActive]}>{t(entry.label)}</Text>
                     </Pressable>
                   );
                 })}
@@ -374,7 +374,8 @@ function TasksPanel({
         <Empty ui={ui} icon="ListChecks" title={t("AgentDetail.55")} description={t("AgentDetail.56")} />
       ) : null}
       {items.map((task) => {
-        const meta = TASK_STATUS[task.status ?? ""] ?? { label: task.status || t("AgentDetail.57"), tone: "muted" as const };
+        const taskMeta = TASK_STATUS[task.status ?? ""];
+        const meta = taskMeta ? { ...taskMeta, label: t(taskMeta.label) } : { label: task.status || t("AgentDetail.57"), tone: "muted" as const };
         const output = task.result?.output?.trim();
         const cost = task.completed_at
           ? Math.max(0, Math.round((Date.parse(task.completed_at) - Date.parse(task.dispatched_at ?? task.completed_at)) / 1000))

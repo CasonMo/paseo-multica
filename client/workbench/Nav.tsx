@@ -11,14 +11,14 @@ import { initials, type Project } from "./model";
 type NavPressState = { pressed: boolean; hovered?: boolean };
 
 const RAIL: { key: PageKey; label: string; icon: string }[] = [
-  { key: "overview", label: t("AgentDetail.1"), icon: "LayoutDashboard" },
-  { key: "issues", label: t("Nav.2"), icon: "ListTodo" },
-  { key: "projects", label: t("Nav.3"), icon: "FolderKanban" },
-  { key: "team", label: t("Nav.4"), icon: "Users" },
-  { key: "chat", label: t("Nav.5"), icon: "MessagesSquare" },
-  { key: "autopilot", label: t("Nav.6"), icon: "Bot" },
-  { key: "workflows", label: t("Nav.7"), icon: "Workflow" },
-  { key: "labels", label: t("AgentDetail.5"), icon: "Tags" },
+  { key: "overview", label: "AgentDetail.1", icon: "LayoutDashboard" },
+  { key: "issues", label: "Nav.2", icon: "ListTodo" },
+  { key: "projects", label: "Nav.3", icon: "FolderKanban" },
+  { key: "team", label: "Nav.4", icon: "Users" },
+  { key: "chat", label: "Nav.5", icon: "MessagesSquare" },
+  { key: "autopilot", label: "Nav.6", icon: "Bot" },
+  { key: "workflows", label: "Nav.7", icon: "Workflow" },
+  { key: "labels", label: "AgentDetail.5", icon: "Tags" },
 ];
 
 export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
@@ -133,7 +133,7 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
         showsVerticalScrollIndicator={false}
       >
         {RAIL.map((entry) =>
-          cell(entry.key, entry.icon, entry.label, () => navigate(entry.key), { selected: active === entry.key }),
+          cell(entry.key, entry.icon, t(entry.label), () => navigate(entry.key), { selected: active === entry.key }),
         )}
       </ScrollView>
 
@@ -324,11 +324,11 @@ function NavRow({
 }
 
 export const WORK_VIEWS: { key: string; label: string; icon: string; query: Record<string, string | number> }[] = [
-  { key: "all", label: t("Nav.20"), icon: "ListChecks", query: {} },
-  { key: "mine", label: t("Nav.21"), icon: "CircleUser", query: { mine: 1 } },
-  { key: "active", label: t("Nav.22"), icon: "Play", query: { status_category: "started" } },
-  { key: "done", label: t("AgentDetail.6"), icon: "CircleCheck", query: { status_category: "done" } },
-  { key: "closed", label: t("AgentDetail.9"), icon: "CircleSlash", query: { status_category: "closed" } },
+  { key: "all", label: "Nav.20", icon: "ListChecks", query: {} },
+  { key: "mine", label: "Nav.21", icon: "CircleUser", query: { mine: 1 } },
+  { key: "active", label: "Nav.22", icon: "Play", query: { status_category: "started" } },
+  { key: "done", label: "AgentDetail.6", icon: "CircleCheck", query: { status_category: "done" } },
+  { key: "closed", label: "AgentDetail.9", icon: "CircleSlash", query: { status_category: "closed" } },
 ];
 
 function WorkNav() {
@@ -409,7 +409,7 @@ function WorkNav() {
             key={entry.key}
             ui={ui}
             icon={entry.icon}
-            label={entry.label}
+            label={t(entry.label)}
             count={counts[entry.key]}
             selected={view === entry.key && !projectId}
             onPress={() => navigate("issues", { view: entry.key })}
@@ -458,7 +458,7 @@ function TeamNav() {
             key={entry.key}
             ui={ui}
             icon={entry.icon}
-            label={entry.label}
+            label={t(entry.label)}
             selected={tab === entry.key}
             onPress={() => navigate("team", { tab: entry.key })}
           />
@@ -486,7 +486,7 @@ function AutomationNav() {
             key={entry.key}
             ui={ui}
             icon={entry.icon}
-            label={entry.label}
+            label={t(entry.label)}
             selected={filter === entry.key}
             onPress={() => navigate("autopilot", { filter: entry.key })}
           />
@@ -514,7 +514,7 @@ function SettingsNav() {
             key={entry.tab}
             ui={ui}
             icon={entry.icon}
-            label={entry.label}
+            label={t(entry.label)}
             selected={page === "settings" && (params.tab ?? "connection") === entry.tab}
             onPress={() => navigate("settings", { tab: entry.tab })}
           />

@@ -54,6 +54,8 @@ Paseo plugin requirements we must follow when developing, reviewing, and releasi
 - Internationalization: every user-facing string goes through the bilingual catalog
   (`tools/i18n-zh.json` / `tools/i18n-en.json` → `tools/i18n-build.mjs` → `i18n-resources.ts`);
   new UI text must add both locales with matching `{{placeholders}}` before release.
+  Module-level tables store catalog keys and call `t()` at render/read time: import-time
+  evaluation runs before the translation runtime binds and would freeze keys or locale.
 
 ## Code safety
 

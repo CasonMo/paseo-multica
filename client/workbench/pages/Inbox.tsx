@@ -12,16 +12,16 @@ import { InboxRow } from "../parts";
 type Tab = "inbox" | "archived" | "snoozed";
 
 const TABS: { value: Tab; label: string }[] = [
-  { value: "inbox", label: t("Nav.27") },
-  { value: "archived", label: t("AgentDetail.28") },
-  { value: "snoozed", label: t("Inbox.3") },
+  { value: "inbox", label: "Nav.27" },
+  { value: "archived", label: "AgentDetail.28" },
+  { value: "snoozed", label: "Inbox.3" },
 ];
 
 const SNOOZE_OPTIONS: { label: string; until(): Date }[] = [
-  { label: t("Inbox.4"), until: () => new Date(Date.now() + 3600_000) },
-  { label: t("Inbox.5"), until: () => new Date(Date.now() + 4 * 3600_000) },
+  { label: "Inbox.4", until: () => new Date(Date.now() + 3600_000) },
+  { label: "Inbox.5", until: () => new Date(Date.now() + 4 * 3600_000) },
   {
-    label: t("Inbox.6"),
+    label: "Inbox.6",
     until: () => {
       const next = new Date();
       next.setDate(next.getDate() + 1);
@@ -29,7 +29,7 @@ const SNOOZE_OPTIONS: { label: string; until(): Date }[] = [
       return next;
     },
   },
-  { label: t("Inbox.7"), until: () => new Date(Date.now() + 7 * 86400_000) },
+  { label: "Inbox.7", until: () => new Date(Date.now() + 7 * 86400_000) },
 ];
 
 export function InboxPage() {
@@ -210,7 +210,7 @@ export function InboxPage() {
           },
         ]}
       >
-        <Chips<Tab> ui={ui} options={TABS} value={tab} onChange={setTab} />
+        <Chips<Tab> ui={ui} options={TABS.map((option) => ({ ...option, label: t(option.label) }))} value={tab} onChange={setTab} />
         <View
           style={[
             ui.s.row,
@@ -426,7 +426,7 @@ export function InboxPage() {
             <Text style={ui.s.muted}>{t("Inbox.150")}{snoozeItem?.title}{t("Inbox.51")}</Text>
             <View style={{ gap: 6 }}>
               {SNOOZE_OPTIONS.map((option) => (
-                <Btn ui={ui} key={option.label} label={option.label} icon="Clock" busy={busy} onPress={() => void snooze(option.until())} />
+                <Btn ui={ui} key={option.label} label={t(option.label)} icon="Clock" busy={busy} onPress={() => void snooze(option.until())} />
               ))}
             </View>
             <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setSnoozeItem(null)} />

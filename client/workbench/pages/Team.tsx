@@ -22,10 +22,10 @@ import { CreateAgentModal, CreateSquadModal } from "../TeamCreate";
 export type Tab = "agents" | "squads" | "runtimes" | "skills";
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: "agents", label: t("AgentDetail.23"), icon: "Bot" },
-  { key: "squads", label: t("Nav.36"), icon: "UsersRound" },
-  { key: "runtimes", label: t("AgentDetail.16"), icon: "Server" },
-  { key: "skills", label: t("AgentDetail.2"), icon: "Blocks" },
+  { key: "agents", label: "AgentDetail.23", icon: "Bot" },
+  { key: "squads", label: "Nav.36", icon: "UsersRound" },
+  { key: "runtimes", label: "AgentDetail.16", icon: "Server" },
+  { key: "skills", label: "AgentDetail.2", icon: "Blocks" },
 ];
 
 export function TeamPage({ initialTab }: { initialTab?: Tab }) {
@@ -115,6 +115,8 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
     }
   };
 
+  const currentTab = TABS.find((entry) => entry.key === tab);
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
@@ -147,7 +149,7 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
                 style={({ pressed }) => [ui.s.chip, active && ui.s.chipActive, pressed && ui.s.pressed]}
               >
                 <Icon name={entry.icon} size={12} color={active ? ui.c.accentFg : ui.c.muted} />
-                <Text style={[ui.s.chipText, active && ui.s.chipTextActive]}>{entry.label}</Text>
+                <Text style={[ui.s.chipText, active && ui.s.chipTextActive]}>{t(entry.label)}</Text>
               </Pressable>
             );
           })}
@@ -171,7 +173,7 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder={t("Team.10", { a: TABS.find((entry) => entry.key === tab)?.label ?? "" })}
+            placeholder={t("Team.10", { a: currentTab ? t(currentTab.label) : "" })}
             placeholderTextColor={ui.c.muted}
             style={{ flex: 1, color: ui.c.fg, fontSize: 13, paddingVertical: 8 }}
             autoCapitalize="none"

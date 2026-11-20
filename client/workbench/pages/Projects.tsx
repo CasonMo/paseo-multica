@@ -11,29 +11,29 @@ import { IssueRow } from "../parts";
 type StatusFilter = "all" | "planned" | "in_progress" | "paused" | "completed" | "cancelled" | "archived";
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: t("ApiExplorer.4") },
-  { value: "planned", label: t("model.1") },
-  { value: "in_progress", label: t("Execution.60") },
-  { value: "paused", label: t("Nav.43") },
-  { value: "completed", label: t("AgentDetail.6") },
-  { value: "cancelled", label: t("AgentDetail.9") },
-  { value: "archived", label: t("AgentDetail.28") },
+  { value: "all", label: "ApiExplorer.4" },
+  { value: "planned", label: "model.1" },
+  { value: "in_progress", label: "Execution.60" },
+  { value: "paused", label: "Nav.43" },
+  { value: "completed", label: "AgentDetail.6" },
+  { value: "cancelled", label: "AgentDetail.9" },
+  { value: "archived", label: "AgentDetail.28" },
 ];
 
 const EDIT_STATUS: { value: string; label: string }[] = [
-  { value: "planned", label: t("model.1") },
-  { value: "in_progress", label: t("Execution.60") },
-  { value: "paused", label: t("Nav.43") },
-  { value: "completed", label: t("AgentDetail.6") },
-  { value: "cancelled", label: t("AgentDetail.9") },
+  { value: "planned", label: "model.1" },
+  { value: "in_progress", label: "Execution.60" },
+  { value: "paused", label: "Nav.43" },
+  { value: "completed", label: "AgentDetail.6" },
+  { value: "cancelled", label: "AgentDetail.9" },
 ];
 
 const EDIT_PRIORITY: { value: string; label: string }[] = [
-  { value: "none", label: t("model.20") },
-  { value: "low", label: t("model.19") },
-  { value: "medium", label: t("model.18") },
-  { value: "high", label: t("model.17") },
-  { value: "urgent", label: t("model.16") },
+  { value: "none", label: "model.20" },
+  { value: "low", label: "model.19" },
+  { value: "medium", label: "model.18" },
+  { value: "high", label: "model.17" },
+  { value: "urgent", label: "model.16" },
 ];
 
 export function ProjectsPage() {
@@ -210,7 +210,7 @@ export function ProjectsPage() {
           ) : null}
         </View>
 
-        <Chips<StatusFilter> ui={ui} options={STATUS_OPTIONS} value={status} onChange={setStatus} />
+        <Chips<StatusFilter> ui={ui} options={STATUS_OPTIONS.map((option) => ({ ...option, label: t(option.label) }))} value={status} onChange={setStatus} />
 
         {projectsQuery.loading && list.length === 0 ? (
           <Card ui={ui}>
@@ -601,11 +601,11 @@ function ProjectFormModal({
           />
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("IssueDetail.65")}</Text>
-            <Chips ui={ui} options={EDIT_STATUS} value={status} onChange={setStatus} />
+            <Chips ui={ui} options={EDIT_STATUS.map((option) => ({ ...option, label: t(option.label) }))} value={status} onChange={setStatus} />
           </View>
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("IssueDetail.66")}</Text>
-            <Chips ui={ui} options={EDIT_PRIORITY} value={priority} onChange={setPriority} />
+            <Chips ui={ui} options={EDIT_PRIORITY.map((option) => ({ ...option, label: t(option.label) }))} value={priority} onChange={setPriority} />
           </View>
           <View style={[ui.s.row, { gap: 10 }]}>
             <View style={{ flex: 1 }}>

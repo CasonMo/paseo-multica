@@ -11,34 +11,34 @@ import { WORK_VIEWS } from "../Nav";
 import { useWorkingAgents, type WorkingAgent } from "../Execution";
 
 const VIEW_LABEL: Record<string, string> = {
-  all: t("Nav.20"),
-  mine: t("Nav.21"),
-  active: t("Nav.22"),
-  done: t("AgentDetail.6"),
-  closed: t("AgentDetail.9"),
+  all: "Nav.20",
+  mine: "Nav.21",
+  active: "Nav.22",
+  done: "AgentDetail.6",
+  closed: "AgentDetail.9",
 };
 
 const BOARD: { key: string; label: string; icon: string; categories: string[]; status: string }[] = [
-  { key: "backlog", label: t("Issues.6"), icon: "CircleDashed", categories: ["backlog"], status: "backlog" },
-  { key: "todo", label: t("Issues.7"), icon: "Circle", categories: ["todo", "unstarted"], status: "todo" },
+  { key: "backlog", label: "Issues.6", icon: "CircleDashed", categories: ["backlog"], status: "backlog" },
+  { key: "todo", label: "Issues.7", icon: "Circle", categories: ["todo", "unstarted"], status: "todo" },
   {
     key: "started",
-    label: t("Execution.60"),
+    label: "Execution.60",
     icon: "CircleDot",
     categories: ["in_progress", "started", "blocked"],
     status: "in_progress",
   },
   {
     key: "review",
-    label: t("Issues.9"),
+    label: "Issues.9",
     icon: "CircleCheck",
     categories: ["in_review", "review"],
     status: "in_review",
   },
-  { key: "done", label: t("AgentDetail.6"), icon: "CheckCheck", categories: ["done", "completed"], status: "done" },
+  { key: "done", label: "AgentDetail.6", icon: "CheckCheck", categories: ["done", "completed"], status: "done" },
   {
     key: "closed",
-    label: t("AgentDetail.9"),
+    label: "AgentDetail.9",
     icon: "CircleSlash",
     categories: ["cancelled", "closed"],
     status: "cancelled",
@@ -126,7 +126,7 @@ export function IssuesPage() {
     return map;
   }, [agents.data, members.data]);
   const activeProject = projectId ? projectMap.get(projectId) : null;
-  const title = VIEW_LABEL[view] ?? t("Nav.20");
+  const title = VIEW_LABEL[view] ? t(VIEW_LABEL[view]) : t("Nav.20");
 
   const visibleColumns = useMemo(() => {
     if (view === "active") return BOARD.filter((column) => column.key === "started");
@@ -355,13 +355,13 @@ export function IssuesPage() {
               return (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={entry.label}
+                  accessibilityLabel={t(entry.label)}
                   key={entry.key}
                   onPress={() => { setFilterOpen(false); navigate("issues", { view: entry.key }); }}
                   style={({ pressed }) => [ui.s.menuItem, active && ui.s.hoverSurface, pressed && ui.s.pressed]}
                 >
                   <Icon name={entry.icon} size={14} color={active ? ui.c.fg : ui.c.muted} />
-                  <Text style={{ flex: 1, fontSize: 14, color: ui.c.fg, fontWeight: active ? "600" : "400" }}>{entry.label}</Text>
+                  <Text style={{ flex: 1, fontSize: 14, color: ui.c.fg, fontWeight: active ? "600" : "400" }}>{t(entry.label)}</Text>
                   {active ? <Icon name="Check" size={14} color={ui.c.brand} /> : null}
                 </Pressable>
               );
@@ -677,12 +677,12 @@ function BoardColumn({
     <View style={{ width, flexGrow: 1, borderRadius: 12, backgroundColor: `${ui.c.fill}66`, padding: 8 }}>
       <View style={[ui.s.row, { gap: 6, height: 28, paddingHorizontal: 6, marginBottom: 8 }]}>
         <Icon name={column.icon} size={12} color={ui.c.muted} />
-        <Text style={{ fontSize: 13, fontWeight: "500", color: ui.c.fg }}>{column.label}</Text>
+        <Text style={{ fontSize: 13, fontWeight: "500", color: ui.c.fg }}>{t(column.label)}</Text>
         <Text style={{ fontSize: 12, color: ui.c.muted }}>{total}</Text>
         <View style={ui.s.grow} />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={t("Issues.53", { a: column.label })}
+          accessibilityLabel={t("Issues.53", { a: t(column.label) })}
           onPress={() => onCreate(column.status)}
           style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
         >
@@ -720,7 +720,7 @@ function BoardColumn({
         {hasMore ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={t("Issues.55", { a: column.label })}
+            accessibilityLabel={t("Issues.55", { a: t(column.label) })}
             onPress={loadMore}
             style={({ pressed }) => [
               ui.s.row,

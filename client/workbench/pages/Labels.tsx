@@ -12,9 +12,9 @@ const COLORS = ["#3b82f6", "#8b5cf6", "#22c55e", "#f59e0b", "#ef4444", "#ec4899"
 type KindFilter = "all" | "issue" | "agent";
 
 const KIND_OPTIONS: { value: KindFilter; label: string }[] = [
-  { value: "all", label: t("ApiExplorer.4") },
-  { value: "issue", label: t("Labels.2") },
-  { value: "agent", label: t("Labels.3") },
+  { value: "all", label: "ApiExplorer.4" },
+  { value: "issue", label: "Labels.2" },
+  { value: "agent", label: "Labels.3" },
 ];
 
 export function LabelsPage() {
@@ -84,7 +84,7 @@ export function LabelsPage() {
         </View>
 
         <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
-          <Chips<KindFilter> ui={ui} options={KIND_OPTIONS} value={kind} onChange={setKind} />
+          <Chips<KindFilter> ui={ui} options={KIND_OPTIONS.map((option) => ({ ...option, label: t(option.label) }))} value={kind} onChange={setKind} />
         </View>
 
         <View

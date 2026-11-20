@@ -20,10 +20,10 @@ type Member = { id: string; userId: string; name: string; email: string; avatarU
 type HandlerType = "none" | "project_lead" | "member" | "agent";
 
 const HANDLER_OPTIONS: { value: HandlerType; label: string }[] = [
-  { value: "none", label: t("model.7") },
-  { value: "project_lead", label: t("model.8") },
-  { value: "member", label: t("Execution.11") },
-  { value: "agent", label: t("AgentDetail.23") },
+  { value: "none", label: "model.7" },
+  { value: "project_lead", label: "model.8" },
+  { value: "member", label: "Execution.11" },
+  { value: "agent", label: "AgentDetail.23" },
 ];
 
 export function WorkflowsPage() {
@@ -80,17 +80,17 @@ export function WorkflowsPage() {
   const statusName = (statusKey: string) => statusOf(statusKey)?.name ?? statusKey;
 
   const handlerText = (handler?: WorkflowHandler | null): string => {
-    if (!handler || handler.type === "none") return HANDLER_LABEL.none;
-    if (handler.type === "project_lead") return HANDLER_LABEL.project_lead;
+    if (!handler || handler.type === "none") return t(HANDLER_LABEL.none);
+    if (handler.type === "project_lead") return t(HANDLER_LABEL.project_lead);
     if (handler.type === "agent") {
       const agent = agentList.find((item) => item.id === handler.id);
-      return t("Workflows.6", { a: HANDLER_LABEL.agent, b: agent?.name ?? handler.id ?? t("Workflows.7") });
+      return t("Workflows.6", { a: t(HANDLER_LABEL.agent), b: agent?.name ?? handler.id ?? t("Workflows.7") });
     }
     if (handler.type === "member") {
       const member = members.find((item) => item.id === handler.id || item.userId === handler.id);
-      return t("Workflows.6", { a: HANDLER_LABEL.member, b: member?.name ?? handler.id ?? t("Workflows.7") });
+      return t("Workflows.6", { a: t(HANDLER_LABEL.member), b: member?.name ?? handler.id ?? t("Workflows.7") });
     }
-    return HANDLER_LABEL[handler.type] ?? handler.type;
+    return HANDLER_LABEL[handler.type] ? t(HANDLER_LABEL[handler.type]) : handler.type;
   };
 
   const remove = async () => {
@@ -618,7 +618,7 @@ function StepModal({
         <ScrollView style={{ maxHeight: 560 }} contentContainerStyle={{ gap: 12 }}>
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("Workflows.65")}</Text>
-            <Chips<HandlerType> ui={ui} options={HANDLER_OPTIONS} value={handlerType} onChange={setHandlerType} />
+            <Chips<HandlerType> ui={ui} options={HANDLER_OPTIONS.map((option) => ({ ...option, label: t(option.label) }))} value={handlerType} onChange={setHandlerType} />
           </View>
 
           {handlerType === "agent" ? (

@@ -56,8 +56,10 @@ export function bindTranslation(fn: (key: string, args?: Args) => string): void 
 
 export function t(key: string, args?: Args): string {
   if (runtime) return runtime(key, args);
-  const table = (resources as unknown as Record<string, Record<string, string>>)[override === "en" ? "en" : "zh-CN"];
-  let out = table[key] ?? key;
+  const table = (resources as unknown as Record<string, unknown>)[override === "en" ? "en" : "zh-CN"];
+  let node: unknown = table;
+  for (const part of key.split(".")) node = (node as Record<string, unknown> | undefined)?.[part];
+  let out = typeof node === "string" ? node : key;
   if (args) for (const [name, value] of Object.entries(args)) out = out.split(`{{${name}}}`).join(String(value));
   return out;
 }

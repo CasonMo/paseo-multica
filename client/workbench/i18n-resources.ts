@@ -98,7 +98,8 @@ export const resources = {
     "106": "Private only",
     "108": "Not bound",
     "110": "System prompt / working rules",
-    "111": "Markdown supported."
+    "111": "Markdown supported.",
+    "112": "MCP"
   },
   "Execution": {
     "1": " working",
@@ -511,7 +512,9 @@ export const resources = {
     "111": "A Webhook URL is generated immediately; POST to it to trigger.",
     "129": "Run history · {{a}}",
     "131": "No run history yet",
-    "132": "Results appear here after a run is triggered."
+    "132": "Results appear here after a run is triggered.",
+    "133": "Webhook",
+    "134": "API"
   },
   "Chat": {
     "1": "Create conversation failed",
@@ -1062,7 +1065,8 @@ export const resources = {
     "106": "仅私有",
     "108": "不绑定",
     "110": "系统提示词 / 工作规则",
-    "111": "支持 Markdown。"
+    "111": "支持 Markdown。",
+    "112": "MCP"
   },
   "Execution": {
     "1": "在工作",
@@ -1475,7 +1479,9 @@ export const resources = {
     "111": "添加后会立即生成 Webhook URL，向它 POST 即可触发。",
     "129": "运行记录 · {{a}}",
     "131": "还没有运行记录",
-    "132": "触发一次运行后，这里会显示结果。"
+    "132": "触发一次运行后，这里会显示结果。",
+    "133": "Webhook",
+    "134": "API"
   },
   "Chat": {
     "1": "创建对话失败",
