@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { Icon, Modal, copyText } from "@getpaseo/plugin/client/ui";
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
@@ -29,7 +30,7 @@ interface MemberRow {
 
 type InviteRow = Record<string, unknown>;
 
-const ROLE_LABEL: Record<string, string> = { owner: "所有者", admin: "管理员", member: "成员" };
+const ROLE_LABEL: Record<string, string> = { owner: t("SettingsSections.1"), admin: t("SettingsSections.2"), member: t("Execution.11") };
 const roleLabel = (role: string) => ROLE_LABEL[role] ?? role;
 
 export function AccountSettings() {
@@ -85,13 +86,13 @@ function ProfileCard({
 
   const save = async () => {
     const next = name.trim();
-    if (!next) return setError("名称不能为空");
+    if (!next) return setError(t("SettingsSections.4"));
     setBusy(true);
     setError(null);
     const result = await api({ method: "PATCH", path: "/api/me", body: { name: next } });
     setBusy(false);
-    if (!result.ok) return setError(result.error ?? "保存失败");
-    toast.show("个人资料已更新", { variant: "success" });
+    if (!result.ok) return setError(result.error ?? t("AgentDetail.64"));
+    toast.show(t("SettingsSections.6"), { variant: "success" });
     query.refresh();
     await onSaved();
   };
@@ -99,8 +100,8 @@ function ProfileCard({
   return (
     <Card ui={ui} style={{ gap: 10 }}>
       <View style={{ gap: 2 }}>
-        <Text style={ui.s.h2}>个人资料</Text>
-        <Text style={ui.s.tiny}>名称会显示在任务、评论与成员列表中。</Text>
+        <Text style={ui.s.h2}>{t("SettingsSections.7")}</Text>
+        <Text style={ui.s.tiny}>{t("SettingsSections.8")}</Text>
       </View>
       {query.error ? <ErrorNote ui={ui} message={query.error} onRetry={query.refresh} /> : null}
       <View style={[ui.s.row, { gap: 10 }]}>
@@ -110,17 +111,17 @@ function ProfileCard({
           <Text style={ui.s.tiny}>{str(profile.email) || user?.email}</Text>
         </View>
       </View>
-      <Field ui={ui} label="名称" value={name} onChangeText={setName} placeholder="你的显示名称" />
+      <Field ui={ui} label={t("AgentDetail.95")} value={name} onChangeText={setName} placeholder={t("SettingsSections.10")} />
       <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
-        <Tag ui={ui} label={`语言 ${language || "未设置"}`} tone="muted" icon="Globe" />
-        <Tag ui={ui} label={`时区 ${timezone || "未设置"}`} tone="muted" icon="Clock" />
-        {str(profile.onboarded_at) ? <Tag ui={ui} label="已完成引导" tone="success" icon="Check" /> : null}
+        <Tag ui={ui} label={t("SettingsSections.11", { a: language || t("SettingsSections.12") })} tone="muted" icon="Globe" />
+        <Tag ui={ui} label={t("SettingsSections.13", { a: timezone || t("SettingsSections.12") })} tone="muted" icon="Clock" />
+        {str(profile.onboarded_at) ? <Tag ui={ui} label={t("SettingsSections.15")} tone="success" icon="Check" /> : null}
       </View>
       {error ? <ErrorNote ui={ui} message={error} /> : null}
       <View style={[ui.s.row, { justifyContent: "flex-end" }]}>
         <Btn
           ui={ui}
-          label="保存"
+          label={t("AgentDetail.72")}
           tone="primary"
           busy={busy}
           disabled={!name.trim() || name.trim() === current}
@@ -153,42 +154,42 @@ function TokensCard({
 
   const create = async () => {
     const next = name.trim();
-    if (!next) return setError("请填写令牌名称");
+    if (!next) return setError(t("SettingsSections.17"));
     setBusy(true);
     setError(null);
     const result = await api({ method: "POST", path: "/api/tokens", body: { name: next } });
     setBusy(false);
-    if (!result.ok) return setError(result.error ?? "创建失败");
+    if (!result.ok) return setError(result.error ?? t("SettingsSections.18"));
     const token = str(asRecord(result.data).token);
     setCreating(false);
     setName("");
     query.refresh();
     if (token) setFresh(token);
-    toast.show("令牌已创建", { variant: "success" });
+    toast.show(t("SettingsSections.19"), { variant: "success" });
   };
 
   const remove = async (item: TokenRow) => {
     setConfirmRemove(null);
     const result = await api({ method: "DELETE", path: `/api/tokens/${item.id}` });
-    if (!result.ok) return toast.error(result.error ?? "撤销失败");
+    if (!result.ok) return toast.error(result.error ?? t("SettingsSections.20"));
     query.refresh();
-    toast.show("令牌已撤销", { variant: "success" });
+    toast.show(t("SettingsSections.21"), { variant: "success" });
   };
 
   return (
     <Card ui={ui} style={{ gap: 10 }}>
       <View style={[ui.s.row, { justifyContent: "space-between" }]}>
         <View style={{ gap: 2, flex: 1 }}>
-          <Text style={ui.s.h2}>访问令牌</Text>
-          <Text style={ui.s.tiny}>用于 CLI、自建服务或第三方集成调用 Multica API。</Text>
+          <Text style={ui.s.h2}>{t("SettingsSections.22")}</Text>
+          <Text style={ui.s.tiny}>{t("SettingsSections.23")}</Text>
         </View>
-        <Btn ui={ui} label="新建" icon="Plus" tone="primary" onPress={() => setCreating(true)} />
+        <Btn ui={ui} label={t("Nav.10")} icon="Plus" tone="primary" onPress={() => setCreating(true)} />
       </View>
       {query.error ? <ErrorNote ui={ui} message={query.error} onRetry={query.refresh} /> : null}
       {query.loading && tokens.length === 0 ? (
-        <LoadingRow ui={ui} label="读取令牌…" />
+        <LoadingRow ui={ui} label={t("SettingsSections.25")} />
       ) : tokens.length === 0 ? (
-        <Empty ui={ui} icon="Key" title="还没有访问令牌" description="创建一个令牌后只显示一次完整密钥。" />
+        <Empty ui={ui} icon="Key" title={t("SettingsSections.26")} description={t("SettingsSections.27")} />
       ) : (
         tokens.map((token) => {
           const expired = token.expires_at ? Date.parse(token.expires_at) < Date.now() : false;
@@ -201,15 +202,15 @@ function TokensCard({
               <View style={{ flex: 1, gap: 2 }}>
                 <View style={[ui.s.row, { gap: 6 }]}>
                   <Text numberOfLines={1} style={[ui.s.body, { fontWeight: "600" }]}>{token.name}</Text>
-                  {expired ? <Tag ui={ui} label="已过期" tone="danger" /> : <Tag ui={ui} label="有效" tone="success" />}
+                  {expired ? <Tag ui={ui} label={t("SettingsSections.28")} tone="danger" /> : <Tag ui={ui} label={t("SettingsSections.29")} tone="success" />}
                 </View>
                 <Text style={[ui.s.tiny, { fontFamily: "Menlo" }]}>{token.token_prefix}…</Text>
                 <Text style={ui.s.tiny}>
-                  创建 {relTime(token.created_at)} · 最近使用 {token.last_used_at ? relTime(token.last_used_at) : "从未"}
-                  {token.expires_at ? ` · 到期 ${relTime(token.expires_at)}` : " · 永不过期"}
+                  {t("SettingsSections.30")} {relTime(token.created_at)} {t("SettingsSections.31")} {token.last_used_at ? relTime(token.last_used_at) : t("SettingsSections.32")}
+                  {token.expires_at ? t("SettingsSections.33", { a: relTime(token.expires_at) }) : t("SettingsSections.34")}
                 </Text>
               </View>
-              <Btn ui={ui} label="撤销" tone="danger" onPress={() => setConfirmRemove(token)} />
+              <Btn ui={ui} label={t("SettingsSections.35")} tone="danger" onPress={() => setConfirmRemove(token)} />
             </View>
           );
         })
@@ -224,21 +225,21 @@ function TokensCard({
         onLoadMore={query.loadMore}
       />
 
-      <Modal title="新建访问令牌" icon={<Icon name="Key" size={16} color={ui.c.muted} />} open={creating} onOpenChange={(next) => !next && setCreating(false)}>
+      <Modal title={t("SettingsSections.36")} icon={<Icon name="Key" size={16} color={ui.c.muted} />} open={creating} onOpenChange={(next) => !next && setCreating(false)}>
         <Modal.Content>
           <View style={{ gap: 12 }}>
-            <Field ui={ui} label="名称" value={name} onChangeText={setName} placeholder="例如：paseo-cli" hint="用用途命名，方便日后识别与撤销。" />
+            <Field ui={ui} label={t("AgentDetail.95")} value={name} onChangeText={setName} placeholder={t("SettingsSections.38")} hint={t("SettingsSections.39")} />
             {error ? <ErrorNote ui={ui} message={error} /> : null}
             <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end" }]}>
-              <Btn ui={ui} label="取消" onPress={() => setCreating(false)} />
-              <Btn ui={ui} label="创建" tone="primary" busy={busy} onPress={() => void create()} />
+              <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setCreating(false)} />
+              <Btn ui={ui} label={t("SettingsSections.30")} tone="primary" busy={busy} onPress={() => void create()} />
             </View>
           </View>
         </Modal.Content>
       </Modal>
 
       <Modal
-        title="令牌已创建"
+        title={t("SettingsSections.19")}
         icon={<Icon name="Check" size={16} color={ui.c.success} />}
         open={Boolean(fresh)}
         onOpenChange={(next) => !next && setFresh(null)}
@@ -246,7 +247,7 @@ function TokensCard({
         <Modal.Content>
           <View style={{ gap: 12 }}>
             <View style={{ gap: 4 }}>
-              <Text style={ui.s.body}>复制并妥善保存，关闭后将无法再次查看完整令牌。</Text>
+              <Text style={ui.s.body}>{t("SettingsSections.43")}</Text>
               <Text selectable style={[ui.s.tiny, { fontFamily: "Menlo", padding: 10, borderRadius: 8, backgroundColor: ui.c.surface2 }]}>
                 {fresh ?? ""}
               </Text>
@@ -254,31 +255,31 @@ function TokensCard({
             <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end" }]}>
               <Btn
                 ui={ui}
-                label="复制"
+                label={t("SettingsSections.44")}
                 icon="Copy"
                 onPress={async () => {
                   if (!fresh) return;
                   await copyText(fresh);
-                  toast.show("令牌已复制", { variant: "success" });
+                  toast.show(t("SettingsSections.45"), { variant: "success" });
                 }}
               />
-              <Btn ui={ui} label="完成" tone="primary" onPress={() => setFresh(null)} />
+              <Btn ui={ui} label={t("SettingsSections.46")} tone="primary" onPress={() => setFresh(null)} />
             </View>
           </View>
         </Modal.Content>
       </Modal>
 
       <Modal
-        title="撤销令牌"
+        title={t("SettingsSections.47")}
         icon={<Icon name="Trash2" size={16} color={ui.c.danger} />}
         open={Boolean(confirmRemove)}
         onOpenChange={(next) => !next && setConfirmRemove(null)}
       >
         <Modal.Content>
-          <Text style={ui.s.body}>撤销「{confirmRemove?.name}」后，使用该令牌的调用会立即失效且不可恢复。</Text>
+          <Text style={ui.s.body}>{t("SettingsSections.48")}{confirmRemove?.name}{t("SettingsSections.49")}</Text>
           <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end", marginTop: 12 }]}>
-            <Btn ui={ui} label="取消" onPress={() => setConfirmRemove(null)} />
-            <Btn ui={ui} label="撤销" tone="danger" onPress={() => confirmRemove && void remove(confirmRemove)} />
+            <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setConfirmRemove(null)} />
+            <Btn ui={ui} label={t("SettingsSections.35")} tone="danger" onPress={() => confirmRemove && void remove(confirmRemove)} />
           </View>
         </Modal.Content>
       </Modal>
@@ -316,45 +317,45 @@ function MembersCard({
 
   const invite = async () => {
     const next = email.trim();
-    if (!next) return setError("请填写邮箱");
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(next)) return setError("邮箱格式不正确");
+    if (!next) return setError(t("SettingsSections.52"));
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(next)) return setError(t("SettingsSections.53"));
     setBusy(true);
     setError(null);
     const result = await api({ method: "POST", path: `/api/workspaces/${workspaceId}/members`, body: { email: next, role } });
     setBusy(false);
-    if (!result.ok) return setError(result.error ?? "邀请失败");
+    if (!result.ok) return setError(result.error ?? t("SettingsSections.54"));
     setInviting(false);
     setEmail("");
     query.refresh();
-    toast.show("邀请已发送", { variant: "success" });
+    toast.show(t("SettingsSections.55"), { variant: "success" });
   };
 
   const changeRole = async (member: MemberRow, next: "member" | "admin") => {
     const result = await api({ method: "PATCH", path: `/api/workspaces/${workspaceId}/members/${member.id}`, body: { role: next } });
-    if (!result.ok) return toast.error(result.error ?? "修改角色失败");
+    if (!result.ok) return toast.error(result.error ?? t("SettingsSections.56"));
     query.refresh();
-    toast.show(`已将 ${member.name ?? member.email ?? "成员"} 设为${roleLabel(next)}`, { variant: "success" });
+    toast.show(t("SettingsSections.57", { a: member.name ?? member.email ?? t("Execution.11"), b: roleLabel(next) }), { variant: "success" });
   };
 
   const remove = async (member: MemberRow) => {
     setConfirmRemove(null);
     const result = await api({ method: "DELETE", path: `/api/workspaces/${workspaceId}/members/${member.id}` });
-    if (!result.ok) return toast.error(result.error ?? "移除失败");
+    if (!result.ok) return toast.error(result.error ?? t("AgentDetail.75"));
     query.refresh();
-    toast.show("成员已移除", { variant: "success" });
+    toast.show(t("SettingsSections.60"), { variant: "success" });
   };
 
   return (
     <Card ui={ui} style={{ gap: 10 }}>
       <View style={[ui.s.row, { justifyContent: "space-between" }]}>
         <View style={{ gap: 2, flex: 1 }}>
-          <Text style={ui.s.h2}>成员</Text>
-          <Text style={ui.s.tiny}>工作区共 {members.length} 位成员。</Text>
+          <Text style={ui.s.h2}>{t("Execution.11")}</Text>
+          <Text style={ui.s.tiny}>{t("SettingsSections.62")} {members.length} {t("SettingsSections.63")}</Text>
         </View>
-        <Btn ui={ui} label="邀请" icon="UserPlus" tone="primary" onPress={() => setInviting(true)} />
+        <Btn ui={ui} label={t("SettingsSections.64")} icon="UserPlus" tone="primary" onPress={() => setInviting(true)} />
       </View>
       {query.error ? <ErrorNote ui={ui} message={query.error} onRetry={query.refresh} /> : null}
-      {query.loading && members.length === 0 ? <LoadingRow ui={ui} label="读取成员…" /> : null}
+      {query.loading && members.length === 0 ? <LoadingRow ui={ui} label={t("SettingsSections.65")} /> : null}
       {members.map((member) => {
         const isOwner = member.role === "owner";
         return (
@@ -374,10 +375,10 @@ function MembersCard({
               <View style={[ui.s.row, { gap: 6 }]}>
                 <Btn
                   ui={ui}
-                  label={member.role === "admin" ? "设为成员" : "设为管理员"}
+                  label={member.role === "admin" ? t("SettingsSections.66") : t("SettingsSections.67")}
                   onPress={() => void changeRole(member, member.role === "admin" ? "member" : "admin")}
                 />
-                <Btn ui={ui} label="移除" icon="UserMinus" tone="danger" onPress={() => setConfirmRemove(member)} />
+                <Btn ui={ui} label={t("SettingsSections.68")} icon="UserMinus" tone="danger" onPress={() => setConfirmRemove(member)} />
               </View>
             ) : null}
           </View>
@@ -393,17 +394,17 @@ function MembersCard({
         onLoadMore={query.loadMore}
       />
 
-      <Modal title="邀请成员" icon={<Icon name="UserPlus" size={16} color={ui.c.muted} />} open={inviting} onOpenChange={(next) => !next && setInviting(false)}>
+      <Modal title={t("SettingsSections.69")} icon={<Icon name="UserPlus" size={16} color={ui.c.muted} />} open={inviting} onOpenChange={(next) => !next && setInviting(false)}>
         <Modal.Content>
           <View style={{ gap: 12 }}>
-            <Field ui={ui} label="邮箱" value={email} onChangeText={setEmail} placeholder="teammate@example.com" hint="对方会收到加入工作区的邀请邮件。" />
+            <Field ui={ui} label={t("SettingsSections.70")} value={email} onChangeText={setEmail} placeholder="teammate@example.com" hint={t("SettingsSections.71")} />
             <View style={{ gap: 6 }}>
-              <Text style={ui.s.label}>角色</Text>
+              <Text style={ui.s.label}>{t("SettingsSections.72")}</Text>
               <Chips
                 ui={ui}
                 options={[
-                  { value: "member", label: "成员", icon: "User" },
-                  { value: "admin", label: "管理员", icon: "Shield" },
+                  { value: "member", label: t("Execution.11"), icon: "User" },
+                  { value: "admin", label: t("SettingsSections.2"), icon: "Shield" },
                 ] as const}
                 value={role}
                 onChange={(next) => setRole(next as typeof role)}
@@ -411,26 +412,26 @@ function MembersCard({
             </View>
             {error ? <ErrorNote ui={ui} message={error} /> : null}
             <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end" }]}>
-              <Btn ui={ui} label="取消" onPress={() => setInviting(false)} />
-              <Btn ui={ui} label="发送邀请" tone="primary" busy={busy} onPress={() => void invite()} />
+              <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setInviting(false)} />
+              <Btn ui={ui} label={t("SettingsSections.76")} tone="primary" busy={busy} onPress={() => void invite()} />
             </View>
           </View>
         </Modal.Content>
       </Modal>
 
       <Modal
-        title="移除成员"
+        title={t("SettingsSections.77")}
         icon={<Icon name="UserMinus" size={16} color={ui.c.danger} />}
         open={Boolean(confirmRemove)}
         onOpenChange={(next) => !next && setConfirmRemove(null)}
       >
         <Modal.Content>
           <Text style={ui.s.body}>
-            确定将「{confirmRemove?.name ?? confirmRemove?.email ?? ""}」移出工作区吗？该成员已分配的任务会保留。
+            {t("SettingsSections.78")}{confirmRemove?.name ?? confirmRemove?.email ?? ""}{t("SettingsSections.79")}
           </Text>
           <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end", marginTop: 12 }]}>
-            <Btn ui={ui} label="取消" onPress={() => setConfirmRemove(null)} />
-            <Btn ui={ui} label="移除" tone="danger" onPress={() => confirmRemove && void remove(confirmRemove)} />
+            <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setConfirmRemove(null)} />
+            <Btn ui={ui} label={t("SettingsSections.68")} tone="danger" onPress={() => confirmRemove && void remove(confirmRemove)} />
           </View>
         </Modal.Content>
       </Modal>
@@ -463,20 +464,20 @@ function InvitationCard({
   const revoke = async (row: InviteRow) => {
     const id = str(row.id);
     const result = await api({ method: "DELETE", path: `/api/workspaces/${workspaceId}/invitations/${id}` });
-    if (!result.ok) return toast.error(result.error ?? "撤销邀请失败");
+    if (!result.ok) return toast.error(result.error ?? t("SettingsSections.82"));
     query.refresh();
-    toast.show("邀请已撤销", { variant: "success" });
+    toast.show(t("SettingsSections.83"), { variant: "success" });
   };
 
   return (
     <Card ui={ui} style={{ gap: 10 }}>
       <View style={{ gap: 2 }}>
-        <Text style={ui.s.h2}>待处理邀请</Text>
-        <Text style={ui.s.tiny}>已发出但尚未被接受的邀请。</Text>
+        <Text style={ui.s.h2}>{t("SettingsSections.84")}</Text>
+        <Text style={ui.s.tiny}>{t("SettingsSections.85")}</Text>
       </View>
       {query.error ? <ErrorNote ui={ui} message={query.error} onRetry={query.refresh} /> : null}
       {rows.length === 0 ? (
-        <Text style={ui.s.muted}>暂无待处理邀请。</Text>
+        <Text style={ui.s.muted}>{t("SettingsSections.86")}</Text>
       ) : (
         rows.map((row, index) => {
           const id = str(row.id) || String(index);
@@ -491,10 +492,10 @@ function InvitationCard({
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={[ui.s.body, { fontWeight: "600" }]}>{email || id}</Text>
                 <Text style={ui.s.tiny}>
-                  {roleLabel(inviteRole)} · 发出 {relTime(str(row.created_at) || str(row.invited_at))}
+                  {roleLabel(inviteRole)} {t("SettingsSections.87")} {relTime(str(row.created_at) || str(row.invited_at))}
                 </Text>
               </View>
-              <Btn ui={ui} label="撤销" tone="danger" onPress={() => void revoke(row)} />
+              <Btn ui={ui} label={t("SettingsSections.35")} tone="danger" onPress={() => void revoke(row)} />
             </View>
           );
         })
@@ -537,28 +538,28 @@ function NotificationCard({
     setBusy(true);
     const result = await api({ method: "PATCH", path: "/api/notification-preferences", body: { preferences: { status_changes: next } } });
     setBusy(false);
-    if (!result.ok) return toast.error(result.error ?? "保存失败");
+    if (!result.ok) return toast.error(result.error ?? t("AgentDetail.64"));
     query.refresh();
-    toast.show(next === "muted" ? "已静音状态变更通知" : "已开启状态变更通知", { variant: "success" });
+    toast.show(next === "muted" ? t("SettingsSections.90") : t("SettingsSections.91"), { variant: "success" });
   };
 
   return (
     <Card ui={ui} style={{ gap: 10 }}>
       <View style={{ gap: 2 }}>
-        <Text style={ui.s.h2}>通知偏好</Text>
-        <Text style={ui.s.tiny}>控制任务状态变化时是否向你发送通知。</Text>
+        <Text style={ui.s.h2}>{t("SettingsSections.92")}</Text>
+        <Text style={ui.s.tiny}>{t("SettingsSections.93")}</Text>
       </View>
       {query.error ? <ErrorNote ui={ui} message={query.error} onRetry={query.refresh} /> : null}
       <View style={[ui.s.row, { gap: 8, flexWrap: "wrap", opacity: busy ? 0.6 : 1 }]}>
         <View style={{ flex: 1, minWidth: 180, gap: 2 }}>
-          <Text style={[ui.s.body, { fontWeight: "600" }]}>状态变更</Text>
-          <Text style={ui.s.tiny}>任务进入新状态、被阻塞或完成时提醒。</Text>
+          <Text style={[ui.s.body, { fontWeight: "600" }]}>{t("SettingsSections.94")}</Text>
+          <Text style={ui.s.tiny}>{t("SettingsSections.95")}</Text>
         </View>
         <Chips
           ui={ui}
           options={[
-            { value: "all", label: "通知", icon: "Bell" },
-            { value: "muted", label: "静音", icon: "BellOff" },
+            { value: "all", label: t("Nav.30"), icon: "Bell" },
+            { value: "muted", label: t("SettingsSections.97"), icon: "BellOff" },
           ] as const}
           value={current}
           onChange={(next) => void update(next)}

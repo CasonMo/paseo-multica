@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
@@ -10,34 +11,34 @@ import { WORK_VIEWS } from "../Nav";
 import { useWorkingAgents, type WorkingAgent } from "../Execution";
 
 const VIEW_LABEL: Record<string, string> = {
-  all: "全部任务",
-  mine: "我的工作",
-  active: "执行中",
-  done: "已完成",
-  closed: "已取消",
+  all: t("Nav.20"),
+  mine: t("Nav.21"),
+  active: t("Nav.22"),
+  done: t("AgentDetail.6"),
+  closed: t("AgentDetail.9"),
 };
 
 const BOARD: { key: string; label: string; icon: string; categories: string[]; status: string }[] = [
-  { key: "backlog", label: "待规划", icon: "CircleDashed", categories: ["backlog"], status: "backlog" },
-  { key: "todo", label: "待办", icon: "Circle", categories: ["todo", "unstarted"], status: "todo" },
+  { key: "backlog", label: t("Issues.6"), icon: "CircleDashed", categories: ["backlog"], status: "backlog" },
+  { key: "todo", label: t("Issues.7"), icon: "Circle", categories: ["todo", "unstarted"], status: "todo" },
   {
     key: "started",
-    label: "进行中",
+    label: t("Execution.60"),
     icon: "CircleDot",
     categories: ["in_progress", "started", "blocked"],
     status: "in_progress",
   },
   {
     key: "review",
-    label: "审核中",
+    label: t("Issues.9"),
     icon: "CircleCheck",
     categories: ["in_review", "review"],
     status: "in_review",
   },
-  { key: "done", label: "已完成", icon: "CheckCheck", categories: ["done", "completed"], status: "done" },
+  { key: "done", label: t("AgentDetail.6"), icon: "CheckCheck", categories: ["done", "completed"], status: "done" },
   {
     key: "closed",
-    label: "已取消",
+    label: t("AgentDetail.9"),
     icon: "CircleSlash",
     categories: ["cancelled", "closed"],
     status: "cancelled",
@@ -120,12 +121,12 @@ export function IssuesPage() {
     for (const raw of members.data ?? []) {
       const person = asRecord(raw.user);
       const id = str(person.id ?? raw.user_id ?? raw.id);
-      if (id) map.set(id, { name: str(person.name ?? raw.name) || "成员", url: str(person.avatar_url) || null });
+      if (id) map.set(id, { name: str(person.name ?? raw.name) || t("Execution.11"), url: str(person.avatar_url) || null });
     }
     return map;
   }, [agents.data, members.data]);
   const activeProject = projectId ? projectMap.get(projectId) : null;
-  const title = VIEW_LABEL[view] ?? "全部任务";
+  const title = VIEW_LABEL[view] ?? t("Nav.20");
 
   const visibleColumns = useMemo(() => {
     if (view === "active") return BOARD.filter((column) => column.key === "started");
@@ -175,18 +176,18 @@ export function IssuesPage() {
             <Text style={{ fontSize: 12, color: ui.c.fg }}>{activeProject.title}</Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="清除项目筛选"
+              accessibilityLabel={t("Issues.14")}
               onPress={() => navigate("issues", { view })}
             >
               <Icon name="X" size={11} color={ui.c.muted} />
             </Pressable>
           </View>
         ) : null}
-        <Text style={ui.s.tiny}>共 {total} 条</Text>
+        <Text style={ui.s.tiny}>{t("Inbox.40")} {total} {t("Issues.16")}</Text>
         {sidebarHidden ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="视图与项目筛选"
+            accessibilityLabel={t("Issues.17")}
             onPress={() => setFilterOpen(true)}
             style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
               ui.s.row,
@@ -227,7 +228,7 @@ export function IssuesPage() {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="搜索任务…"
+            placeholder={t("Issues.18")}
             placeholderTextColor={ui.c.faint}
             autoFocus={params.focus === "search"}
             style={{ flex: 1, color: ui.c.fg, fontSize: 13, paddingVertical: 5 }}
@@ -242,7 +243,7 @@ export function IssuesPage() {
             return (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={entry === "board" ? "看板视图" : "列表视图"}
+                accessibilityLabel={entry === "board" ? t("Issues.19") : t("Issues.20")}
                 accessibilityState={{ selected: active }}
                 key={entry}
                 onPress={() => setMode(entry)}
@@ -261,14 +262,14 @@ export function IssuesPage() {
               >
                 <Icon name={entry === "board" ? "Columns3" : "List"} size={13} color={active ? ui.c.fg : ui.c.muted} />
                 <Text style={{ fontSize: 13, color: active ? ui.c.fg : ui.c.muted, fontWeight: active ? "500" : "400" }}>
-                  {entry === "board" ? "看板" : "列表"}
+                  {entry === "board" ? t("Issues.21") : t("Issues.22")}
                 </Text>
               </Pressable>
             );
           })}
         </View>
 
-        <Btn ui={ui} label="新建" icon="Plus" onPress={() => openCreate()} />
+        <Btn ui={ui} label={t("Nav.10")} icon="Plus" onPress={() => openCreate()} />
       </View>
 
       {mode === "list" && paged.loading && list.length === 0 ? (
@@ -281,9 +282,9 @@ export function IssuesPage() {
         <Empty
           ui={ui}
           icon="Inbox"
-          title={search || view !== "all" || projectId ? "没有匹配的任务" : "还没有任务"}
-          description="调整筛选条件，或创建一条新任务。"
-          action={<Btn ui={ui} label="新建任务" icon="Plus" tone="primary" onPress={() => openCreate()} />}
+          title={search || view !== "all" || projectId ? t("Issues.24") : t("Issues.25")}
+          description={t("Issues.26")}
+          action={<Btn ui={ui} label={t("Issues.27")} icon="Plus" tone="primary" onPress={() => openCreate()} />}
         />
       ) : mode === "board" ? (
         <ScrollView
@@ -341,14 +342,14 @@ export function IssuesPage() {
       )}
 
       <Modal
-        title="视图与项目"
+        title={t("Issues.28")}
         icon={<Icon name="SlidersHorizontal" size={16} color={ui.c.muted} />}
         open={filterOpen}
         onOpenChange={setFilterOpen}
       >
         <Modal.Content>
           <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 2 }}>
-            <Text style={[ui.s.label, { paddingHorizontal: 8, paddingTop: 4 }]}>视图</Text>
+            <Text style={[ui.s.label, { paddingHorizontal: 8, paddingTop: 4 }]}>{t("Nav.31")}</Text>
             {WORK_VIEWS.map((entry) => {
               const active = view === entry.key && !projectId;
               return (
@@ -365,15 +366,15 @@ export function IssuesPage() {
                 </Pressable>
               );
             })}
-            <Text style={[ui.s.label, { paddingHorizontal: 8, paddingTop: 10 }]}>项目</Text>
+            <Text style={[ui.s.label, { paddingHorizontal: 8, paddingTop: 10 }]}>{t("Nav.3")}</Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="全部项目"
+              accessibilityLabel={t("Issues.31")}
               onPress={() => { setFilterOpen(false); navigate("issues", { view }); }}
               style={({ pressed }) => [ui.s.menuItem, !projectId && ui.s.hoverSurface, pressed && ui.s.pressed]}
             >
               <Icon name="Layers" size={14} color={ui.c.muted} />
-              <Text style={{ flex: 1, fontSize: 14, color: ui.c.fg }}>全部项目</Text>
+              <Text style={{ flex: 1, fontSize: 14, color: ui.c.fg }}>{t("Issues.31")}</Text>
               {!projectId ? <Icon name="Check" size={14} color={ui.c.brand} /> : null}
             </Pressable>
             {(projects.data ?? []).map((project) => {
@@ -464,7 +465,7 @@ function IssueCard({
         {running ? (
           <View style={[ui.s.row, { gap: 4, marginLeft: "auto" }]}>
             <ActivityIndicator size="small" color={ui.c.success} />
-            <Text style={{ fontSize: 11, fontWeight: "500", color: ui.c.success }}>运行中</Text>
+            <Text style={{ fontSize: 11, fontWeight: "500", color: ui.c.success }}>{t("AgentDetail.10")}</Text>
           </View>
         ) : null}
       </View>
@@ -486,7 +487,7 @@ function IssueCard({
           <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 1, borderColor: ui.c.border }} />
         )}
         <Text numberOfLines={1} style={[ui.s.tiny, { flex: 1 }]}>
-          {assignee?.name ?? "未指派"}
+          {assignee?.name ?? t("IssueDetail.69")}
         </Text>
         <Text style={ui.s.tiny}>{relTime(issue.updated_at)}</Text>
       </View>
@@ -527,7 +528,7 @@ function CreateIssueModal({
 
   const submit = async () => {
     if (!title.trim()) {
-      toast.error("请填写任务标题");
+      toast.error(t("Issues.35"));
       return;
     }
     setBusy(true);
@@ -538,17 +539,17 @@ function CreateIssueModal({
     const result = await api({ method: "POST", path: "/api/issues", body });
     setBusy(false);
     if (result.ok) {
-      toast.show("任务已创建", { variant: "success" });
+      toast.show(t("Issues.36"), { variant: "success" });
       const created = result.data && typeof result.data === "object" ? (result.data as Issue) : null;
       onCreated(created);
     } else {
-      toast.error(result.error ?? "创建失败");
+      toast.error(result.error ?? t("SettingsSections.18"));
     }
   };
 
   return (
     <Modal
-      title="新建任务"
+      title={t("Issues.27")}
       icon={<Icon name="Plus" size={16} color={ui.c.muted} />}
       open={open}
       onOpenChange={(next) => {
@@ -557,19 +558,19 @@ function CreateIssueModal({
     >
       <Modal.Content>
         <View style={{ gap: 12 }}>
-          <Field ui={ui} label="标题" value={title} onChangeText={setTitle} placeholder="用一句话描述要做的事" autoFocus />
+          <Field ui={ui} label={t("IssueDetail.110")} value={title} onChangeText={setTitle} placeholder={t("IssueDetail.111")} autoFocus />
           <Field
             ui={ui}
-            label="描述"
+            label={t("AgentDetail.97")}
             value={description}
             onChangeText={setDescription}
-            placeholder="补充背景、验收标准…（支持 Markdown）"
+            placeholder={t("IssueDetail.113")}
             multiline
           />
           <View style={{ gap: 6 }}>
-            <Text style={ui.s.label}>状态</Text>
+            <Text style={ui.s.label}>{t("IssueDetail.65")}</Text>
             <View style={[ui.s.row, { gap: 6, flexWrap: "wrap" }]}>
-              {(statuses.length > 0 ? statuses : [{ key: "todo", name: "待办", color: "#8b8b93", id: "todo", category: "unstarted" }]).map((entry) => {
+              {(statuses.length > 0 ? statuses : [{ key: "todo", name: t("Issues.7"), color: "#8b8b93", id: "todo", category: "unstarted" }]).map((entry) => {
                 const active = entry.key === status;
                 return (
                   <Pressable
@@ -592,23 +593,23 @@ function CreateIssueModal({
             </View>
           </View>
           <View style={{ gap: 6 }}>
-            <Text style={ui.s.label}>优先级</Text>
+            <Text style={ui.s.label}>{t("IssueDetail.66")}</Text>
             <Chips
               ui={ui}
               options={[
-                { value: "none", label: "无" },
-                { value: "low", label: "低" },
-                { value: "medium", label: "中" },
-                { value: "high", label: "高" },
-                { value: "urgent", label: "紧急" },
+                { value: "none", label: t("model.20") },
+                { value: "low", label: t("model.19") },
+                { value: "medium", label: t("model.18") },
+                { value: "high", label: t("model.17") },
+                { value: "urgent", label: t("model.16") },
               ]}
               value={priority}
               onChange={setPriority}
             />
           </View>
           <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8, paddingTop: 4 }]}>
-            <Btn ui={ui} label="取消" onPress={onClose} />
-            <Btn ui={ui} label="创建任务" icon="Check" tone="primary" busy={busy} onPress={() => void submit()} />
+            <Btn ui={ui} label={t("AgentDetail.40")} onPress={onClose} />
+            <Btn ui={ui} label={t("Automation.33")} icon="Check" tone="primary" busy={busy} onPress={() => void submit()} />
           </View>
         </View>
       </Modal.Content>
@@ -681,7 +682,7 @@ function BoardColumn({
         <View style={ui.s.grow} />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`新建${column.label}任务`}
+          accessibilityLabel={t("Issues.53", { a: column.label })}
           onPress={() => onCreate(column.status)}
           style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
         >
@@ -702,7 +703,7 @@ function BoardColumn({
             <ActivityIndicator size="small" color={ui.c.muted} />
           </View>
         ) : items.length === 0 ? (
-          <Text style={[ui.s.tiny, { textAlign: "center", paddingVertical: 26 }]}>无任务</Text>
+          <Text style={[ui.s.tiny, { textAlign: "center", paddingVertical: 26 }]}>{t("Issues.54")}</Text>
         ) : (
           items.map((issue) => (
             <IssueCard
@@ -719,7 +720,7 @@ function BoardColumn({
         {hasMore ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`加载更多${column.label}任务`}
+            accessibilityLabel={t("Issues.55", { a: column.label })}
             onPress={loadMore}
             style={({ pressed }) => [
               ui.s.row,
@@ -732,7 +733,7 @@ function BoardColumn({
             ) : (
               <Icon name="ChevronDown" size={13} color={ui.c.muted} />
             )}
-            <Text style={ui.s.tiny}>加载更多（{items.length}/{total}）</Text>
+            <Text style={ui.s.tiny}>{t("Issues.56")}{items.length}/{total}{t("Issues.152")}</Text>
           </Pressable>
         ) : null}
       </ScrollView>

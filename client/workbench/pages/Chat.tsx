@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
@@ -78,7 +79,7 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
           sessionsQuery.refresh();
           invalidate();
         }
-      } else toast.error(result.error ?? "创建对话失败");
+      } else toast.error(result.error ?? t("Chat.1"));
     })();
     return () => {
       cancelled = true;
@@ -123,7 +124,7 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
       invalidate();
     } else {
       setDraft(content);
-      toast.error(result.error ?? "发送失败");
+      toast.error(result.error ?? t("Chat.2"));
     }
   };
 
@@ -136,7 +137,7 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
       if (done) toast.show(done, { variant: "success" });
       sessionsQuery.refresh();
       invalidate();
-    } else toast.error(result.error ?? "操作失败");
+    } else toast.error(result.error ?? t("Automation.13"));
   };
 
   const createChat = async (agent: Agent) => {
@@ -149,14 +150,14 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
       if (created?.id) select(created.id);
       sessionsQuery.refresh();
       invalidate();
-    } else toast.error(result.error ?? "创建对话失败");
+    } else toast.error(result.error ?? t("Chat.1"));
   };
 
   const list = (
     <View style={{ flex: 1, minWidth: 0, borderRightWidth: compact ? 0 : 1, borderRightColor: ui.c.border }}>
       <View style={[ui.s.row, { padding: 10, gap: 8, borderBottomWidth: 1, borderBottomColor: ui.c.border }]}>
-        <Text style={[ui.s.h3, ui.s.grow]}>对话</Text>
-        <Btn ui={ui} label="新对话" icon="Plus" tone="primary" busy={creating} onPress={() => setPickerOpen(true)} />
+        <Text style={[ui.s.h3, ui.s.grow]}>{t("Chat.5")}</Text>
+        <Btn ui={ui} label={t("Chat.6")} icon="Plus" tone="primary" busy={creating} onPress={() => setPickerOpen(true)} />
       </View>
       <ScrollView contentContainerStyle={{ paddingVertical: 6 }}>
         {sessionsQuery.loading && sessions.length === 0 ? (
@@ -165,9 +166,9 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
           <Empty
             ui={ui}
             icon="MessagesSquare"
-            title="还没有对话"
-            description="选择一个智能体，开始你的第一段对话。"
-            action={<Btn ui={ui} label="新对话" icon="Plus" tone="primary" onPress={() => setPickerOpen(true)} />}
+            title={t("Chat.7")}
+            description={t("Chat.8")}
+            action={<Btn ui={ui} label={t("Chat.6")} icon="Plus" tone="primary" onPress={() => setPickerOpen(true)} />}
           />
         ) : (
           sessions.map((session) => {
@@ -189,7 +190,7 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
                   <View style={[ui.s.row, { gap: 5 }]}>
                     {session.pinned ? <Icon name="Pin" size={11} color={ui.c.muted} /> : null}
                     <Text numberOfLines={1} style={[ui.s.body, { fontWeight: isActive ? "700" : "600", flex: 1 }]}>
-                      {session.title || agent?.name || "未命名对话"}
+                      {session.title || agent?.name || t("Chat.10")}
                     </Text>
                     {session.unread_count ? (
                       <View
@@ -210,7 +211,7 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
                     ) : null}
                   </View>
                   <Text numberOfLines={1} style={ui.s.tiny}>
-                    {session.last_message?.content ?? "还没有消息"}
+                    {session.last_message?.content ?? t("Chat.11")}
                   </Text>
                 </View>
                 <Text style={ui.s.tiny}>{relTime(session.updated_at)}</Text>
@@ -233,7 +234,7 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
         {compact ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="返回会话列表"
+            accessibilityLabel={t("Chat.12")}
             onPress={() => setShowList(true)}
             style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
           >
@@ -243,9 +244,9 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
         <Avatar ui={ui} name={agentMap.get(active.agent_id)?.name ?? "AI"} url={agentMap.get(active.agent_id)?.avatar_url} size={26} />
         <View style={ui.s.grow}>
           <Text numberOfLines={1} style={[ui.s.body, { fontWeight: "700" }]}>
-            {active.title || "对话"}
+            {active.title || t("Chat.5")}
           </Text>
-          <Text style={ui.s.tiny}>{agentMap.get(active.agent_id)?.name ?? "智能体"}</Text>
+          <Text style={ui.s.tiny}>{agentMap.get(active.agent_id)?.name ?? t("AgentDetail.23")}</Text>
         </View>
         <Pressable
           accessibilityRole="button"
@@ -258,7 +259,7 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          onPress={() => void mutateSession("PATCH", `/api/chat/sessions/${active.id}/archive`, { archived: true }, "已归档")}
+          onPress={() => void mutateSession("PATCH", `/api/chat/sessions/${active.id}/archive`, { archived: true }, t("AgentDetail.28"))}
           style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
         >
           <Icon name="Archive" size={15} color={ui.c.muted} />
@@ -282,9 +283,9 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
         {!messagesQuery.loading && messages.length === 0 ? (
           <View style={{ paddingVertical: 32, alignItems: "center", gap: 6 }}>
             <Icon name="Sparkles" size={22} color={ui.c.accent} />
-            <Text style={ui.s.h3}>开始和 {agentMap.get(active.agent_id)?.name ?? "智能体"} 对话</Text>
+            <Text style={ui.s.h3}>{t("Chat.16")} {agentMap.get(active.agent_id)?.name ?? t("AgentDetail.23")} {t("Chat.5")}</Text>
             <Text style={[ui.s.muted, { textAlign: "center" }]}>
-              直接描述你的问题，智能体会给出答复并可以为你创建任务。
+              {t("Chat.19")}
             </Text>
           </View>
         ) : null}
@@ -306,7 +307,7 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
           <TextInput
             value={draft}
             onChangeText={setDraft}
-            placeholder="输入消息，Enter 发送…"
+            placeholder={t("Chat.20")}
             placeholderTextColor={ui.c.muted}
             multiline
             onSubmitEditing={() => void send()}
@@ -336,7 +337,7 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
             <Icon name={sending ? "Loader" : "ArrowUp"} size={18} color={draft.trim() ? ui.c.accentFg : ui.c.muted} />
           </Pressable>
         </View>
-        <Text style={ui.s.tiny}>每 4 秒自动刷新 · {busy ? "同步中…" : "已同步"}</Text>
+        <Text style={ui.s.tiny}>{t("Chat.21")} {busy ? t("Chat.22") : t("Chat.23")}</Text>
       </View>
     </View>
   ) : (
@@ -344,8 +345,8 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
       <Empty
         ui={ui}
         icon="MessagesSquare"
-        title="选择一段对话"
-        description="左侧列出你的全部对话；也可以新建对话与任意智能体交流。"
+        title={t("Chat.24")}
+        description={t("Chat.25")}
       />
     </View>
   );
@@ -360,7 +361,7 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
       )}
 
       <Modal
-        title="选择智能体"
+        title={t("Chat.26")}
         icon={<Icon name="Bot" size={16} color={ui.c.muted} />}
         open={pickerOpen}
         onOpenChange={setPickerOpen}
@@ -368,7 +369,7 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
         <Modal.Content>
           <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 8 }}>
             {agents.length === 0 ? (
-              <Empty ui={ui} icon="Bot" title="没有智能体" description="先在团队页创建或启用一个智能体。" />
+              <Empty ui={ui} icon="Bot" title={t("Chat.27")} description={t("Chat.28")} />
             ) : (
               agents.map((agent) => (
                 <Pressable
@@ -393,7 +394,7 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
                   <View style={{ flex: 1, gap: 2 }}>
                     <Text style={[ui.s.body, { fontWeight: "600" }]}>{agent.name}</Text>
                     <Text numberOfLines={1} style={ui.s.tiny}>
-                      {agent.model ?? "默认模型"} · {agent.status === "idle" ? "空闲" : agent.status === "working" ? "工作中" : "离线"}
+                      {agent.model ?? t("Chat.29")} · {agent.status === "idle" ? t("model.21") : agent.status === "working" ? t("model.22") : t("RuntimeDetail.4")}
                     </Text>
                   </View>
                   <Dot color={agent.status === "working" ? ui.c.accent : agent.status === "idle" ? ui.c.success : ui.c.muted} />
@@ -413,7 +414,7 @@ function Bubble({ ui, message, agentName }: { ui: Ui; message: ChatMessage; agen
   return (
     <View style={{ alignItems: mine ? "flex-end" : "flex-start", gap: 4 }}>
       <View style={[ui.s.row, { gap: 6 }]}>
-        <Text style={ui.s.tiny}>{mine ? "我" : agentName ?? "智能体"}</Text>
+        <Text style={ui.s.tiny}>{mine ? t("Chat.33") : agentName ?? t("AgentDetail.23")}</Text>
         <Text style={ui.s.tiny}>{relTime(message.created_at)}</Text>
         {message.elapsed_ms ? <Text style={ui.s.tiny}>{Math.round(message.elapsed_ms / 1000)}s</Text> : null}
       </View>
@@ -434,7 +435,7 @@ function Bubble({ ui, message, agentName }: { ui: Ui; message: ChatMessage; agen
           <View style={[ui.s.row, { gap: 6, marginBottom: 4 }]}>
             <Icon name="AlertTriangle" size={13} color={ui.c.danger} />
             <Text style={[ui.s.tiny, { color: ui.c.danger }]}>
-              {message.failure_reason === "timeout" ? "响应超时" : "执行失败"}
+              {message.failure_reason === "timeout" ? t("Chat.35") : t("Chat.36")}
             </Text>
           </View>
         ) : null}
@@ -443,7 +444,7 @@ function Bubble({ ui, message, agentName }: { ui: Ui; message: ChatMessage; agen
         ) : message.content ? (
           <Markdown>{message.content}</Markdown>
         ) : (
-          <Text style={ui.s.muted}>（无回复内容）</Text>
+          <Text style={ui.s.muted}>{t("Chat.37")}</Text>
         )}
         {message.failure_reason && message.content ? (
           <Text style={[ui.s.tiny, { color: ui.c.danger, marginTop: 6 }]}>{message.failure_reason}</Text>

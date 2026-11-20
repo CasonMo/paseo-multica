@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { Icon } from "@getpaseo/plugin/client/ui";
 import type { ReactNode } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
@@ -100,29 +101,29 @@ export function IssueRow({
         </Text>
       ) : null}
       <PriorityMark ui={ui} priority={issue.priority} />
-      {issue.due_date ? <Text style={ui.s.tiny}>截止 {issue.due_date}</Text> : null}
+      {issue.due_date ? <Text style={ui.s.tiny}>{t("IssueDetail.45")} {issue.due_date}</Text> : null}
       <Text style={[ui.s.tiny, { minWidth: 56, textAlign: "right" }]}>{relTime(issue.updated_at)}</Text>
     </Pressable>
   );
 }
 
 const INBOX_META: Record<string, { label: string; icon: string }> = {
-  issue_created: { label: "新需求", icon: "FilePlus" },
-  issue_status_changed: { label: "状态变更", icon: "RefreshCw" },
-  status_changed: { label: "状态变更", icon: "RefreshCw" },
-  issue_assigned: { label: "指派给你", icon: "UserCheck" },
-  assignee_changed: { label: "负责人变更", icon: "UserCheck" },
-  unassigned: { label: "取消指派", icon: "UserMinus" },
-  issue_comment: { label: "新评论", icon: "MessageSquare" },
-  comment: { label: "新评论", icon: "MessageSquare" },
-  new_comment: { label: "新评论", icon: "MessageSquare" },
-  agent_started: { label: "智能体开始", icon: "Bot" },
-  agent_completed: { label: "智能体完成", icon: "Bot" },
-  agent_failed: { label: "智能体失败", icon: "TriangleAlert" },
-  task_failed: { label: "任务失败", icon: "TriangleAlert" },
-  quick_create_done: { label: "快速创建完成", icon: "Sparkles" },
-  mention: { label: "提到你", icon: "AtSign" },
-  workflow: { label: "工作流", icon: "Workflow" },
+  issue_created: { label: t("parts.2"), icon: "FilePlus" },
+  issue_status_changed: { label: t("SettingsSections.94"), icon: "RefreshCw" },
+  status_changed: { label: t("SettingsSections.94"), icon: "RefreshCw" },
+  issue_assigned: { label: t("parts.5"), icon: "UserCheck" },
+  assignee_changed: { label: t("parts.6"), icon: "UserCheck" },
+  unassigned: { label: t("IssueDetail.100"), icon: "UserMinus" },
+  issue_comment: { label: t("parts.8"), icon: "MessageSquare" },
+  comment: { label: t("parts.8"), icon: "MessageSquare" },
+  new_comment: { label: t("parts.8"), icon: "MessageSquare" },
+  agent_started: { label: t("parts.11"), icon: "Bot" },
+  agent_completed: { label: t("parts.12"), icon: "Bot" },
+  agent_failed: { label: t("parts.13"), icon: "TriangleAlert" },
+  task_failed: { label: t("parts.14"), icon: "TriangleAlert" },
+  quick_create_done: { label: t("parts.15"), icon: "Sparkles" },
+  mention: { label: t("parts.16"), icon: "AtSign" },
+  workflow: { label: t("Nav.7"), icon: "Workflow" },
 };
 
 const INBOX_ICON: Record<string, string> = Object.fromEntries(
@@ -198,7 +199,7 @@ export function InboxRow({
         {!item.read && onRead ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="标记已读"
+            accessibilityLabel={t("IssueDetail.85")}
             onPress={onRead}
             style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
           >
@@ -208,7 +209,7 @@ export function InboxRow({
         {onArchive ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="归档通知"
+            accessibilityLabel={t("Inbox.32")}
             onPress={onArchive}
             style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
           >
@@ -242,7 +243,7 @@ export function AgentRow({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${agent.name}，${agent.status ?? "未知状态"}`}
+      accessibilityLabel={t("Nav.17", { a: agent.name, b: agent.status ?? t("parts.21") })}
       onPress={onPress}
       style={({ pressed }) => [ui.s.listRow, pressed && ui.s.pressed]}
     >
@@ -252,25 +253,25 @@ export function AgentRow({
           {agent.name}
         </Text>
         <Text numberOfLines={1} style={ui.s.tiny}>
-          {agent.model ? agent.model : "未设置模型"}
+          {agent.model ? agent.model : t("AgentDetail.24")}
           {runtimeLabel ? ` · ${runtimeLabel}` : ""}
         </Text>
       </View>
       {agent.archived_at ? (
-        <Tag ui={ui} label="已归档" tone="muted" />
+        <Tag ui={ui} label={t("AgentDetail.28")} tone="muted" />
       ) : (
         <View style={[ui.s.row, { gap: 5 }]}>
           <Dot color={tone} />
           <Text style={[ui.s.tiny, { color: tone }]}>
             {agent.status === "working"
-              ? "工作中"
+              ? t("model.22")
               : agent.status === "blocked"
-                ? "阻塞"
+                ? t("model.23")
                 : agent.status === "error"
-                  ? "异常"
+                  ? t("model.24")
                   : agent.status === "idle"
-                    ? "空闲"
-                    : "离线"}
+                    ? t("model.21")
+                    : t("RuntimeDetail.4")}
           </Text>
         </View>
       )}

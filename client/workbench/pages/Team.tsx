@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { Icon } from "@getpaseo/plugin/client/ui";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
@@ -21,10 +22,10 @@ import { CreateAgentModal, CreateSquadModal } from "../TeamCreate";
 export type Tab = "agents" | "squads" | "runtimes" | "skills";
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: "agents", label: "智能体", icon: "Bot" },
-  { key: "squads", label: "小队", icon: "UsersRound" },
-  { key: "runtimes", label: "运行时", icon: "Server" },
-  { key: "skills", label: "技能", icon: "Blocks" },
+  { key: "agents", label: t("AgentDetail.23"), icon: "Bot" },
+  { key: "squads", label: t("Nav.36"), icon: "UsersRound" },
+  { key: "runtimes", label: t("AgentDetail.16"), icon: "Server" },
+  { key: "skills", label: t("AgentDetail.2"), icon: "Blocks" },
 ];
 
 export function TeamPage({ initialTab }: { initialTab?: Tab }) {
@@ -110,7 +111,7 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
       if (id) navigate("chat", { sessionId: id });
       else navigate("chat", { agentId: agent.id });
     } else {
-      toast.error(result.error ?? "创建会话失败");
+      toast.error(result.error ?? t("Team.5"));
     }
   };
 
@@ -125,13 +126,13 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
       >
         <View style={[ui.s.row, { gap: 10 }]}>
           <View style={ui.s.grow}>
-            <Text style={[ui.s.title, { fontSize: compact ? 18 : 21 }]}>团队</Text>
-            <Text style={ui.s.muted}>智能体、小队、运行时与技能</Text>
+            <Text style={[ui.s.title, { fontSize: compact ? 18 : 21 }]}>{t("Nav.4")}</Text>
+            <Text style={ui.s.muted}>{t("Team.7")}</Text>
           </View>
           {tab === "agents" ? (
-            <Btn ui={ui} label="新建智能体" icon="Plus" tone="primary" onPress={() => setCreatingAgent(true)} />
+            <Btn ui={ui} label={t("TeamCreate.3")} icon="Plus" tone="primary" onPress={() => setCreatingAgent(true)} />
           ) : tab === "squads" ? (
-            <Btn ui={ui} label="新建小队" icon="Plus" tone="primary" onPress={() => setCreatingSquad(true)} />
+            <Btn ui={ui} label={t("TeamCreate.19")} icon="Plus" tone="primary" onPress={() => setCreatingSquad(true)} />
           ) : null}
         </View>
 
@@ -170,7 +171,7 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder={`搜索${TABS.find((entry) => entry.key === tab)?.label ?? ""}…`}
+            placeholder={t("Team.10", { a: TABS.find((entry) => entry.key === tab)?.label ?? "" })}
             placeholderTextColor={ui.c.muted}
             style={{ flex: 1, color: ui.c.fg, fontSize: 13, paddingVertical: 8 }}
             autoCapitalize="none"
@@ -181,13 +182,13 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
         {tab === "agents" ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={showArchived ? "隐藏已归档智能体" : "显示已归档智能体"}
+            accessibilityLabel={showArchived ? t("Team.11") : t("Team.12")}
             onPress={() => setShowArchived((value) => !value)}
             style={({ pressed }) => [ui.s.row, { gap: 6, alignSelf: "flex-start" }, pressed && ui.s.pressed]}
           >
             <Icon name={showArchived ? "EyeOff" : "Archive"} size={13} color={ui.c.muted} />
             <Text style={ui.s.tiny}>
-              {showArchived ? "隐藏已归档" : archivedCount > 0 ? `显示已归档（${archivedCount}）` : "显示已归档"}
+              {showArchived ? t("Team.13") : archivedCount > 0 ? t("Team.14", { a: archivedCount }) : t("Team.15")}
             </Text>
           </Pressable>
         ) : null}
@@ -201,7 +202,7 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
                 <ErrorNote ui={ui} message={agentsQuery.error} onRetry={agentsQuery.refresh} />
               </View>
             ) : filteredAgents.length === 0 ? (
-              <Empty ui={ui} icon="Bot" title="没有智能体" description="在 Multica 后台创建智能体，或调整搜索条件。" />
+              <Empty ui={ui} icon="Bot" title={t("Chat.27")} description={t("Team.17")} />
             ) : (
               <View style={{ paddingBottom: 6 }}>
                 {filteredAgents.map((agent, index) => (
@@ -225,7 +226,7 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
             {squadsQuery.loading && squads.length === 0 ? (
               <LoadingRow ui={ui} />
             ) : filteredSquads.length === 0 ? (
-              <Empty ui={ui} icon="UsersRound" title="没有小队" description="小队让多个智能体围绕同一问题协作。" />
+              <Empty ui={ui} icon="UsersRound" title={t("Team.18")} description={t("Team.19")} />
             ) : (
               <View style={{ paddingBottom: 6 }}>
                 {filteredSquads.map((squad, index) => {
@@ -244,7 +245,7 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
                             {squad.name}
                           </Text>
                           <Text numberOfLines={1} style={ui.s.tiny}>
-                            队长 {leader?.name ?? "—"} · {squad.member_count ?? squad.member_preview?.length ?? 0} 位成员
+                            {t("SquadDetail.10")} {leader?.name ?? "—"} · {squad.member_count ?? squad.member_preview?.length ?? 0} {t("Team.21")}
                           </Text>
                         </View>
                         <Icon name="ChevronRight" size={15} color={ui.c.muted} />
@@ -262,7 +263,7 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
             {runtimesQuery.loading && runtimes.length === 0 ? (
               <LoadingRow ui={ui} />
             ) : filteredRuntimes.length === 0 ? (
-              <Empty ui={ui} icon="Server" title="没有运行时" description="在 Multica 中连接一台运行时设备后即可调度智能体。" />
+              <Empty ui={ui} icon="Server" title={t("Team.22")} description={t("Team.23")} />
             ) : (
               <View style={{ paddingBottom: 6 }}>
                 {filteredRuntimes.map((runtime, index) => {
@@ -272,7 +273,7 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
                       {index > 0 ? <Divider ui={ui} style={{ marginHorizontal: 14 }} /> : null}
                       <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel={`查看运行时 ${runtimeName(runtime)}`}
+                        accessibilityLabel={t("Team.24", { a: runtimeName(runtime) })}
                         onPress={() => setRuntimeId(runtime.id)}
                         style={({ pressed }) => [ui.s.listRow, { alignItems: "flex-start" }, pressed && ui.s.pressed]}
                       >
@@ -282,13 +283,13 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
                         <View style={{ flex: 1, gap: 3 }}>
                           <Text style={[ui.s.body, { fontWeight: "600" }]}>{runtimeName(runtime)}</Text>
                           <Text numberOfLines={1} style={ui.s.tiny}>
-                            {runtime.provider ?? "provider"} · {runtime.device_info || "未知设备"}
+                            {runtime.provider ?? "provider"} · {runtime.device_info || t("RuntimeDetail.2")}
                           </Text>
                           <Text style={ui.s.tiny}>
-                            {online ? "在线" : `最后在线 ${relTime(runtime.last_seen_at)}`}
+                            {online ? t("RuntimeDetail.3") : t("RuntimeDetail.8", { a: relTime(runtime.last_seen_at) })}
                           </Text>
                         </View>
-                        <Tag ui={ui} label={runtime.visibility === "private" ? "私有" : "工作区"} tone="muted" />
+                        <Tag ui={ui} label={runtime.visibility === "private" ? t("RuntimeDetail.5") : t("Nav.47")} tone="muted" />
                         <Icon name="ChevronRight" size={15} color={ui.c.muted} />
                       </Pressable>
                     </View>
@@ -308,7 +309,7 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
                 <ErrorNote ui={ui} message={skillsQuery.error} onRetry={skillsQuery.refresh} />
               </View>
             ) : filteredSkills.length === 0 ? (
-              <Empty ui={ui} icon="Blocks" title="没有技能" description="技能为智能体提供可复用的工具与知识。" />
+              <Empty ui={ui} icon="Blocks" title={t("Team.30")} description={t("Team.31")} />
             ) : (
               <View style={{ paddingBottom: 6 }}>
                 {filteredSkills.map((skill, index) => (
@@ -374,7 +375,7 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
         onClose={() => setCreatingAgent(false)}
         onDone={() => {
           agentsQuery.refresh();
-          toast.show("智能体已创建", { variant: "success" });
+          toast.show(t("Team.32"), { variant: "success" });
         }}
       />
       <CreateSquadModal
@@ -383,7 +384,7 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
         onClose={() => setCreatingSquad(false)}
         onDone={() => {
           squadsQuery.refresh();
-          toast.show("小队已创建", { variant: "success" });
+          toast.show(t("Team.33"), { variant: "success" });
         }}
       />
       <RuntimeDetailModal
@@ -396,8 +397,8 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
 }
 
 function runtimeLabel(agent: Agent, runtimes: AgentRuntime[]): string {
-  if (!agent.runtime_id) return "未绑定运行时";
+  if (!agent.runtime_id) return t("AgentDetail.14");
   const runtime = runtimes.find((item) => item.id === agent.runtime_id);
-  if (!runtime) return agent.runtime_availability === "offline" ? "运行时离线" : "运行时";
-  return `${runtimeName(runtime)}${runtime.status === "online" ? "" : "（离线）"}`;
+  if (!runtime) return agent.runtime_availability === "offline" ? t("AgentDetail.15") : t("AgentDetail.16");
+  return t("AgentDetail.17", { a: runtimeName(runtime), b: runtime.status === "online" ? "" : t("AgentDetail.18") });
 }

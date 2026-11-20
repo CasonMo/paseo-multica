@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { ScrollView, Text, View } from "react-native";
 import { asList, asRecord, num, str, useQuery } from "./api";
@@ -98,7 +99,7 @@ export function RuntimeDetailModal({
 
   return (
     <Modal
-      title={runtime ? runtime.custom_name || runtime.name : "运行时"}
+      title={runtime ? runtime.custom_name || runtime.name : t("AgentDetail.16")}
       icon={<Icon name="Server" size={16} color={ui.c.muted} />}
       open={Boolean(runtime)}
       onOpenChange={(next) => {
@@ -124,34 +125,34 @@ export function RuntimeDetailModal({
               <View style={{ flex: 1, gap: 3 }}>
                 <Text style={{ color: ui.c.fg, fontSize: 16, fontWeight: "700" }}>{runtime.custom_name || runtime.name}</Text>
                 <Text style={ui.s.tiny}>
-                  {runtime.provider ?? "provider"} · {runtime.device_info || "未知设备"}
+                  {runtime.provider ?? "provider"} · {runtime.device_info || t("RuntimeDetail.2")}
                 </Text>
                 <View style={[ui.s.row, { gap: 6, flexWrap: "wrap" }]}>
-                  <Tag ui={ui} label={online ? "在线" : "离线"} tone={online ? "success" : "muted"} />
-                  <Tag ui={ui} label={runtime.visibility === "private" ? "私有" : "工作区"} tone="muted" />
-                  <Tag ui={ui} label={online ? "刚刚活跃" : `最后在线 ${relTime(runtime.last_seen_at)}`} tone="muted" icon="Clock" />
+                  <Tag ui={ui} label={online ? t("RuntimeDetail.3") : t("RuntimeDetail.4")} tone={online ? "success" : "muted"} />
+                  <Tag ui={ui} label={runtime.visibility === "private" ? t("RuntimeDetail.5") : t("Nav.47")} tone="muted" />
+                  <Tag ui={ui} label={online ? t("RuntimeDetail.7") : t("RuntimeDetail.8", { a: relTime(runtime.last_seen_at) })} tone="muted" icon="Clock" />
                 </View>
               </View>
             </View>
 
             <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
-              <Stat ui={ui} label="任务数" value={tasks} icon="Activity" />
-              <Stat ui={ui} label="输入 Tokens" value={compact(sum(usageRows, "input_tokens"))} icon="ArrowDown" />
-              <Stat ui={ui} label="输出 Tokens" value={compact(sum(usageRows, "output_tokens"))} icon="ArrowUp" />
-              <Stat ui={ui} label="缓存读取" value={compact(sum(usageRows, "cache_read_tokens"))} icon="Database" />
+              <Stat ui={ui} label={t("RuntimeDetail.9")} value={tasks} icon="Activity" />
+              <Stat ui={ui} label={t("RuntimeDetail.10")} value={compact(sum(usageRows, "input_tokens"))} icon="ArrowDown" />
+              <Stat ui={ui} label={t("RuntimeDetail.11")} value={compact(sum(usageRows, "output_tokens"))} icon="ArrowUp" />
+              <Stat ui={ui} label={t("RuntimeDetail.12")} value={compact(sum(usageRows, "cache_read_tokens"))} icon="Database" />
             </View>
 
             <ScrollView style={{ maxHeight: 460 }} contentContainerStyle={{ gap: 12 }}>
               {activity.error ? <ErrorNote ui={ui} message={activity.error} onRetry={activity.refresh} /> : null}
               <View style={{ gap: 8 }}>
                 <View style={[ui.s.row, { justifyContent: "space-between" }]}>
-                  <Text style={ui.s.label}>24 小时任务分布</Text>
-                  <Btn ui={ui} label="刷新" icon="RefreshCw" onPress={refreshAll} />
+                  <Text style={ui.s.label}>{t("RuntimeDetail.13")}</Text>
+                  <Btn ui={ui} label={t("Nav.14")} icon="RefreshCw" onPress={refreshAll} />
                 </View>
                 {activity.loading && !activity.data ? (
-                  <LoadingRow ui={ui} label="读取活动…" />
+                  <LoadingRow ui={ui} label={t("RuntimeDetail.15")} />
                 ) : tasks === 0 ? (
-                  <Text style={ui.s.muted}>暂无活动记录。</Text>
+                  <Text style={ui.s.muted}>{t("RuntimeDetail.16")}</Text>
                 ) : (
                   <Bars ui={ui} points={hourly} height={56} />
                 )}
@@ -160,11 +161,11 @@ export function RuntimeDetailModal({
               <Divider ui={ui} />
 
               <View style={{ gap: 6 }}>
-                <Text style={ui.s.label}>按日用量</Text>
+                <Text style={ui.s.label}>{t("RuntimeDetail.17")}</Text>
                 {usage.loading && !usage.data ? (
-                  <LoadingRow ui={ui} label="读取用量…" />
+                  <LoadingRow ui={ui} label={t("RuntimeDetail.18")} />
                 ) : usageRows.length === 0 ? (
-                  <Text style={ui.s.muted}>该运行时暂无 Token 用量。</Text>
+                  <Text style={ui.s.muted}>{t("RuntimeDetail.19")}</Text>
                 ) : (
                   usageRows.map((row, index) => (
                     <View
@@ -173,10 +174,10 @@ export function RuntimeDetailModal({
                     >
                       <View style={[ui.s.row, { gap: 6 }]}>
                         <Text style={[ui.s.body, { fontWeight: "600" }]}>{str(row.date) || "—"}</Text>
-                        <Text numberOfLines={1} style={[ui.s.tiny, { flex: 1 }]}>{str(row.model) || "未知模型"}</Text>
+                        <Text numberOfLines={1} style={[ui.s.tiny, { flex: 1 }]}>{str(row.model) || t("RuntimeDetail.20")}</Text>
                       </View>
                       <Text style={ui.s.tiny}>
-                        输入 {compact(num(row.input_tokens))} · 输出 {compact(num(row.output_tokens))} · 缓存读{" "}
+                        {t("RuntimeDetail.21")} {compact(num(row.input_tokens))} {t("RuntimeDetail.22")} {compact(num(row.output_tokens))} {t("RuntimeDetail.23")}{" "}
                         {compact(num(row.cache_read_tokens))}
                       </Text>
                     </View>
@@ -185,12 +186,12 @@ export function RuntimeDetailModal({
               </View>
 
               <View style={{ gap: 6 }}>
-                <Text style={ui.s.label}>按智能体</Text>
+                <Text style={ui.s.label}>{t("RuntimeDetail.24")}</Text>
                 {byAgent.error ? <ErrorNote ui={ui} message={byAgent.error} onRetry={byAgent.refresh} /> : null}
                 {byAgent.loading && !byAgent.data ? (
-                  <LoadingRow ui={ui} label="读取智能体用量…" />
+                  <LoadingRow ui={ui} label={t("RuntimeDetail.25")} />
                 ) : agentRows.length === 0 ? (
-                  <Text style={ui.s.muted}>暂无智能体用量。</Text>
+                  <Text style={ui.s.muted}>{t("RuntimeDetail.26")}</Text>
                 ) : (
                   agentRows.map((row, index) => (
                     <View key={`${str(row.agent_id)}-${index}`} style={[ui.s.row, { gap: 8, paddingVertical: 4 }]}>
@@ -198,7 +199,7 @@ export function RuntimeDetailModal({
                       <View style={{ flex: 1, gap: 1 }}>
                         <Text style={[ui.s.body, { fontWeight: "600" }]}>{agentName(str(row.agent_id))}</Text>
                         <Text style={ui.s.tiny}>
-                          {num(row.task_count)} 个任务 · 输入 {compact(num(row.input_tokens))} · 输出{" "}
+                          {num(row.task_count)} {t("RuntimeDetail.27")} {compact(num(row.input_tokens))} {t("RuntimeDetail.22")}{" "}
                           {compact(num(row.output_tokens))}
                         </Text>
                       </View>
@@ -210,9 +211,9 @@ export function RuntimeDetailModal({
 
               <Divider ui={ui} />
               <View style={{ gap: 4 }}>
-                <Text style={ui.s.label}>速率限制</Text>
+                <Text style={ui.s.label}>{t("RuntimeDetail.29")}</Text>
                 <Text style={ui.s.muted}>
-                  {rateLimits.status === 404 ? "该运行时未上报速率限制。" : hasLimits ? JSON.stringify(limits).slice(0, 300) : "该运行时未上报速率限制。"}
+                  {rateLimits.status === 404 ? t("RuntimeDetail.30") : hasLimits ? JSON.stringify(limits).slice(0, 300) : t("RuntimeDetail.30")}
                 </Text>
               </View>
             </ScrollView>

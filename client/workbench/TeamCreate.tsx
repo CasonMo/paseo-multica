@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useState } from "react";
 import { Text, View } from "react-native";
@@ -38,7 +39,7 @@ export function CreateAgentModal({
   const submit = async () => {
     const trimmed = name.trim();
     if (!trimmed) {
-      setError("请填写智能体名称");
+      setError(t("TeamCreate.1"));
       return;
     }
     setBusy(true);
@@ -60,31 +61,31 @@ export function CreateAgentModal({
       onClose();
       onDone();
     } else {
-      setError(result.error ?? "创建智能体失败");
+      setError(result.error ?? t("TeamCreate.2"));
     }
   };
 
   return (
     <Modal
-      title="新建智能体"
+      title={t("TeamCreate.3")}
       icon={<Icon name="Bot" size={16} color={ui.c.muted} />}
       open={open}
       onOpenChange={(next) => !next && onClose()}
     >
       <Modal.Content>
         <View style={{ gap: 12 }}>
-          <Field ui={ui} label="名称" value={name} onChangeText={setName} placeholder="例如：代码审查员" autoFocus />
+          <Field ui={ui} label={t("AgentDetail.95")} value={name} onChangeText={setName} placeholder={t("TeamCreate.5")} autoFocus />
           <Field
             ui={ui}
-            label="描述"
+            label={t("AgentDetail.97")}
             value={description}
             onChangeText={setDescription}
-            placeholder="一句话说明这个智能体擅长什么"
+            placeholder={t("TeamCreate.7")}
           />
           <View style={{ gap: 6 }}>
-            <Text style={ui.s.label}>运行时</Text>
+            <Text style={ui.s.label}>{t("AgentDetail.16")}</Text>
             {runtimes.length === 0 ? (
-              <Text style={ui.s.muted}>暂无可用运行时，创建后可在智能体详情中绑定。</Text>
+              <Text style={ui.s.muted}>{t("TeamCreate.9")}</Text>
             ) : (
               <Chips
                 ui={ui}
@@ -94,19 +95,19 @@ export function CreateAgentModal({
               />
             )}
           </View>
-          <Field ui={ui} label="模型" value={model} onChangeText={setModel} placeholder="留空则由运行时决定" />
+          <Field ui={ui} label={t("AgentDetail.99")} value={model} onChangeText={setModel} placeholder={t("TeamCreate.11")} />
           <Field
             ui={ui}
-            label="系统指令"
+            label={t("TeamCreate.12")}
             value={instructions}
             onChangeText={setInstructions}
-            placeholder="描述角色、边界与输出要求"
+            placeholder={t("TeamCreate.13")}
             multiline
           />
           {error ? <ErrorNote ui={ui} message={error} /> : null}
           <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end" }]}>
-            <Btn ui={ui} label="取消" onPress={onClose} />
-            <Btn ui={ui} label="创建" tone="primary" busy={busy} onPress={() => void submit()} />
+            <Btn ui={ui} label={t("AgentDetail.40")} onPress={onClose} />
+            <Btn ui={ui} label={t("SettingsSections.30")} tone="primary" busy={busy} onPress={() => void submit()} />
           </View>
         </View>
       </Modal.Content>
@@ -139,11 +140,11 @@ export function CreateSquadModal({
   const submit = async () => {
     const trimmed = name.trim();
     if (!trimmed) {
-      setError("请填写小队名称");
+      setError(t("SquadDetail.22"));
       return;
     }
     if (!selectedLeader) {
-      setError("请选择队长");
+      setError(t("TeamCreate.17"));
       return;
     }
     setBusy(true);
@@ -167,31 +168,31 @@ export function CreateSquadModal({
       onClose();
       onDone();
     } else {
-      setError(result.error ?? "创建小队失败");
+      setError(result.error ?? t("TeamCreate.18"));
     }
   };
 
   return (
     <Modal
-      title="新建小队"
+      title={t("TeamCreate.19")}
       icon={<Icon name="UsersRound" size={16} color={ui.c.muted} />}
       open={open}
       onOpenChange={(next) => !next && onClose()}
     >
       <Modal.Content>
         <View style={{ gap: 12 }}>
-          <Field ui={ui} label="名称" value={name} onChangeText={setName} placeholder="例如：发布保障小队" autoFocus />
+          <Field ui={ui} label={t("AgentDetail.95")} value={name} onChangeText={setName} placeholder={t("TeamCreate.21")} autoFocus />
           <Field
             ui={ui}
-            label="描述"
+            label={t("AgentDetail.97")}
             value={description}
             onChangeText={setDescription}
-            placeholder="小队负责什么问题域"
+            placeholder={t("SquadDetail.27")}
           />
           <View style={{ gap: 6 }}>
-            <Text style={ui.s.label}>队长</Text>
+            <Text style={ui.s.label}>{t("SquadDetail.10")}</Text>
             {active.length === 0 ? (
-              <Text style={ui.s.muted}>请先创建智能体，再由它担任队长。</Text>
+              <Text style={ui.s.muted}>{t("TeamCreate.25")}</Text>
             ) : (
               <Chips
                 ui={ui}
@@ -203,16 +204,16 @@ export function CreateSquadModal({
           </View>
           <Field
             ui={ui}
-            label="协作指令"
+            label={t("SquadDetail.13")}
             value={instructions}
             onChangeText={setInstructions}
-            placeholder="约定成员分工、交接与验收方式"
+            placeholder={t("TeamCreate.27")}
             multiline
           />
           {error ? <ErrorNote ui={ui} message={error} /> : null}
           <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end" }]}>
-            <Btn ui={ui} label="取消" onPress={onClose} />
-            <Btn ui={ui} label="创建" tone="primary" busy={busy} onPress={() => void submit()} />
+            <Btn ui={ui} label={t("AgentDetail.40")} onPress={onClose} />
+            <Btn ui={ui} label={t("SettingsSections.30")} tone="primary" busy={busy} onPress={() => void submit()} />
           </View>
         </View>
       </Modal.Content>

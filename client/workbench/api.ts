@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { useRpc } from "@getpaseo/plugin/client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiRequestRpc } from "../../shared/contracts";
@@ -101,7 +102,7 @@ export function useQuery<T = unknown>(
           setError(null);
           setLastUpdated(Date.now());
         } else {
-          setError(result.error ?? `请求失败 (HTTP ${result.status})`);
+          setError(result.error ?? t("api.1", { a: result.status }));
         }
       } catch (cause) {
         if (!mounted.current || ticket !== seq.current) return;
@@ -211,7 +212,7 @@ export function usePagedQuery<T = Record<string, unknown>>(
           setTotal(Number.isFinite(nextTotal) ? nextTotal : reset ? list.length : itemsRef.current.length + list.length);
           setError(null);
         } else {
-          setError(result.error ?? `请求失败 (HTTP ${result.status})`);
+          setError(result.error ?? t("api.1", { a: result.status }));
         }
       } catch (cause) {
         if (mounted.current && ticket === seq.current) setError(cause instanceof Error ? cause.message : String(cause));

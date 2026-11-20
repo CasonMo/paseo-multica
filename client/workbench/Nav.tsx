@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { Icon } from "@getpaseo/plugin/client/ui";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
@@ -10,14 +11,14 @@ import { initials, type Project } from "./model";
 type NavPressState = { pressed: boolean; hovered?: boolean };
 
 const RAIL: { key: PageKey; label: string; icon: string }[] = [
-  { key: "overview", label: "概览", icon: "LayoutDashboard" },
-  { key: "issues", label: "工作", icon: "ListTodo" },
-  { key: "projects", label: "项目", icon: "FolderKanban" },
-  { key: "team", label: "团队", icon: "Users" },
-  { key: "chat", label: "聊天", icon: "MessagesSquare" },
-  { key: "autopilot", label: "自动化", icon: "Bot" },
-  { key: "workflows", label: "工作流", icon: "Workflow" },
-  { key: "labels", label: "标签", icon: "Tags" },
+  { key: "overview", label: t("AgentDetail.1"), icon: "LayoutDashboard" },
+  { key: "issues", label: t("Nav.2"), icon: "ListTodo" },
+  { key: "projects", label: t("Nav.3"), icon: "FolderKanban" },
+  { key: "team", label: t("Nav.4"), icon: "Users" },
+  { key: "chat", label: t("Nav.5"), icon: "MessagesSquare" },
+  { key: "autopilot", label: t("Nav.6"), icon: "Bot" },
+  { key: "workflows", label: t("Nav.7"), icon: "Workflow" },
+  { key: "labels", label: t("AgentDetail.5"), icon: "Tags" },
 ];
 
 export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
@@ -101,7 +102,7 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
     >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="切换工作区"
+        accessibilityLabel={t("Nav.9")}
         onPress={onWorkspacePicker}
         style={({ pressed, hovered }: NavPressState) => [
           {
@@ -121,8 +122,8 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
         </Text>
       </Pressable>
 
-      {cell("create", "SquarePen", "新建", () => navigate("issues", { create: "1" }), { plain: true })}
-      {cell("search", "Search", "搜索", () => navigate("issues", { focus: "search" }), { plain: true })}
+      {cell("create", "SquarePen", t("Nav.10"), () => navigate("issues", { create: "1" }), { plain: true })}
+      {cell("search", "Search", t("Nav.11"), () => navigate("issues", { focus: "search" }), { plain: true })}
 
       <View style={{ height: 1, width: 24, backgroundColor: ui.c.line, marginVertical: 6 }} />
 
@@ -139,15 +140,15 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
       {cell(
         "nav-toggle",
         navCollapsed ? "PanelLeftOpen" : "PanelLeftClose",
-        navCollapsed ? "展开导航" : "收起导航",
+        navCollapsed ? t("Nav.12") : t("Nav.13"),
         toggleNav,
         { plain: true },
       )}
-      {cell("refresh", "RefreshCw", "刷新", () => void refresh(), { busy, plain: true })}
-      {cell("settings", "Settings", "设置", () => navigate("settings"), { selected: page === "settings" })}
+      {cell("refresh", "RefreshCw", t("Nav.14"), () => void refresh(), { busy, plain: true })}
+      {cell("settings", "Settings", t("Nav.15"), () => navigate("settings"), { selected: page === "settings" })}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="账户"
+        accessibilityLabel={t("Nav.16")}
         onPress={() => navigate("settings", { tab: "account" })}
         style={({ pressed }) => [{ marginTop: 6, borderRadius: 14 }, pressed && ui.s.pressed]}
       >
@@ -252,7 +253,7 @@ function Group({
     <View>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${label}，${open ? "收起" : "展开"}`}
+        accessibilityLabel={t("Nav.17", { a: label, b: open ? t("Nav.18") : t("Nav.19") })}
         accessibilityState={{ expanded: open }}
         aria-expanded={open}
         onPress={toggle}
@@ -323,11 +324,11 @@ function NavRow({
 }
 
 export const WORK_VIEWS: { key: string; label: string; icon: string; query: Record<string, string | number> }[] = [
-  { key: "all", label: "全部任务", icon: "ListChecks", query: {} },
-  { key: "mine", label: "我的工作", icon: "CircleUser", query: { mine: 1 } },
-  { key: "active", label: "执行中", icon: "Play", query: { status_category: "started" } },
-  { key: "done", label: "已完成", icon: "CircleCheck", query: { status_category: "done" } },
-  { key: "closed", label: "已取消", icon: "CircleSlash", query: { status_category: "closed" } },
+  { key: "all", label: t("Nav.20"), icon: "ListChecks", query: {} },
+  { key: "mine", label: t("Nav.21"), icon: "CircleUser", query: { mine: 1 } },
+  { key: "active", label: t("Nav.22"), icon: "Play", query: { status_category: "started" } },
+  { key: "done", label: t("AgentDetail.6"), icon: "CircleCheck", query: { status_category: "done" } },
+  { key: "closed", label: t("AgentDetail.9"), icon: "CircleSlash", query: { status_category: "closed" } },
 ];
 
 function WorkNav() {
@@ -377,11 +378,11 @@ function WorkNav() {
 
   return (
     <View>
-      <SectionTitle ui={ui} title={params.id ? "任务" : "工作"} />
-      <NavRow ui={ui} icon="Bell" label="收件箱" count={unreadCount} onPress={() => navigate("inbox")} />
-      <Group ui={ui} id="work.preview" label="最近通知" defaultOpen={false}>
+      <SectionTitle ui={ui} title={params.id ? t("AgentDetail.3") : t("Nav.2")} />
+      <NavRow ui={ui} icon="Bell" label={t("Nav.27")} count={unreadCount} onPress={() => navigate("inbox")} />
+      <Group ui={ui} id="work.preview" label={t("Nav.28")} defaultOpen={false}>
         {previewList.length === 0 ? (
-          <Text style={[ui.s.tiny, { paddingHorizontal: 8, paddingVertical: 6 }]}>暂无通知</Text>
+          <Text style={[ui.s.tiny, { paddingHorizontal: 8, paddingVertical: 6 }]}>{t("Nav.29")}</Text>
         ) : (
           previewList.map((item) => (
             <Pressable
@@ -395,14 +396,14 @@ function WorkNav() {
               ]}
             >
               <Text numberOfLines={1} style={{ fontSize: 12, color: ui.c.muted }}>
-                {item.title || "通知"}
+                {item.title || t("Nav.30")}
               </Text>
             </Pressable>
           ))
         )}
       </Group>
 
-      <Group ui={ui} id="work.views" label="视图">
+      <Group ui={ui} id="work.views" label={t("Nav.31")}>
         {WORK_VIEWS.map((entry) => (
           <NavRow
             key={entry.key}
@@ -416,9 +417,9 @@ function WorkNav() {
         ))}
       </Group>
 
-      <Group ui={ui} id="work.projects" label="项目">
+      <Group ui={ui} id="work.projects" label={t("Nav.3")}>
         {list.length === 0 ? (
-          <Text style={[ui.s.tiny, { paddingHorizontal: 8, paddingVertical: 6 }]}>暂无项目</Text>
+          <Text style={[ui.s.tiny, { paddingHorizontal: 8, paddingVertical: 6 }]}>{t("Nav.33")}</Text>
         ) : (
           list.map((project) => (
             <NavRow
@@ -432,7 +433,7 @@ function WorkNav() {
             />
           ))
         )}
-        <NavRow ui={ui} icon="Plus" label="新建项目" onPress={() => navigate("projects")} />
+        <NavRow ui={ui} icon="Plus" label={t("Nav.34")} onPress={() => navigate("projects")} />
       </Group>
     </View>
   );
@@ -443,15 +444,15 @@ function TeamNav() {
   const ui = useUi(theme, compact);
   const tab = params.tab ?? "agents";
   const items = [
-    { key: "agents", label: "智能体", icon: "Bot" },
-    { key: "squads", label: "小队", icon: "UsersRound" },
-    { key: "runtimes", label: "运行时", icon: "Server" },
-    { key: "skills", label: "技能", icon: "Blocks" },
+    { key: "agents", label: t("AgentDetail.23"), icon: "Bot" },
+    { key: "squads", label: t("Nav.36"), icon: "UsersRound" },
+    { key: "runtimes", label: t("AgentDetail.16"), icon: "Server" },
+    { key: "skills", label: t("AgentDetail.2"), icon: "Blocks" },
   ];
   return (
     <View>
-      <SectionTitle ui={ui} title="团队" />
-      <Group ui={ui} id="team.org" label="组织">
+      <SectionTitle ui={ui} title={t("Nav.4")} />
+      <Group ui={ui} id="team.org" label={t("Nav.40")}>
         {items.map((entry) => (
           <NavRow
             key={entry.key}
@@ -472,14 +473,14 @@ function AutomationNav() {
   const ui = useUi(theme, compact);
   const filter = params.filter ?? "all";
   const items = [
-    { key: "all", label: "全部自动化", icon: "LayoutList" },
-    { key: "active", label: "运行中", icon: "Activity" },
-    { key: "paused", label: "已暂停", icon: "Pause" },
+    { key: "all", label: t("Nav.41"), icon: "LayoutList" },
+    { key: "active", label: t("AgentDetail.10"), icon: "Activity" },
+    { key: "paused", label: t("Nav.43"), icon: "Pause" },
   ];
   return (
     <View>
-      <SectionTitle ui={ui} title="自动化" />
-      <Group ui={ui} id="autopilot.tasks" label="任务">
+      <SectionTitle ui={ui} title={t("Nav.6")} />
+      <Group ui={ui} id="autopilot.tasks" label={t("AgentDetail.3")}>
         {items.map((entry) => (
           <NavRow
             key={entry.key}
@@ -499,15 +500,15 @@ function SettingsNav() {
   const { theme, compact, page, params, navigate } = useWorkbench();
   const ui = useUi(theme, compact);
   const links = [
-    { label: "服务器连接", icon: "Plug", tab: "connection" },
-    { label: "工作区", icon: "Layers", tab: "workspace" },
-    { label: "接口调试", icon: "Terminal", tab: "api" },
-    { label: "账户", icon: "CircleUser", tab: "account" },
+    { label: t("Nav.46"), icon: "Plug", tab: "connection" },
+    { label: t("Nav.47"), icon: "Layers", tab: "workspace" },
+    { label: t("Nav.48"), icon: "Terminal", tab: "api" },
+    { label: t("Nav.16"), icon: "CircleUser", tab: "account" },
   ];
   return (
     <View>
-      <SectionTitle ui={ui} title="设置" />
-      <Group ui={ui} id="settings.tabs" label="设置项">
+      <SectionTitle ui={ui} title={t("Nav.15")} />
+      <Group ui={ui} id="settings.tabs" label={t("Nav.51")}>
         {links.map((entry) => (
           <NavRow
             key={entry.tab}

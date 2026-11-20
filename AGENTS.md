@@ -48,9 +48,12 @@ Paseo plugin requirements we must follow when developing, reviewing, and releasi
 - Use obvious placeholders such as `<workspace-id>`, `<token>`, `example.com`, `12345678`.
 - Screenshots and media: never capture or commit images of real workspace data. Listing
   media are synthetic renderings constructed exclusively from the fictional seed data in
-  `tools/demo-data.mjs` via `tools/render-media.mjs` (author-approved desensitized media);
-  regenerate with `node tools/render-media.mjs` then `rsvg-convert`. Any other image change
-  must be supplied and confirmed desensitized by the author.
+  `tools/demo-data.mjs` via `tools/render-media.mjs [zh|en]` (author-approved desensitized
+  media); regenerate with `node tools/render-media.mjs en|zh` then `rsvg-convert`. Any other
+  image change must be supplied and confirmed desensitized by the author.
+- Internationalization: every user-facing string goes through the bilingual catalog
+  (`tools/i18n-zh.json` / `tools/i18n-en.json` → `tools/i18n-build.mjs` → `i18n-resources.ts`);
+  new UI text must add both locales with matching `{{placeholders}}` before release.
 
 ## Code safety
 

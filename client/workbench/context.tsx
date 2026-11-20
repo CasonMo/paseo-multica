@@ -1,3 +1,4 @@
+import { t, useI18n, bindTranslation } from "./i18n";
 import type { PluginTheme } from "@getpaseo/plugin";
 import { useRpc } from "@getpaseo/plugin/client";
 import { useToast } from "@getpaseo/plugin/client/ui";
@@ -57,6 +58,7 @@ export interface WorkbenchValue {
   selectWorkspace: (workspaceId: string) => Promise<void>;
   statuses: IssueStatusEntry[];
   statusesLoading: boolean;
+  locale: string;
   bump: number;
   invalidate: () => void;
 }
@@ -105,6 +107,8 @@ export function WorkbenchProvider({
   children: ReactNode;
 }) {
   const api = useApi();
+  const { locale, t: translate } = useI18n();
+  bindTranslation((key, args) => translate(key as never, args as never));
   const toast = useToast();
   const listRpc = useRpc(connectionsListRpc);
   const bootstrapRpcFn = useRpc(bootstrapRpc);
@@ -144,7 +148,7 @@ export function WorkbenchProvider({
       if (alive.current) setConnections(next);
     } catch (cause) {
       if (alive.current) {
-        toast.error(`读取连接配置失败：${cause instanceof Error ? cause.message : String(cause)}`);
+        toast.error(t("context.1", { a: cause instanceof Error ? cause.message : String(cause) }));
       }
     }
   }, [listRpc, toast]);
@@ -196,9 +200,9 @@ export function WorkbenchProvider({
         await reloadConnections();
         invalidate();
         const workspace = remote?.workspaces.find((item) => item.id === nextWorkspaceId);
-        toast.show(`已切换到 ${workspace?.name ?? "新工作区"}`, { variant: "success" });
+        toast.show(t("context.2", { a: workspace?.name ?? t("context.3") }), { variant: "success" });
       } catch (cause) {
-        toast.error(`切换工作区失败：${cause instanceof Error ? cause.message : String(cause)}`);
+        toast.error(t("context.4", { a: cause instanceof Error ? cause.message : String(cause) }));
       }
     },
     [server, selectRpc, reloadBootstrap, reloadConnections, invalidate, remote, toast],
@@ -224,6 +228,7 @@ export function WorkbenchProvider({
     page,
     params,
     navigate,
+    locale,
     connections,
     server,
     servers,

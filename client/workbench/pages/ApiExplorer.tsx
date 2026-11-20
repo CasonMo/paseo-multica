@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { Icon, Modal, copyText } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
@@ -75,7 +76,7 @@ export function ApiExplorerPage() {
 
   const countLabel = search || method !== "ALL" || domain !== "all"
     ? `${filtered.length} / ${visibleRoutes.length}`
-    : `${visibleRoutes.length} 个接口`;
+    : t("ApiExplorer.1", { a: visibleRoutes.length });
 
   const list = (
     <View style={{ flex: 1, minWidth: 0, gap: 10 }}>
@@ -85,7 +86,7 @@ export function ApiExplorerPage() {
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="搜索路径或接口名，例如 issues / comments"
+            placeholder={t("ApiExplorer.2")}
             placeholderTextColor={ui.c.muted}
             autoCapitalize="none"
             autoCorrect={false}
@@ -94,7 +95,7 @@ export function ApiExplorerPage() {
           {search ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="清空搜索"
+              accessibilityLabel={t("ApiExplorer.3")}
               onPress={() => setSearch("")}
               style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
             >
@@ -131,7 +132,7 @@ export function ApiExplorerPage() {
           })}
         </ScrollView>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-          <DomainChip ui={ui} active={domain === "all"} label="全部" count={visibleRoutes.length} onPress={() => setDomain("all")} />
+          <DomainChip ui={ui} active={domain === "all"} label={t("ApiExplorer.4")} count={visibleRoutes.length} onPress={() => setDomain("all")} />
           {domains.map(([key, count]) => (
             <DomainChip
               key={key}
@@ -143,13 +144,13 @@ export function ApiExplorerPage() {
             />
           ))}
         </ScrollView>
-        <Text style={ui.s.tiny}>{countLabel} · 点击查看并直接调用</Text>
+        <Text style={ui.s.tiny}>{countLabel} {t("ApiExplorer.5")}</Text>
       </View>
 
       <Card ui={ui} padded={false}>
         <ScrollView style={{ maxHeight: compact ? undefined : 620 }} contentContainerStyle={{ paddingVertical: 4 }}>
           {filtered.length === 0 ? (
-            <Empty ui={ui} icon="SearchX" title="没有匹配的接口" description="换个关键词或清空筛选条件试试。" />
+            <Empty ui={ui} icon="SearchX" title={t("ApiExplorer.6")} description={t("ApiExplorer.7")} />
           ) : (
             filtered.map((route) => {
               const active = selected?.[0] === route[0] && selected[1] === route[1];
@@ -192,7 +193,7 @@ export function ApiExplorerPage() {
       <View style={{ flex: 1, padding: 12 }}>
         {list}
         <Modal
-          title={selected ? `${selected[0]} ${selected[1]}` : "接口详情"}
+          title={selected ? `${selected[0]} ${selected[1]}` : t("ApiExplorer.8")}
           icon={<Icon name="Plug" size={16} color={ui.c.muted} />}
           open={detailOpen}
           onOpenChange={setDetailOpen}
@@ -219,8 +220,8 @@ export function ApiExplorerPage() {
           <Empty
             ui={ui}
             icon="Plug"
-            title="选择左侧接口开始调试"
-            description="全部 Multica 后台接口都在这里：路径参数、查询参数与请求体都可直接编辑并调用。"
+            title={t("ApiExplorer.9")}
+            description={t("ApiExplorer.10")}
           />
         )}
       </View>
@@ -278,7 +279,7 @@ function RouteDetail({ ui, route }: { ui: Ui; route: ApiRouteTuple }) {
     setError(null);
     const missing = params.find((name) => !values[name]?.trim());
     if (missing) {
-      setError(`请填写路径参数 ${missing}`);
+      setError(t("ApiExplorer.11", { a: missing }));
       return;
     }
     let path = route[1];
@@ -291,7 +292,7 @@ function RouteDetail({ ui, route }: { ui: Ui; route: ApiRouteTuple }) {
           Object.entries(parsed).map(([key, value]) => [key, typeof value === "string" ? value : JSON.stringify(value)]),
         );
       } catch {
-        setError("查询参数不是合法 JSON");
+        setError(t("ApiExplorer.12"));
         return;
       }
     }
@@ -300,7 +301,7 @@ function RouteDetail({ ui, route }: { ui: Ui; route: ApiRouteTuple }) {
       try {
         body = JSON.parse(bodyText);
       } catch {
-        setError("请求体不是合法 JSON");
+        setError(t("ApiExplorer.13"));
         return;
       }
     }
@@ -320,7 +321,7 @@ function RouteDetail({ ui, route }: { ui: Ui; route: ApiRouteTuple }) {
       error: result.error,
       body: JSON.stringify(result.data ?? (result.error ? { error: result.error, code: result.code } : null), null, 2),
     });
-    if (!result.ok) toast.error(result.error ?? `请求失败 (HTTP ${result.status})`);
+    if (!result.ok) toast.error(result.error ?? t("api.1", { a: result.status }));
   };
 
   const curl = useMemo(() => {
@@ -351,12 +352,12 @@ function RouteDetail({ ui, route }: { ui: Ui; route: ApiRouteTuple }) {
         <View style={[ui.s.row, { gap: 6, flexWrap: "wrap" }]}>
           <Tag ui={ui} label={handlerLabel(route[2])} tone="muted" icon="Code" />
           <Tag ui={ui} label={domainLabel(routeDomain(route[1]))} tone="accent" />
-          {isInternalRoute(route[1]) ? <Tag ui={ui} label="内部接口" tone="warning" icon="ShieldAlert" /> : null}
+          {isInternalRoute(route[1]) ? <Tag ui={ui} label={t("ApiExplorer.15")} tone="warning" icon="ShieldAlert" /> : null}
         </View>
 
         {params.length > 0 ? (
           <View style={{ gap: 8 }}>
-            <Text style={ui.s.label}>路径参数</Text>
+            <Text style={ui.s.label}>{t("ApiExplorer.16")}</Text>
             {params.map((name) => (
               <View key={name} style={[ui.s.row, { gap: 8 }]}>
                 <Text style={[ui.s.mono, { width: 96 }]} numberOfLines={1}>
@@ -365,7 +366,7 @@ function RouteDetail({ ui, route }: { ui: Ui; route: ApiRouteTuple }) {
                 <TextInput
                   value={values[name] ?? ""}
                   onChangeText={(text) => setValues((prev) => ({ ...prev, [name]: text }))}
-                  placeholder={`输入 ${name}`}
+                  placeholder={t("ApiExplorer.17", { a: name })}
                   placeholderTextColor={ui.c.muted}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -377,11 +378,11 @@ function RouteDetail({ ui, route }: { ui: Ui; route: ApiRouteTuple }) {
         ) : null}
 
         <View style={{ gap: 6 }}>
-          <Text style={ui.s.label}>查询参数（JSON）</Text>
+          <Text style={ui.s.label}>{t("ApiExplorer.18")}</Text>
           <TextInput
             value={queryText}
             onChangeText={setQueryText}
-            placeholder={'{"limit": 20, "q": "关键词"}'}
+            placeholder={t("ApiExplorer.19")}
             placeholderTextColor={ui.c.muted}
             autoCapitalize="none"
             autoCorrect={false}
@@ -392,11 +393,11 @@ function RouteDetail({ ui, route }: { ui: Ui; route: ApiRouteTuple }) {
 
         {hasBody ? (
           <View style={{ gap: 6 }}>
-            <Text style={ui.s.label}>请求体（JSON）</Text>
+            <Text style={ui.s.label}>{t("ApiExplorer.20")}</Text>
             <TextInput
               value={bodyText}
               onChangeText={setBodyText}
-              placeholder={'{"title": "新任务"}'}
+              placeholder={t("ApiExplorer.21")}
               placeholderTextColor={ui.c.muted}
               autoCapitalize="none"
               autoCorrect={false}
@@ -409,14 +410,14 @@ function RouteDetail({ ui, route }: { ui: Ui; route: ApiRouteTuple }) {
         {error ? <ErrorNote ui={ui} message={error} /> : null}
 
         <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
-          <Btn ui={ui} label="发送请求" icon="Send" tone="primary" busy={busy} onPress={() => void run()} />
+          <Btn ui={ui} label={t("ApiExplorer.22")} icon="Send" tone="primary" busy={busy} onPress={() => void run()} />
           <Btn
             ui={ui}
-            label="复制 curl"
+            label={t("ApiExplorer.23")}
             icon="Terminal"
             onPress={async () => {
               await copyText(curl);
-              toast.show("已复制 curl 命令", { variant: "success" });
+              toast.show(t("ApiExplorer.24"), { variant: "success" });
             }}
           />
         </View>
@@ -435,26 +436,26 @@ function RouteDetail({ ui, route }: { ui: Ui; route: ApiRouteTuple }) {
             <View style={ui.s.grow} />
             <Btn
               ui={ui}
-              label="复制响应"
+              label={t("ApiExplorer.25")}
               icon="Copy"
               onPress={async () => {
                 await copyText(response.body);
-                toast.show("已复制响应", { variant: "success" });
+                toast.show(t("ApiExplorer.26"), { variant: "success" });
               }}
             />
           </View>
           <Text selectable style={ui.s.code}>
-            {response.body || "（空响应）"}
+            {response.body || t("ApiExplorer.27")}
           </Text>
         </Card>
       ) : null}
 
       <Card ui={ui} style={{ gap: 6 }}>
-        <Text style={ui.s.label}>curl 预览</Text>
+        <Text style={ui.s.label}>{t("ApiExplorer.28")}</Text>
         <Text selectable style={ui.s.code}>
           {curl}
         </Text>
-        <Text style={ui.s.tiny}>API Key 只在本地服务器使用，命令中以环境变量代替，不会泄露到界面。</Text>
+        <Text style={ui.s.tiny}>{t("ApiExplorer.29")}</Text>
       </Card>
     </View>
   );

@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
@@ -68,7 +69,7 @@ export function SquadDetailModal({
       squad.refresh();
       onChanged();
     } else {
-      toast.error(result.error ?? "添加成员失败");
+      toast.error(result.error ?? t("SquadDetail.1"));
     }
   };
 
@@ -84,7 +85,7 @@ export function SquadDetailModal({
       squad.refresh();
       onChanged();
     } else {
-      toast.error(result.error ?? "移除成员失败");
+      toast.error(result.error ?? t("SquadDetail.2"));
     }
   };
 
@@ -98,13 +99,13 @@ export function SquadDetailModal({
       onChanged();
       onClose();
     } else {
-      toast.error(result.error ?? "删除小队失败");
+      toast.error(result.error ?? t("SquadDetail.3"));
     }
   };
 
   return (
     <Modal
-      title={squad.data?.name ?? "小队"}
+      title={squad.data?.name ?? t("Nav.36")}
       icon={<Icon name="UsersRound" size={16} color={ui.c.muted} />}
       open={Boolean(squadId)}
       onOpenChange={(next) => {
@@ -118,15 +119,15 @@ export function SquadDetailModal({
           <View style={{ gap: 12 }}>
             {squad.data.description ? <Text style={ui.s.body}>{squad.data.description}</Text> : null}
             <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
-              <Btn ui={ui} label="添加成员" icon="UserPlus" onPress={() => setAdding(true)} />
-              <Btn ui={ui} label="编辑" icon="Pencil" onPress={() => setEditing(true)} />
-              <Btn ui={ui} label="删除小队" icon="Trash2" tone="danger" onPress={() => setConfirmDelete(true)} />
+              <Btn ui={ui} label={t("SquadDetail.5")} icon="UserPlus" onPress={() => setAdding(true)} />
+              <Btn ui={ui} label={t("AgentDetail.33")} icon="Pencil" onPress={() => setEditing(true)} />
+              <Btn ui={ui} label={t("SquadDetail.7")} icon="Trash2" tone="danger" onPress={() => setConfirmDelete(true)} />
             </View>
             <Divider ui={ui} />
             <View style={{ gap: 2 }}>
-              <Text style={ui.s.label}>成员 · {rows.length}</Text>
+              <Text style={ui.s.label}>{t("SquadDetail.8")} {rows.length}</Text>
               {rows.length === 0 ? (
-                <Text style={ui.s.muted}>还没有成员</Text>
+                <Text style={ui.s.muted}>{t("SquadDetail.9")}</Text>
               ) : (
                 rows.map((member, index) => {
                   const isLeader = member.role === "leader" || (leaderId && member.member_id === leaderId);
@@ -137,13 +138,13 @@ export function SquadDetailModal({
                         {nameOf(member.member_id)}
                       </Text>
                       {isLeader ? (
-                        <Tag ui={ui} label="队长" tone="accent" />
+                        <Tag ui={ui} label={t("SquadDetail.10")} tone="accent" />
                       ) : (
-                        <Tag ui={ui} label="成员" tone="muted" />
+                        <Tag ui={ui} label={t("Execution.11")} tone="muted" />
                       )}
                       <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel={`移除 ${nameOf(member.member_id)}`}
+                        accessibilityLabel={t("SquadDetail.12", { a: nameOf(member.member_id) })}
                         onPress={() => void removeMember(member)}
                         style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
                       >
@@ -156,7 +157,7 @@ export function SquadDetailModal({
             </View>
             {squad.data.instructions ? (
               <View style={{ gap: 6 }}>
-                <Text style={ui.s.label}>协作指令</Text>
+                <Text style={ui.s.label}>{t("SquadDetail.13")}</Text>
                 <Text style={ui.s.body}>{squad.data.instructions}</Text>
               </View>
             ) : null}
@@ -165,21 +166,21 @@ export function SquadDetailModal({
       </Modal.Content>
 
       <Modal
-        title="添加成员"
+        title={t("SquadDetail.5")}
         icon={<Icon name="UserPlus" size={16} color={ui.c.muted} />}
         open={adding}
         onOpenChange={(next) => !next && setAdding(false)}
       >
         <Modal.Content>
           {candidates.length === 0 ? (
-            <Text style={ui.s.muted}>所有智能体都已在小队中。</Text>
+            <Text style={ui.s.muted}>{t("SquadDetail.15")}</Text>
           ) : (
             <View style={{ gap: 2 }}>
               {candidates.map((agent) => (
                 <Pressable
                   key={agent.id}
                   accessibilityRole="button"
-                  accessibilityLabel={`添加 ${agent.name}`}
+                  accessibilityLabel={t("SquadDetail.16", { a: agent.name })}
                   disabled={busy}
                   onPress={() => void addMember(agent)}
                   style={({ pressed }) => [ui.s.listRow, pressed && ui.s.pressed]}
@@ -210,16 +211,16 @@ export function SquadDetailModal({
       />
 
       <Modal
-        title="删除小队"
+        title={t("SquadDetail.7")}
         icon={<Icon name="Trash2" size={16} color={ui.c.danger} />}
         open={confirmDelete}
         onOpenChange={(next) => !next && setConfirmDelete(false)}
       >
         <Modal.Content>
-          <Text style={ui.s.body}>删除「{squad.data?.name}」后成员关系不可恢复，智能体本身不受影响。</Text>
+          <Text style={ui.s.body}>{t("SquadDetail.18")}{squad.data?.name}{t("SquadDetail.19")}</Text>
           <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end", marginTop: 12 }]}>
-            <Btn ui={ui} label="取消" onPress={() => setConfirmDelete(false)} />
-            <Btn ui={ui} label="删除" tone="danger" busy={busy} onPress={() => void removeSquad()} />
+            <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setConfirmDelete(false)} />
+            <Btn ui={ui} label={t("SquadDetail.21")} tone="danger" busy={busy} onPress={() => void removeSquad()} />
           </View>
         </Modal.Content>
       </Modal>
@@ -260,7 +261,7 @@ function EditSquadModal({
     if (!squad || !current) return;
     const name = current.name.trim();
     if (!name) {
-      setError("请填写小队名称");
+      setError(t("SquadDetail.22"));
       return;
     }
     setBusy(true);
@@ -281,13 +282,13 @@ function EditSquadModal({
       onSaved();
       onClose();
     } else {
-      setError(result.error ?? "保存失败");
+      setError(result.error ?? t("AgentDetail.64"));
     }
   };
 
   return (
     <Modal
-      title="编辑小队"
+      title={t("SquadDetail.24")}
       icon={<Icon name="Pencil" size={16} color={ui.c.muted} />}
       open={Boolean(squad) && Boolean(current)}
       onOpenChange={(next) => !next && onClose()}
@@ -295,16 +296,16 @@ function EditSquadModal({
       <Modal.Content>
         {current ? (
           <View style={{ gap: 12 }}>
-            <Field ui={ui} label="名称" value={current.name} onChangeText={(value) => patch({ name: value })} />
+            <Field ui={ui} label={t("AgentDetail.95")} value={current.name} onChangeText={(value) => patch({ name: value })} />
             <Field
               ui={ui}
-              label="描述"
+              label={t("AgentDetail.97")}
               value={current.description}
               onChangeText={(value) => patch({ description: value })}
-              placeholder="小队负责什么问题域"
+              placeholder={t("SquadDetail.27")}
             />
             <View style={{ gap: 6 }}>
-              <Text style={ui.s.label}>队长</Text>
+              <Text style={ui.s.label}>{t("SquadDetail.10")}</Text>
               <Chips
                 ui={ui}
                 options={agents.filter((agent) => !agent.archived_at).map((agent) => ({ value: agent.id, label: agent.name }))}
@@ -314,15 +315,15 @@ function EditSquadModal({
             </View>
             <Field
               ui={ui}
-              label="协作指令"
+              label={t("SquadDetail.13")}
               value={current.instructions}
               onChangeText={(value) => patch({ instructions: value })}
               multiline
             />
             {error ? <ErrorNote ui={ui} message={error} /> : null}
             <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end" }]}>
-              <Btn ui={ui} label="取消" onPress={onClose} />
-              <Btn ui={ui} label="保存" tone="primary" busy={busy} onPress={() => void save()} />
+              <Btn ui={ui} label={t("AgentDetail.40")} onPress={onClose} />
+              <Btn ui={ui} label={t("AgentDetail.72")} tone="primary" busy={busy} onPress={() => void save()} />
             </View>
           </View>
         ) : null}

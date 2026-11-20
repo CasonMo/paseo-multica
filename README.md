@@ -49,14 +49,25 @@ cloud (`https://api.multica.ai`) and any self-hosted Multica server.
 - Switch between several Multica servers (official cloud + self-hosted) from the workspace
   picker; each connection keeps its own key, workspace and internal-route preference.
 
+## Internationalization
+
+The UI follows the Paseo app language (English / 中文). All strings live in a bilingual
+catalog (`tools/i18n-zh.json` + `tools/i18n-en.json`, 900+ keys) compiled into
+`client/workbench/i18n-resources.ts` by `node tools/i18n-build.mjs`; call sites use `t()`
+from `client/workbench/i18n.ts`, and persistent registrations (command center, settings
+screen titles) use SDK `PluginMessage`s so the host resolves them in the presenting
+language. The current locale is shown in Settings. Regenerate media per locale with
+`node tools/render-media.mjs en|zh`.
+
 ## Media & provenance
 
 Listing screenshots and the icon are **synthetic renderings built from fictional seed
 data** (`tools/demo-data.mjs`), not captures of any real workspace:
 
 ```bash
-node tools/render-media.mjs                 # writes assets/screenshots/*.svg + assets/icon.svg
-rsvg-convert -w 1600 -h 900 assets/screenshots/overview.svg -o assets/screenshots/overview.png
+node tools/render-media.mjs en              # writes assets/screenshots/en/*.svg + assets/icon.svg
+node tools/render-media.mjs zh              # writes assets/screenshots/zh/*.svg
+rsvg-convert -w 1600 -h 900 assets/screenshots/en/overview.svg -o assets/screenshots/en/overview.png
 rsvg-convert -w 256 -h 256 assets/icon.svg -o assets/icon.png
 ```
 

@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
@@ -11,9 +12,9 @@ const COLORS = ["#3b82f6", "#8b5cf6", "#22c55e", "#f59e0b", "#ef4444", "#ec4899"
 type KindFilter = "all" | "issue" | "agent";
 
 const KIND_OPTIONS: { value: KindFilter; label: string }[] = [
-  { value: "all", label: "全部" },
-  { value: "issue", label: "需求标签" },
-  { value: "agent", label: "智能体标签" },
+  { value: "all", label: t("ApiExplorer.4") },
+  { value: "issue", label: t("Labels.2") },
+  { value: "agent", label: t("Labels.3") },
 ];
 
 export function LabelsPage() {
@@ -47,11 +48,11 @@ export function LabelsPage() {
     const result = await api({ method: "DELETE", path: `/api/labels/${confirmDelete.id}` });
     setBusy(false);
     if (result.ok) {
-      toast.show("标签已删除", { variant: "success" });
+      toast.show(t("Labels.4"), { variant: "success" });
       setConfirmDelete(null);
       labelsQuery.refresh();
       invalidate();
-    } else toast.error(result.error ?? "删除失败");
+    } else toast.error(result.error ?? t("Automation.15"));
   };
 
   return (
@@ -65,14 +66,14 @@ export function LabelsPage() {
       >
         <View style={[ui.s.row, { gap: 10 }]}>
           <View style={ui.s.grow}>
-            <Text style={[ui.s.title, { fontSize: compact ? 18 : 21 }]}>标签</Text>
+            <Text style={[ui.s.title, { fontSize: compact ? 18 : 21 }]}>{t("AgentDetail.5")}</Text>
             <Text style={ui.s.muted}>
-              共 {labelsQuery.total} 个标签 · 需求 {counts.issue ?? 0} · 智能体 {counts.agent ?? 0}
+              {t("Inbox.40")} {labelsQuery.total} {t("Labels.8")} {counts.issue ?? 0} {t("Labels.9")} {counts.agent ?? 0}
             </Text>
           </View>
           <Btn
             ui={ui}
-            label="新建"
+            label={t("Nav.10")}
             icon="Plus"
             tone="primary"
             onPress={() => {
@@ -104,7 +105,7 @@ export function LabelsPage() {
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="搜索标签名称…"
+            placeholder={t("Labels.11")}
             placeholderTextColor={ui.c.muted}
             style={{ flex: 1, color: ui.c.fg, fontSize: 13, paddingVertical: 8 }}
             autoCapitalize="none"
@@ -123,12 +124,12 @@ export function LabelsPage() {
             <Empty
               ui={ui}
               icon="Tags"
-              title={needle || kind !== "all" ? "没有匹配的标签" : "还没有标签"}
-              description="用标签给需求和智能体分组，例如 env:dev1、team:growth。"
+              title={needle || kind !== "all" ? t("Labels.12") : t("Labels.13")}
+              description={t("Labels.14")}
               action={
                 <Btn
                   ui={ui}
-                  label="新建标签"
+                  label={t("Labels.15")}
                   icon="Plus"
                   tone="primary"
                   onPress={() => {
@@ -162,7 +163,7 @@ export function LabelsPage() {
                         <Text numberOfLines={1} style={[ui.s.body, { fontWeight: "600" }]}>
                           {label.name}
                         </Text>
-                        <Tag ui={ui} label={label.resource_type === "agent" ? "智能体" : "需求"} tone="muted" />
+                        <Tag ui={ui} label={label.resource_type === "agent" ? t("AgentDetail.23") : t("Labels.17")} tone="muted" />
                       </View>
                       {label.description ? (
                         <Text numberOfLines={2} style={ui.s.tiny}>
@@ -170,14 +171,14 @@ export function LabelsPage() {
                         </Text>
                       ) : null}
                       <Text style={ui.s.tiny}>
-                        使用 {label.usage_count ?? 0} 次 · 更新于 {relTime(label.updated_at ?? label.created_at)}
+                        {t("Labels.18")} {label.usage_count ?? 0} {t("Labels.19")} {relTime(label.updated_at ?? label.created_at)}
                       </Text>
                     </View>
                     <View style={[ui.s.row, { gap: 2 }]}>
                       <IconBtn
                         ui={ui}
                         icon="Pencil"
-                        label={`编辑标签 ${label.name}`}
+                        label={t("Labels.20", { a: label.name })}
                         onPress={() => {
                           setEditing(label);
                           setFormOpen(true);
@@ -186,7 +187,7 @@ export function LabelsPage() {
                       <IconBtn
                         ui={ui}
                         icon="Trash2"
-                        label={`删除标签 ${label.name}`}
+                        label={t("Labels.21", { a: label.name })}
                         color={ui.c.danger}
                         onPress={() => setConfirmDelete(label)}
                       />
@@ -207,7 +208,7 @@ export function LabelsPage() {
           onLoadMore={labelsQuery.loadMore}
         />
 
-        {labelsQuery.loadingMore ? <Text style={[ui.s.tiny, { textAlign: "center" }]}>正在同步…</Text> : null}
+        {labelsQuery.loadingMore ? <Text style={[ui.s.tiny, { textAlign: "center" }]}>{t("Labels.22")}</Text> : null}
       </ScrollView>
 
       <LabelFormModal
@@ -224,7 +225,7 @@ export function LabelsPage() {
       />
 
       <Modal
-        title="删除标签"
+        title={t("Labels.23")}
         icon={<Icon name="TriangleAlert" size={16} color={ui.c.danger} />}
         open={Boolean(confirmDelete)}
         onOpenChange={(next) => {
@@ -234,11 +235,11 @@ export function LabelsPage() {
         <Modal.Content>
           <View style={{ gap: 12 }}>
             <Text style={ui.s.body}>
-              确定删除标签「{confirmDelete?.name}」？它会从 {confirmDelete?.usage_count ?? 0} 处引用中移除。
+              {t("Labels.24")}{confirmDelete?.name}{t("Labels.25")} {confirmDelete?.usage_count ?? 0} {t("Labels.26")}
             </Text>
             <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8 }]}>
-              <Btn ui={ui} label="取消" onPress={() => setConfirmDelete(null)} />
-              <Btn ui={ui} label="删除" tone="danger" busy={busy} onPress={() => void remove()} />
+              <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setConfirmDelete(null)} />
+              <Btn ui={ui} label={t("SquadDetail.21")} tone="danger" busy={busy} onPress={() => void remove()} />
             </View>
           </View>
         </Modal.Content>
@@ -280,7 +281,7 @@ function LabelFormModal({
 
   const submit = async () => {
     if (!name.trim()) {
-      toast.error("请填写标签名称");
+      toast.error(t("Labels.29"));
       return;
     }
     setBusy(true);
@@ -295,14 +296,14 @@ function LabelFormModal({
       : await api({ method: "POST", path: "/api/labels", body });
     setBusy(false);
     if (result.ok) {
-      toast.show(label ? "标签已更新" : "标签已创建", { variant: "success" });
+      toast.show(label ? t("Labels.30") : t("Labels.31"), { variant: "success" });
       onSaved();
-    } else toast.error(result.error ?? "保存失败");
+    } else toast.error(result.error ?? t("AgentDetail.64"));
   };
 
   return (
     <Modal
-      title={label ? "编辑标签" : "新建标签"}
+      title={label ? t("Labels.33") : t("Labels.15")}
       icon={<Icon name="Tags" size={16} color={ui.c.muted} />}
       open={open}
       onOpenChange={(next) => {
@@ -311,35 +312,35 @@ function LabelFormModal({
     >
       <Modal.Content>
         <View style={{ gap: 12 }}>
-          <Field ui={ui} label="名称" value={name} onChangeText={setName} placeholder="例如 env:gray1" autoFocus />
+          <Field ui={ui} label={t("AgentDetail.95")} value={name} onChangeText={setName} placeholder={t("Labels.36")} autoFocus />
           <Field
             ui={ui}
-            label="描述"
+            label={t("AgentDetail.97")}
             value={description}
             onChangeText={setDescription}
-            placeholder="这个标签代表什么？"
+            placeholder={t("Labels.38")}
           />
           <View style={{ gap: 6 }}>
-            <Text style={ui.s.label}>适用对象</Text>
+            <Text style={ui.s.label}>{t("Labels.39")}</Text>
             <Chips<"issue" | "agent">
               ui={ui}
               options={[
-                { value: "issue", label: "需求" },
-                { value: "agent", label: "智能体" },
+                { value: "issue", label: t("Labels.17") },
+                { value: "agent", label: t("AgentDetail.23") },
               ]}
               value={kind}
               onChange={setKind}
             />
           </View>
           <View style={{ gap: 8 }}>
-            <Text style={ui.s.label}>颜色</Text>
+            <Text style={ui.s.label}>{t("Labels.42")}</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {COLORS.map((entry) => {
                 const active = entry.toLowerCase() === color.toLowerCase();
                 return (
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`选择颜色 ${entry}`}
+                    accessibilityLabel={t("Labels.43", { a: entry })}
                     accessibilityState={{ selected: active }}
                     key={entry}
                     onPress={() => setColor(entry)}
@@ -364,16 +365,16 @@ function LabelFormModal({
             </View>
             <View style={[ui.s.row, { gap: 8 }]}>
               <View style={{ width: 120 }}>
-                <Field ui={ui} label="自定义色值" value={color} onChangeText={setColor} placeholder="#3b82f6" code />
+                <Field ui={ui} label={t("Labels.44")} value={color} onChangeText={setColor} placeholder="#3b82f6" code />
               </View>
               <View style={{ paddingTop: 18 }}>
-                <Tag ui={ui} label={name.trim() || "标签预览"} color={color} />
+                <Tag ui={ui} label={name.trim() || t("Labels.45")} color={color} />
               </View>
             </View>
           </View>
           <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8, paddingTop: 4 }]}>
-            <Btn ui={ui} label="取消" onPress={onClose} />
-            <Btn ui={ui} label={label ? "保存" : "创建标签"} icon="Check" tone="primary" busy={busy} onPress={() => void submit()} />
+            <Btn ui={ui} label={t("AgentDetail.40")} onPress={onClose} />
+            <Btn ui={ui} label={label ? t("AgentDetail.72") : t("Labels.48")} icon="Check" tone="primary" busy={busy} onPress={() => void submit()} />
           </View>
         </View>
       </Modal.Content>

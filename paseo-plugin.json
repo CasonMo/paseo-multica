@@ -9,9 +9,12 @@
     }
   },
   "media": [
-    "assets/screenshots/overview.png",
-    "assets/screenshots/kanban.png",
-    "assets/screenshots/issue-detail.png"
+    "assets/screenshots/en/overview.png",
+    "assets/screenshots/en/kanban.png",
+    "assets/screenshots/en/issue-detail.png",
+    "assets/screenshots/zh/overview.png",
+    "assets/screenshots/zh/kanban.png",
+    "assets/screenshots/zh/issue-detail.png"
   ],
   "icon": "assets/icon.png",
   "requirements": {

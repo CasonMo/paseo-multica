@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
@@ -19,10 +20,10 @@ type Member = { id: string; userId: string; name: string; email: string; avatarU
 type HandlerType = "none" | "project_lead" | "member" | "agent";
 
 const HANDLER_OPTIONS: { value: HandlerType; label: string }[] = [
-  { value: "none", label: "无处理人" },
-  { value: "project_lead", label: "项目负责人" },
-  { value: "member", label: "成员" },
-  { value: "agent", label: "智能体" },
+  { value: "none", label: t("model.7") },
+  { value: "project_lead", label: t("model.8") },
+  { value: "member", label: t("Execution.11") },
+  { value: "agent", label: t("AgentDetail.23") },
 ];
 
 export function WorkflowsPage() {
@@ -61,7 +62,7 @@ export function WorkflowsPage() {
       (membersQuery.data ?? []).map((item) => ({
         id: String(item.id ?? ""),
         userId: String(item.user_id ?? ""),
-        name: String(item.name ?? item.email ?? "成员"),
+        name: String(item.name ?? item.email ?? t("Execution.11")),
         email: String(item.email ?? ""),
         avatarUrl: (item.avatar_url as string | null) ?? null,
       })),
@@ -83,11 +84,11 @@ export function WorkflowsPage() {
     if (handler.type === "project_lead") return HANDLER_LABEL.project_lead;
     if (handler.type === "agent") {
       const agent = agentList.find((item) => item.id === handler.id);
-      return `${HANDLER_LABEL.agent} · ${agent?.name ?? handler.id ?? "未指定"}`;
+      return t("Workflows.6", { a: HANDLER_LABEL.agent, b: agent?.name ?? handler.id ?? t("Workflows.7") });
     }
     if (handler.type === "member") {
       const member = members.find((item) => item.id === handler.id || item.userId === handler.id);
-      return `${HANDLER_LABEL.member} · ${member?.name ?? handler.id ?? "未指定"}`;
+      return t("Workflows.6", { a: HANDLER_LABEL.member, b: member?.name ?? handler.id ?? t("Workflows.7") });
     }
     return HANDLER_LABEL[handler.type] ?? handler.type;
   };
@@ -98,12 +99,12 @@ export function WorkflowsPage() {
     const result = await api({ method: "DELETE", path: `/api/issue-workflows/${confirmDelete.id}` });
     setBusy(false);
     if (result.ok) {
-      toast.show("工作流已删除", { variant: "success" });
+      toast.show(t("Workflows.10"), { variant: "success" });
       setConfirmDelete(null);
       setActiveId(null);
       workflowsQuery.refresh();
       invalidate();
-    } else toast.error(result.error ?? "删除失败");
+    } else toast.error(result.error ?? t("Automation.15"));
   };
 
   return (
@@ -117,14 +118,14 @@ export function WorkflowsPage() {
       >
         <View style={[ui.s.row, { gap: 10 }]}>
           <View style={ui.s.grow}>
-            <Text style={[ui.s.title, { fontSize: compact ? 18 : 21 }]}>工作流</Text>
+            <Text style={[ui.s.title, { fontSize: compact ? 18 : 21 }]}>{t("Nav.7")}</Text>
             <Text style={ui.s.muted}>
-              共 {workflowList.length} 个流程 · 每个状态可指定处理人、指令与流转方向
+              {t("Inbox.40")} {workflowList.length} {t("Workflows.14")}
             </Text>
           </View>
           <Btn
             ui={ui}
-            label="新建"
+            label={t("Nav.10")}
             icon="Plus"
             tone="primary"
             onPress={() => {
@@ -152,7 +153,7 @@ export function WorkflowsPage() {
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="搜索工作流…"
+            placeholder={t("Workflows.16")}
             placeholderTextColor={ui.c.muted}
             style={{ flex: 1, color: ui.c.fg, fontSize: 13, paddingVertical: 8 }}
             autoCapitalize="none"
@@ -171,12 +172,12 @@ export function WorkflowsPage() {
             <Empty
               ui={ui}
               icon="Workflow"
-              title={needle ? "没有匹配的工作流" : "还没有工作流"}
-              description="工作流定义需求在每个状态下由谁处理、执行什么指令、下一步流向哪里。"
+              title={needle ? t("Workflows.17") : t("Workflows.18")}
+              description={t("Workflows.19")}
               action={
                 <Btn
                   ui={ui}
-                  label="新建工作流"
+                  label={t("Workflows.20")}
                   icon="Plus"
                   tone="primary"
                   onPress={() => {
@@ -193,7 +194,7 @@ export function WorkflowsPage() {
                   {index > 0 ? <Divider ui={ui} style={{ marginHorizontal: 14 }} /> : null}
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`打开工作流 ${workflow.name}`}
+                    accessibilityLabel={t("Workflows.21", { a: workflow.name })}
                     onPress={() => setActiveId(workflow.id)}
                     style={({ pressed }) => [ui.s.listRow, { alignItems: "flex-start" }, pressed && ui.s.pressed]}
                   >
@@ -215,7 +216,7 @@ export function WorkflowsPage() {
                         <Text numberOfLines={1} style={[ui.s.body, { fontWeight: "600" }]}>
                           {workflow.name}
                         </Text>
-                        {workflow.is_default ? <Tag ui={ui} label="默认" tone="accent" /> : null}
+                        {workflow.is_default ? <Tag ui={ui} label={t("Workflows.22")} tone="accent" /> : null}
                       </View>
                       {workflow.description ? (
                         <Text numberOfLines={2} style={ui.s.tiny}>
@@ -223,8 +224,8 @@ export function WorkflowsPage() {
                         </Text>
                       ) : null}
                       <Text style={ui.s.tiny}>
-                        {workflow.steps?.length ?? 0} 个状态 ·{" "}
-                        {workflow.project_ids?.length ? `${workflow.project_ids.length} 个项目绑定` : "未绑定项目"} ·{" "}
+                        {workflow.steps?.length ?? 0} {t("Workflows.23")}{" "}
+                        {workflow.project_ids?.length ? t("Workflows.24", { a: workflow.project_ids.length }) : t("Workflows.25")} ·{" "}
                         {relTime(workflow.updated_at ?? workflow.created_at)}
                       </Text>
                     </View>
@@ -247,7 +248,7 @@ export function WorkflowsPage() {
       </ScrollView>
 
       <Modal
-        title={active ? active.name : "工作流详情"}
+        title={active ? active.name : t("Workflows.26")}
         icon={<Icon name="Workflow" size={16} color={ui.c.muted} />}
         open={Boolean(active)}
         onOpenChange={(next) => {
@@ -258,23 +259,23 @@ export function WorkflowsPage() {
           {active ? (
             <ScrollView style={{ maxHeight: 560 }} contentContainerStyle={{ gap: 12 }}>
               <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
-                {active.is_default ? <Tag ui={ui} label="默认流程" tone="accent" /> : null}
-                <Tag ui={ui} label={`${active.steps?.length ?? 0} 个状态`} tone="muted" />
+                {active.is_default ? <Tag ui={ui} label={t("IssueDetail.73")} tone="accent" /> : null}
+                <Tag ui={ui} label={t("Workflows.28", { a: active.steps?.length ?? 0 })} tone="muted" />
                 <View style={ui.s.grow} />
                 <IconBtn
                   ui={ui}
                   icon="Pencil"
-                  label="编辑流程信息"
+                  label={t("Workflows.29")}
                   onPress={() => {
                     setEditing(active);
                     setFormOpen(true);
                   }}
                 />
-                <IconBtn ui={ui} icon="ListChecks" label="编辑状态集合" onPress={() => setStatusSetFor(active)} />
+                <IconBtn ui={ui} icon="ListChecks" label={t("Workflows.30")} onPress={() => setStatusSetFor(active)} />
                 <IconBtn
                   ui={ui}
                   icon="Trash2"
-                  label="删除工作流"
+                  label={t("Workflows.31")}
                   color={ui.c.danger}
                   onPress={() => setConfirmDelete(active)}
                 />
@@ -282,19 +283,19 @@ export function WorkflowsPage() {
 
               {active.description ? <Text style={ui.s.body}>{active.description}</Text> : null}
               <Text style={ui.s.tiny}>
-                更新 {relTime(active.updated_at)}
+                {t("Projects.48")} {relTime(active.updated_at)}
                 {active.project_ids?.length
-                  ? ` · 绑定项目：${active.project_ids
+                  ? t("Workflows.33", { a: active.project_ids
                       .map((id) => projectList.find((project) => project.id === id)?.title ?? id)
-                      .join("、")}`
-                  : " · 未绑定项目"}
+                      .join(t("Workflows.155")) })
+                  : t("Workflows.34")}
               </Text>
 
               <Divider ui={ui} />
 
               <View style={{ gap: 8 }}>
                 {(active.steps ?? []).length === 0 ? (
-                  <Empty ui={ui} icon="ListChecks" title="没有状态" description="点击右上角状态集合，选择这个流程包含的状态。" />
+                  <Empty ui={ui} icon="ListChecks" title={t("Workflows.35")} description={t("Workflows.36")} />
                 ) : (
                   (active.steps ?? []).map((step) => {
                     const entry = statusOf(step.status_key);
@@ -303,7 +304,7 @@ export function WorkflowsPage() {
                     return (
                       <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel={`编辑状态 ${statusName(step.status_key)}`}
+                        accessibilityLabel={t("Workflows.37", { a: statusName(step.status_key) })}
                         key={step.status_key}
                         onPress={() => setStepEdit({ workflow: active, step })}
                         style={({ pressed }) => [
@@ -332,7 +333,7 @@ export function WorkflowsPage() {
                         {step.next_status_key || step.back_status_key ? (
                           <Text style={ui.s.tiny}>
                             {step.next_status_key ? `→ ${statusName(step.next_status_key)}` : ""}
-                            {step.next_status_key && step.back_status_key ? "　" : ""}
+                            {step.next_status_key && step.back_status_key ? t("Workflows.156") : ""}
                             {step.back_status_key ? `↩ ${statusName(step.back_status_key)}` : ""}
                           </Text>
                         ) : null}
@@ -393,7 +394,7 @@ export function WorkflowsPage() {
       />
 
       <Modal
-        title="删除工作流"
+        title={t("Workflows.31")}
         icon={<Icon name="TriangleAlert" size={16} color={ui.c.danger} />}
         open={Boolean(confirmDelete)}
         onOpenChange={(next) => {
@@ -403,11 +404,11 @@ export function WorkflowsPage() {
         <Modal.Content>
           <View style={{ gap: 12 }}>
             <Text style={ui.s.body}>
-              确定删除「{confirmDelete?.name}」？已绑定该流程的项目需要重新选择流程。
+              {t("Automation.48")}{confirmDelete?.name}{t("Workflows.40")}
             </Text>
             <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8 }]}>
-              <Btn ui={ui} label="取消" onPress={() => setConfirmDelete(null)} />
-              <Btn ui={ui} label="删除" tone="danger" busy={busy} onPress={() => void remove()} />
+              <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setConfirmDelete(null)} />
+              <Btn ui={ui} label={t("SquadDetail.21")} tone="danger" busy={busy} onPress={() => void remove()} />
             </View>
           </View>
         </Modal.Content>
@@ -447,7 +448,7 @@ function WorkflowFormModal({
 
   const submit = async () => {
     if (!name.trim()) {
-      toast.error("请填写工作流名称");
+      toast.error(t("Workflows.43"));
       return;
     }
     setBusy(true);
@@ -461,15 +462,15 @@ function WorkflowFormModal({
       : await api({ method: "POST", path: "/api/issue-workflows", body });
     setBusy(false);
     if (result.ok) {
-      toast.show(workflow ? "工作流已更新" : "工作流已创建", { variant: "success" });
+      toast.show(workflow ? t("Workflows.44") : t("Workflows.45"), { variant: "success" });
       const saved = result.data && typeof result.data === "object" ? (result.data as Workflow) : null;
       onSaved(saved);
-    } else toast.error(result.error ?? "保存失败");
+    } else toast.error(result.error ?? t("AgentDetail.64"));
   };
 
   return (
     <Modal
-      title={workflow ? "编辑工作流" : "新建工作流"}
+      title={workflow ? t("Workflows.47") : t("Workflows.20")}
       icon={<Icon name="Workflow" size={16} color={ui.c.muted} />}
       open={open}
       onOpenChange={(next) => {
@@ -478,20 +479,20 @@ function WorkflowFormModal({
     >
       <Modal.Content>
         <View style={{ gap: 12 }}>
-          <Field ui={ui} label="名称" value={name} onChangeText={setName} placeholder="例如 缺陷修复流程" autoFocus />
+          <Field ui={ui} label={t("AgentDetail.95")} value={name} onChangeText={setName} placeholder={t("Workflows.50")} autoFocus />
           <Field
             ui={ui}
-            label="描述"
+            label={t("AgentDetail.97")}
             value={description}
             onChangeText={setDescription}
-            placeholder="这个流程解决什么场景？"
+            placeholder={t("Workflows.52")}
             multiline
           />
           {workflow ? (
-            <Text style={ui.s.tiny}>状态集合请在工作流详情里用「编辑状态集合」调整，避免覆盖已配置的处理人。</Text>
+            <Text style={ui.s.tiny}>{t("Workflows.53")}</Text>
           ) : (
             <View style={{ gap: 6 }}>
-              <Text style={ui.s.label}>包含状态</Text>
+              <Text style={ui.s.label}>{t("Workflows.54")}</Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
                 {statuses.map((status) => (
                   <ToggleChip
@@ -510,14 +511,14 @@ function WorkflowFormModal({
                   />
                 ))}
               </View>
-              <Text style={ui.s.tiny}>待办、已完成、已取消会默认包含，无需选择。</Text>
+              <Text style={ui.s.tiny}>{t("Workflows.55")}</Text>
             </View>
           )}
           <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8, paddingTop: 4 }]}>
-            <Btn ui={ui} label="取消" onPress={onClose} />
+            <Btn ui={ui} label={t("AgentDetail.40")} onPress={onClose} />
             <Btn
               ui={ui}
-              label={workflow ? "保存" : "创建工作流"}
+              label={workflow ? t("AgentDetail.72") : t("Workflows.58")}
               icon="Check"
               tone="primary"
               busy={busy}
@@ -577,7 +578,7 @@ function StepModal({
   const save = async () => {
     if (!target || !step) return;
     if ((handlerType === "agent" || handlerType === "member") && !handlerId) {
-      toast.error(handlerType === "agent" ? "请选择智能体" : "请选择成员");
+      toast.error(handlerType === "agent" ? t("Workflows.59") : t("Workflows.60"));
       return;
     }
     setBusy(true);
@@ -599,14 +600,14 @@ function StepModal({
     });
     setBusy(false);
     if (result.ok) {
-      toast.show("状态配置已保存", { variant: "success" });
+      toast.show(t("Workflows.61"), { variant: "success" });
       onSaved();
-    } else toast.error(result.error ?? "保存失败");
+    } else toast.error(result.error ?? t("AgentDetail.64"));
   };
 
   return (
     <Modal
-      title={status ? `状态 · ${status.name || status.key}` : "状态配置"}
+      title={status ? t("Workflows.63", { a: status.name || status.key }) : t("Workflows.64")}
       icon={<Icon name="ListChecks" size={16} color={ui.c.muted} />}
       open={open}
       onOpenChange={(next) => {
@@ -616,16 +617,16 @@ function StepModal({
       <Modal.Content>
         <ScrollView style={{ maxHeight: 560 }} contentContainerStyle={{ gap: 12 }}>
           <View style={{ gap: 6 }}>
-            <Text style={ui.s.label}>处理人</Text>
+            <Text style={ui.s.label}>{t("Workflows.65")}</Text>
             <Chips<HandlerType> ui={ui} options={HANDLER_OPTIONS} value={handlerType} onChange={setHandlerType} />
           </View>
 
           {handlerType === "agent" ? (
             <View style={{ gap: 6 }}>
-              <Text style={ui.s.label}>选择智能体</Text>
+              <Text style={ui.s.label}>{t("Chat.26")}</Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
                 {agents.length === 0 ? (
-                  <Text style={ui.s.tiny}>这个工作区还没有智能体。</Text>
+                  <Text style={ui.s.tiny}>{t("Workflows.67")}</Text>
                 ) : (
                   agents.map((agent) => (
                     <ToggleChip
@@ -643,10 +644,10 @@ function StepModal({
 
           {handlerType === "member" ? (
             <View style={{ gap: 6 }}>
-              <Text style={ui.s.label}>选择成员</Text>
+              <Text style={ui.s.label}>{t("Workflows.68")}</Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
                 {members.length === 0 ? (
-                  <Text style={ui.s.tiny}>没有可选的成员。</Text>
+                  <Text style={ui.s.tiny}>{t("Workflows.69")}</Text>
                 ) : (
                   members.map((member) => (
                     <ToggleChip
@@ -664,18 +665,18 @@ function StepModal({
 
           <Field
             ui={ui}
-            label="执行指令"
+            label={t("Workflows.70")}
             value={instructions}
             onChangeText={setInstructions}
-            placeholder="这个状态该做什么、产出什么、不要做什么…"
+            placeholder={t("Workflows.71")}
             multiline
-            hint="指令会随需求进入该状态时交给处理人。"
+            hint={t("Workflows.72")}
           />
 
           <View style={{ gap: 6 }}>
-            <Text style={ui.s.label}>下一状态</Text>
+            <Text style={ui.s.label}>{t("Workflows.73")}</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-              <ToggleChip ui={ui} label="不设置" active={!nextKey} onPress={() => setNextKey(null)} />
+              <ToggleChip ui={ui} label={t("Workflows.74")} active={!nextKey} onPress={() => setNextKey(null)} />
               {otherKeys.map((statusKey) => (
                 <ToggleChip
                   key={statusKey}
@@ -689,9 +690,9 @@ function StepModal({
           </View>
 
           <View style={{ gap: 6 }}>
-            <Text style={ui.s.label}>回退状态</Text>
+            <Text style={ui.s.label}>{t("Workflows.75")}</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-              <ToggleChip ui={ui} label="不设置" active={!backKey} onPress={() => setBackKey(null)} />
+              <ToggleChip ui={ui} label={t("Workflows.74")} active={!backKey} onPress={() => setBackKey(null)} />
               {otherKeys.map((statusKey) => (
                 <ToggleChip
                   key={statusKey}
@@ -705,8 +706,8 @@ function StepModal({
           </View>
 
           <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8, paddingTop: 4 }]}>
-            <Btn ui={ui} label="取消" onPress={onClose} />
-            <Btn ui={ui} label="保存" icon="Check" tone="primary" busy={busy} onPress={() => void save()} />
+            <Btn ui={ui} label={t("AgentDetail.40")} onPress={onClose} />
+            <Btn ui={ui} label={t("AgentDetail.72")} icon="Check" tone="primary" busy={busy} onPress={() => void save()} />
           </View>
         </ScrollView>
       </Modal.Content>
@@ -748,7 +749,7 @@ function StatusSetModal({
     });
     if (!patch.ok) {
       setBusy(false);
-      toast.error(patch.error ?? "保存失败");
+      toast.error(patch.error ?? t("AgentDetail.64"));
       return;
     }
     const restore = picked
@@ -776,13 +777,13 @@ function StatusSetModal({
       });
     }
     setBusy(false);
-    toast.show(`已保存 ${picked.length} 个状态`, { variant: "success" });
+    toast.show(t("Workflows.80", { a: picked.length }), { variant: "success" });
     onSaved();
   };
 
   return (
     <Modal
-      title={workflow ? `状态集合 · ${workflow.name}` : "状态集合"}
+      title={workflow ? t("Workflows.81", { a: workflow.name }) : t("Workflows.82")}
       icon={<Icon name="ListChecks" size={16} color={ui.c.muted} />}
       open={Boolean(workflow)}
       onOpenChange={(next) => {
@@ -792,7 +793,7 @@ function StatusSetModal({
       <Modal.Content>
         <ScrollView style={{ maxHeight: 560 }} contentContainerStyle={{ gap: 12 }}>
           <Text style={ui.s.tiny}>
-            选择这个流程包含的状态。保存会重建状态集合，已保留状态的处理人与指令会自动恢复。
+            {t("Workflows.83")}
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
             {statuses.map((status) => (
@@ -813,8 +814,8 @@ function StatusSetModal({
             ))}
           </View>
           <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8, paddingTop: 4 }]}>
-            <Btn ui={ui} label="取消" onPress={onClose} />
-            <Btn ui={ui} label="保存" icon="Check" tone="primary" busy={busy} onPress={() => void save()} />
+            <Btn ui={ui} label={t("AgentDetail.40")} onPress={onClose} />
+            <Btn ui={ui} label={t("AgentDetail.72")} icon="Check" tone="primary" busy={busy} onPress={() => void save()} />
           </View>
         </ScrollView>
       </Modal.Content>

@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { Icon, Modal, copyText } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -23,14 +24,14 @@ import { useWorkbench, type WorkbenchValue } from "../context";
 import { fmtDateTime, relTime, type Agent, type Autopilot, type Squad } from "../model";
 
 const RUN_STATUS: Record<string, { label: string; tone: "success" | "danger" | "muted" | "warning" | "accent" }> = {
-  issue_created: { label: "已创建任务", tone: "accent" },
-  running: { label: "运行中", tone: "accent" },
-  completed: { label: "已完成", tone: "success" },
-  failed: { label: "失败", tone: "danger" },
-  skipped: { label: "已跳过", tone: "warning" },
+  issue_created: { label: t("Automation.1"), tone: "accent" },
+  running: { label: t("AgentDetail.10"), tone: "accent" },
+  completed: { label: t("AgentDetail.6"), tone: "success" },
+  failed: { label: t("AgentDetail.7"), tone: "danger" },
+  skipped: { label: t("Automation.5"), tone: "warning" },
 };
 
-const TRIGGER_LABEL: Record<string, string> = { schedule: "定时", webhook: "Webhook", api: "API" };
+const TRIGGER_LABEL: Record<string, string> = { schedule: t("Automation.6"), webhook: "Webhook", api: "API" };
 
 const TIMEZONES = [
   "Asia/Shanghai",
@@ -86,8 +87,8 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
   const quotaLimit = typeof usage?.limit === "number" ? usage.limit : null;
 
   const nameOf = (item: Autopilot) => {
-    if (item.assignee_type === "squad") return squads.find((s) => s.id === item.assignee_id)?.name ?? "小队";
-    return agents.find((a) => a.id === item.assignee_id)?.name ?? "智能体";
+    if (item.assignee_type === "squad") return squads.find((s) => s.id === item.assignee_id)?.name ?? t("Nav.36");
+    return agents.find((a) => a.id === item.assignee_id)?.name ?? t("AgentDetail.23");
   };
 
   const list = useMemo(
@@ -115,9 +116,9 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
     const result = await api({ method: "POST", path: `/api/autopilots/${item.id}/trigger` });
     setBusyId(null);
     if (result.ok) {
-      toast.show("已触发一次运行", { variant: "success" });
+      toast.show(t("Automation.9"), { variant: "success" });
       refreshAll();
-    } else toast.error(result.error ?? "触发失败");
+    } else toast.error(result.error ?? t("Automation.10"));
   };
 
   const toggle = async (item: Autopilot) => {
@@ -126,9 +127,9 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
     const result = await api({ method: "PATCH", path: `/api/autopilots/${item.id}`, body: { status: next } });
     setBusyId(null);
     if (result.ok) {
-      toast.show(next === "active" ? "已恢复" : "已暂停", { variant: "success" });
+      toast.show(next === "active" ? t("Automation.11") : t("Nav.43"), { variant: "success" });
       refreshAll();
-    } else toast.error(result.error ?? "操作失败");
+    } else toast.error(result.error ?? t("Automation.13"));
   };
 
   const remove = async () => {
@@ -137,11 +138,11 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
     const result = await api({ method: "DELETE", path: `/api/autopilots/${deleteFor.id}` });
     setBusyId(null);
     if (result.ok) {
-      toast.show("自动化已删除", { variant: "success" });
+      toast.show(t("Automation.14"), { variant: "success" });
       if (detailFor?.id === deleteFor.id) setDetailFor(null);
       setDeleteFor(null);
       refreshAll();
-    } else toast.error(result.error ?? "删除失败");
+    } else toast.error(result.error ?? t("Automation.15"));
   };
 
   return (
@@ -154,18 +155,18 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
     >
       <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
         <View style={ui.s.grow}>
-          <Text style={ui.s.title}>自动化</Text>
-          <Text style={ui.s.muted}>定时或通过 Webhook / API 触发的智能体任务</Text>
+          <Text style={ui.s.title}>{t("Nav.6")}</Text>
+          <Text style={ui.s.muted}>{t("Automation.17")}</Text>
         </View>
-        <Btn ui={ui} label="新建" icon="Plus" tone="primary" onPress={() => setCreateOpen(true)} />
-        <IconBtn ui={ui} icon="RefreshCw" label="刷新" busy={query.loadingMore} onPress={refreshAll} />
+        <Btn ui={ui} label={t("Nav.10")} icon="Plus" tone="primary" onPress={() => setCreateOpen(true)} />
+        <IconBtn ui={ui} icon="RefreshCw" label={t("Nav.14")} busy={query.loadingMore} onPress={refreshAll} />
       </View>
 
       {quotaUsed !== null && quotaLimit !== null ? (
         <Card ui={ui} style={{ gap: 6 }}>
           <View style={[ui.s.row, { gap: 8 }]}>
             <Icon name="Gauge" size={14} color={ui.c.muted} />
-            <Text style={ui.s.label}>本月自动化额度</Text>
+            <Text style={ui.s.label}>{t("Automation.20")}</Text>
             <View style={ui.s.grow} />
             <Text style={ui.s.tiny}>
               {quotaUsed} / {quotaLimit}
@@ -188,9 +189,9 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
         value={filter}
         onChange={setFilter}
         options={[
-          { value: "all", label: `全部 ${counts.all}` },
-          { value: "active", label: `运行中 ${counts.active}` },
-          { value: "paused", label: `已暂停 ${counts.paused}` },
+          { value: "all", label: t("Automation.21", { a: counts.all }) },
+          { value: "active", label: t("Automation.22", { a: counts.active }) },
+          { value: "paused", label: t("Automation.23", { a: counts.paused }) },
         ]}
       />
 
@@ -201,15 +202,15 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
           <Empty
             ui={ui}
             icon="Bot"
-            title={counts.all === 0 ? "还没有自动化" : "没有匹配的自动化"}
+            title={counts.all === 0 ? t("Automation.24") : t("Automation.25")}
             description={
               counts.all === 0
-                ? "创建一条自动化，让智能体按时或按事件自动开始工作。"
-                : "换个筛选条件看看。"
+                ? t("Automation.26")
+                : t("Automation.27")
             }
             action={
               counts.all === 0 ? (
-                <Btn ui={ui} label="新建自动化" icon="Plus" tone="primary" onPress={() => setCreateOpen(true)} />
+                <Btn ui={ui} label={t("Automation.28")} icon="Plus" tone="primary" onPress={() => setCreateOpen(true)} />
               ) : undefined
             }
           />
@@ -226,18 +227,18 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
             <View style={[ui.s.rowTop, { gap: 10 }]}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`打开自动化 ${item.title}`}
+                accessibilityLabel={t("Automation.29", { a: item.title })}
                 onPress={() => setDetailFor(item)}
                 style={({ pressed }) => [{ flex: 1, gap: 4 }, pressed && ui.s.pressed]}
               >
                 <Text style={[ui.s.body, { fontWeight: "600" }]}>{item.title}</Text>
                 <Text numberOfLines={2} style={ui.s.muted}>
-                  {item.description || "没有描述"}
+                  {item.description || t("Automation.30")}
                 </Text>
               </Pressable>
               <Tag
                 ui={ui}
-                label={item.status === "active" ? "运行中" : item.status === "paused" ? "已暂停" : item.status}
+                label={item.status === "active" ? t("AgentDetail.10") : item.status === "paused" ? t("Nav.43") : item.status}
                 tone={item.status === "active" ? "success" : item.status === "paused" ? "warning" : "muted"}
                 icon={item.status === "active" ? "Radio" : "Pause"}
               />
@@ -247,7 +248,7 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
               <Tag ui={ui} label={nameOf(item)} icon={item.assignee_type === "squad" ? "Users" : "Bot"} />
               <Tag
                 ui={ui}
-                label={item.execution_mode === "create_issue" ? "创建任务" : "直接执行"}
+                label={item.execution_mode === "create_issue" ? t("Automation.33") : t("Automation.34")}
                 tone="muted"
                 icon={item.execution_mode === "create_issue" ? "ListTodo" : "Play"}
               />
@@ -258,11 +259,11 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
 
             <View style={{ gap: 3 }}>
               <View style={[ui.s.row, { justifyContent: "space-between" }]}>
-                <Text style={ui.s.tiny}>下次运行</Text>
+                <Text style={ui.s.tiny}>{t("Automation.35")}</Text>
                 <Text style={ui.s.tiny}>{item.next_run_at ? fmtDateTime(item.next_run_at) : "—"}</Text>
               </View>
               <View style={[ui.s.row, { justifyContent: "space-between" }]}>
-                <Text style={ui.s.tiny}>上次运行</Text>
+                <Text style={ui.s.tiny}>{t("Automation.36")}</Text>
                 <Text style={ui.s.tiny}>
                   {item.last_run_status ? RUN_STATUS[item.last_run_status]?.label ?? item.last_run_status : "—"}
                   {item.last_run_at ? ` · ${relTime(item.last_run_at)}` : ""}
@@ -271,17 +272,17 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
             </View>
 
             <View style={[ui.s.row, { gap: 6, justifyContent: "flex-end" }]}>
-              <IconBtn ui={ui} icon="Pencil" label="编辑自动化" onPress={() => setEditFor(item)} />
-              <IconBtn ui={ui} icon="Trash2" label="删除自动化" color={ui.c.danger} onPress={() => setDeleteFor(item)} />
-              <Btn ui={ui} label="触发器" icon="Zap" onPress={() => setDetailFor(item)} />
+              <IconBtn ui={ui} icon="Pencil" label={t("Automation.37")} onPress={() => setEditFor(item)} />
+              <IconBtn ui={ui} icon="Trash2" label={t("Automation.38")} color={ui.c.danger} onPress={() => setDeleteFor(item)} />
+              <Btn ui={ui} label={t("Automation.39")} icon="Zap" onPress={() => setDetailFor(item)} />
               <Btn
                 ui={ui}
-                label={item.status === "active" ? "暂停" : "恢复"}
+                label={item.status === "active" ? t("Automation.40") : t("AgentDetail.34")}
                 icon={item.status === "active" ? "Pause" : "Play"}
                 busy={busyId === item.id}
                 onPress={() => void toggle(item)}
               />
-              <Btn ui={ui} label="立即运行" icon="Play" tone="primary" busy={busyId === item.id} onPress={() => void trigger(item)} />
+              <Btn ui={ui} label={t("Automation.42")} icon="Play" tone="primary" busy={busyId === item.id} onPress={() => void trigger(item)} />
             </View>
           </Card>
         ))}
@@ -306,7 +307,7 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
         onCreate={async (body, kind, schedule) => {
           const result = await api({ method: "POST", path: "/api/autopilots", body });
           if (!result.ok) {
-            toast.error(result.error ?? "创建失败");
+            toast.error(result.error ?? t("SettingsSections.18"));
             return false;
           }
           const created = asRecord(result.data);
@@ -321,9 +322,9 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
                   ? { kind: "webhook" }
                   : { kind: "schedule", cron_expression: schedule.cron.trim(), timezone: schedule.timezone },
             });
-            if (!triggerResult.ok) toast.error(triggerResult.error ?? "触发器创建失败");
+            if (!triggerResult.ok) toast.error(triggerResult.error ?? t("Automation.44"));
           }
-          toast.show("自动化已创建", { variant: "success" });
+          toast.show(t("Automation.45"), { variant: "success" });
           setCreateOpen(false);
           refreshAll();
           return true;
@@ -356,13 +357,13 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
         onSaved={() => {
           setEditFor(null);
           refreshAll();
-          toast.show("自动化已更新", { variant: "success" });
+          toast.show(t("Automation.46"), { variant: "success" });
         }}
         onError={(message) => toast.error(message)}
       />
 
       <Modal
-        title="删除自动化"
+        title={t("Automation.38")}
         icon={<Icon name="Trash2" size={16} color={ui.c.danger} />}
         open={Boolean(deleteFor)}
         onOpenChange={(next) => !next && setDeleteFor(null)}
@@ -370,11 +371,11 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
         <Modal.Content>
           <View style={{ gap: 12 }}>
             <Text style={ui.s.body}>
-              确定删除「{deleteFor?.title ?? ""}」吗？删除后它的触发器与运行记录将一并移除，无法恢复。
+              {t("Automation.48")}{deleteFor?.title ?? ""}{t("Automation.49")}
             </Text>
             <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end" }]}>
-              <Btn ui={ui} label="取消" onPress={() => setDeleteFor(null)} />
-              <Btn ui={ui} label="删除" icon="Trash2" tone="danger" busy={busyId === deleteFor?.id} onPress={() => void remove()} />
+              <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setDeleteFor(null)} />
+              <Btn ui={ui} label={t("SquadDetail.21")} icon="Trash2" tone="danger" busy={busyId === deleteFor?.id} onPress={() => void remove()} />
             </View>
           </View>
         </Modal.Content>
@@ -419,35 +420,35 @@ function CreateAutopilotModal({
   ];
 
   return (
-    <Modal title="新建自动化" icon={<Icon name="Bot" size={16} color={ui.c.muted} />} open={open} onOpenChange={(next) => !next && onClose()}>
+    <Modal title={t("Automation.28")} icon={<Icon name="Bot" size={16} color={ui.c.muted} />} open={open} onOpenChange={(next) => !next && onClose()}>
       <Modal.Content>
         <ScrollView style={{ maxHeight: 460 }} contentContainerStyle={{ gap: 12 }}>
-          <Field ui={ui} label="名称" value={title} onChangeText={setTitle} placeholder="例如：每天早上总结未完成任务" />
-          <Field ui={ui} label="描述" value={description} onChangeText={setDescription} multiline placeholder="这条自动化要做什么" />
+          <Field ui={ui} label={t("AgentDetail.95")} value={title} onChangeText={setTitle} placeholder={t("Automation.54")} />
+          <Field ui={ui} label={t("AgentDetail.97")} value={description} onChangeText={setDescription} multiline placeholder={t("Automation.56")} />
           <View style={{ gap: 6 }}>
-            <Text style={ui.s.label}>执行方式</Text>
+            <Text style={ui.s.label}>{t("Automation.57")}</Text>
             <Chips<"create_issue" | "run_only">
               ui={ui}
               value={mode}
               onChange={setMode}
               options={[
-                { value: "create_issue", label: "创建任务并执行", icon: "ListTodo" },
-                { value: "run_only", label: "直接执行", icon: "Play" },
+                { value: "create_issue", label: t("Automation.58"), icon: "ListTodo" },
+                { value: "run_only", label: t("Automation.34"), icon: "Play" },
               ]}
             />
           </View>
           <View style={{ gap: 6 }}>
-            <Text style={ui.s.label}>执行者</Text>
+            <Text style={ui.s.label}>{t("Automation.60")}</Text>
             <ScrollView style={{ maxHeight: 180 }} contentContainerStyle={{ gap: 6 }}>
               {targets.length === 0 ? (
-                <Text style={ui.s.muted}>当前工作区还没有可用的智能体或小队，请先在「团队」页创建。</Text>
+                <Text style={ui.s.muted}>{t("Automation.61")}</Text>
               ) : null}
               {targets.map((item) => {
                 const active = target === `${item.kind}:${item.id}`;
                 return (
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`选择执行者 ${item.name}`}
+                    accessibilityLabel={t("Automation.62", { a: item.name })}
                     key={`${item.kind}:${item.id}`}
                     onPress={() => setTarget(`${item.kind}:${item.id}`)}
                     style={({ pressed }) => [
@@ -465,7 +466,7 @@ function CreateAutopilotModal({
                   >
                     <Avatar ui={ui} name={item.name} url={item.avatar} size={24} />
                     <Text style={[ui.s.body, { flex: 1 }]}>{item.name}</Text>
-                    <Text style={ui.s.tiny}>{item.kind === "squad" ? "小队" : "智能体"}</Text>
+                    <Text style={ui.s.tiny}>{item.kind === "squad" ? t("Nav.36") : t("AgentDetail.23")}</Text>
                     {active ? <Icon name="Check" size={14} color={ui.c.accent} /> : null}
                   </Pressable>
                 );
@@ -473,13 +474,13 @@ function CreateAutopilotModal({
             </ScrollView>
           </View>
           <View style={{ gap: 6 }}>
-            <Text style={ui.s.label}>触发方式</Text>
+            <Text style={ui.s.label}>{t("Automation.65")}</Text>
             <Chips<"schedule" | "webhook">
               ui={ui}
               value={kind}
               onChange={setKind}
               options={[
-                { value: "schedule", label: "定时", icon: "Clock" },
+                { value: "schedule", label: t("Automation.6"), icon: "Clock" },
                 { value: "webhook", label: "Webhook", icon: "Webhook" },
               ]}
             />
@@ -488,35 +489,35 @@ function CreateAutopilotModal({
             <>
               <Field
                 ui={ui}
-                label="定时表达式（Cron）"
+                label={t("Automation.67")}
                 value={cron}
                 onChangeText={setCron}
                 code
-                hint="留空则不创建定时触发器，之后仍可手动或通过 API 触发。"
+                hint={t("Automation.68")}
               />
               <View style={{ gap: 6 }}>
-                <Text style={ui.s.label}>时区</Text>
+                <Text style={ui.s.label}>{t("Automation.69")}</Text>
                 <Chips<string> ui={ui} value={timezone} onChange={setTimezone} options={TIMEZONES.map((tz) => ({ value: tz, label: tz }))} />
               </View>
               <CronPreview ui={ui} api={api} cron={cron} timezone={timezone} />
             </>
           ) : (
-            <Text style={ui.s.muted}>创建后会生成一个 Webhook URL，向它 POST 任意 JSON 即可触发。</Text>
+            <Text style={ui.s.muted}>{t("Automation.70")}</Text>
           )}
-          <Field ui={ui} label="触发器标签（可选）" value={label} onChangeText={setLabel} placeholder="例如：工作日早上" />
+          <Field ui={ui} label={t("Automation.71")} value={label} onChangeText={setLabel} placeholder={t("Automation.72")} />
           {error ? <ErrorNote ui={ui} message={error} /> : null}
         </ScrollView>
         <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end", marginTop: 12 }]}>
-          <Btn ui={ui} label="取消" onPress={onClose} />
+          <Btn ui={ui} label={t("AgentDetail.40")} onPress={onClose} />
           <Btn
             ui={ui}
-            label="创建"
+            label={t("SettingsSections.30")}
             tone="primary"
             busy={busy}
             onPress={async () => {
-              if (!title.trim()) return setError("请填写名称");
-              if (!target) return setError("请选择执行者");
-              if (kind === "schedule" && cron.trim() === "") return setError("请填写 Cron 表达式，或切换为 Webhook 触发");
+              if (!title.trim()) return setError(t("AgentDetail.92"));
+              if (!target) return setError(t("Automation.76"));
+              if (kind === "schedule" && cron.trim() === "") return setError(t("Automation.77"));
               const [targetKind, id] = target.split(":");
               setBusy(true);
               setError(null);
@@ -564,7 +565,7 @@ function CronPreview({ ui, api, cron, timezone }: { ui: Ui; api: ApiFn; cron: st
   if (next.length === 0) return null;
   return (
     <View style={{ gap: 3 }}>
-      <Text style={ui.s.label}>接下来</Text>
+      <Text style={ui.s.label}>{t("Automation.78")}</Text>
       {next.slice(0, 3).map((value) => (
         <Text key={value} style={ui.s.tiny}>
           {fmtDateTime(value)} · {relTime(value)}
@@ -629,7 +630,7 @@ function AutopilotDetailModal({
   const addTrigger = async () => {
     if (!autopilot) return;
     if (kind === "schedule" && !cron.trim()) {
-      toast.error("请填写 Cron 表达式");
+      toast.error(t("Automation.79"));
       return;
     }
     setBusy("add");
@@ -640,9 +641,9 @@ function AutopilotDetailModal({
     });
     setBusy(null);
     if (result.ok) {
-      toast.show(kind === "schedule" ? "定时触发器已添加" : "Webhook 触发器已添加", { variant: "success" });
+      toast.show(kind === "schedule" ? t("Automation.80") : t("Automation.81"), { variant: "success" });
       afterChange();
-    } else toast.error(result.error ?? "添加失败");
+    } else toast.error(result.error ?? t("AgentDetail.84"));
   };
 
   const toggleTrigger = async (item: AutopilotTrigger) => {
@@ -655,7 +656,7 @@ function AutopilotDetailModal({
     });
     setBusy(null);
     if (result.ok) afterChange();
-    else toast.error(result.error ?? "操作失败");
+    else toast.error(result.error ?? t("Automation.13"));
   };
 
   const removeTrigger = async (item: AutopilotTrigger) => {
@@ -664,9 +665,9 @@ function AutopilotDetailModal({
     const result = await api({ method: "DELETE", path: `/api/autopilots/${autopilot.id}/triggers/${item.id}` });
     setBusy(null);
     if (result.ok) {
-      toast.show("触发器已删除", { variant: "success" });
+      toast.show(t("Automation.84"), { variant: "success" });
       afterChange();
-    } else toast.error(result.error ?? "删除失败");
+    } else toast.error(result.error ?? t("Automation.15"));
   };
 
   const rotate = async (item: AutopilotTrigger) => {
@@ -678,14 +679,14 @@ function AutopilotDetailModal({
     });
     setBusy(null);
     if (result.ok) {
-      toast.show("Webhook 链接已重置", { variant: "success" });
+      toast.show(t("Automation.86"), { variant: "success" });
       afterChange();
-    } else toast.error(result.error ?? "重置失败");
+    } else toast.error(result.error ?? t("Automation.87"));
   };
 
   return (
     <Modal
-      title={autopilot ? `触发器 · ${autopilot.title}` : "触发器"}
+      title={autopilot ? t("Automation.88", { a: autopilot.title }) : t("Automation.39")}
       icon={<Icon name="Zap" size={16} color={ui.c.muted} />}
       open={Boolean(autopilot)}
       onOpenChange={(next) => !next && onClose()}
@@ -696,19 +697,19 @@ function AutopilotDetailModal({
             <View style={[ui.s.row, { gap: 6, flexWrap: "wrap" }]}>
               <Tag
                 ui={ui}
-                label={live.status === "active" ? "运行中" : live.status === "paused" ? "已暂停" : live.status}
+                label={live.status === "active" ? t("AgentDetail.10") : live.status === "paused" ? t("Nav.43") : live.status}
                 tone={live.status === "active" ? "success" : live.status === "paused" ? "warning" : "muted"}
               />
-              <Tag ui={ui} label={live.execution_mode === "create_issue" ? "创建任务" : "直接执行"} tone="muted" />
-              <Tag ui={ui} label={live.next_run_at ? `下次 ${fmtDateTime(live.next_run_at)}` : "未排期"} icon="Clock" />
+              <Tag ui={ui} label={live.execution_mode === "create_issue" ? t("Automation.33") : t("Automation.34")} tone="muted" />
+              <Tag ui={ui} label={live.next_run_at ? t("Automation.94", { a: fmtDateTime(live.next_run_at) }) : t("Automation.95")} icon="Clock" />
             </View>
           ) : null}
 
           <View style={{ gap: 8 }}>
-            <Text style={ui.s.label}>已有触发器</Text>
+            <Text style={ui.s.label}>{t("Automation.96")}</Text>
             {query.loading && triggers.length === 0 ? <LoadingRow ui={ui} /> : null}
             {!query.loading && triggers.length === 0 ? (
-              <Text style={ui.s.muted}>还没有触发器。添加定时或 Webhook 触发器后，自动化才会自动运行。</Text>
+              <Text style={ui.s.muted}>{t("Automation.97")}</Text>
             ) : null}
             {triggers.map((item) => (
               <View
@@ -729,19 +730,19 @@ function AutopilotDetailModal({
                     icon={item.kind === "webhook" ? "Webhook" : "Clock"}
                     tone="accent"
                   />
-                  {!item.enabled ? <Tag ui={ui} label="已停用" tone="muted" /> : null}
+                  {!item.enabled ? <Tag ui={ui} label={t("AgentDetail.48")} tone="muted" /> : null}
                   <View style={ui.s.grow} />
                   <IconBtn
                     ui={ui}
                     icon={item.enabled ? "ToggleRight" : "ToggleLeft"}
-                    label={item.enabled ? "停用触发器" : "启用触发器"}
+                    label={item.enabled ? t("Automation.99") : t("Automation.100")}
                     busy={busy === item.id}
                     onPress={() => void toggleTrigger(item)}
                   />
                   <IconBtn
                     ui={ui}
                     icon="Trash2"
-                    label="删除触发器"
+                    label={t("Automation.101")}
                     color={ui.c.danger}
                     onPress={() => void removeTrigger(item)}
                   />
@@ -753,20 +754,20 @@ function AutopilotDetailModal({
                     </Text>
                     <Text style={ui.s.tiny}>
                       {item.timezone ?? "UTC"}
-                      {item.next_run_at ? ` · 下次 ${fmtDateTime(item.next_run_at)}` : ""}
-                      {item.last_fired_at ? ` · 最近 ${relTime(item.last_fired_at)}` : ""}
+                      {item.next_run_at ? t("Automation.102", { a: fmtDateTime(item.next_run_at) }) : ""}
+                      {item.last_fired_at ? t("Automation.103", { a: relTime(item.last_fired_at) }) : ""}
                     </Text>
                   </View>
                 ) : (
                   <View style={{ gap: 6 }}>
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel="复制 Webhook 地址"
+                      accessibilityLabel={t("Automation.104")}
                       onPress={async () => {
                         const url = item.webhook_url ?? item.webhook_path ?? "";
                         if (!url) return;
                         await copyText(url);
-                        toast.show("Webhook 地址已复制", { variant: "success" });
+                        toast.show(t("Automation.105"), { variant: "success" });
                       }}
                       style={({ pressed }) => [ui.s.row, { gap: 6 }, pressed && ui.s.pressed]}
                     >
@@ -776,8 +777,8 @@ function AutopilotDetailModal({
                       <Icon name="Copy" size={13} color={ui.c.muted} />
                     </Pressable>
                     <View style={[ui.s.row, { gap: 6 }]}>
-                      <Btn ui={ui} label="重置 Webhook 链接" icon="RefreshCw" busy={busy === item.id} onPress={() => void rotate(item)} />
-                      {item.has_signing_secret ? <Tag ui={ui} label="已配置签名" tone="success" icon="ShieldCheck" /> : null}
+                      <Btn ui={ui} label={t("Automation.106")} icon="RefreshCw" busy={busy === item.id} onPress={() => void rotate(item)} />
+                      {item.has_signing_secret ? <Tag ui={ui} label={t("Automation.107")} tone="success" icon="ShieldCheck" /> : null}
                     </View>
                   </View>
                 )}
@@ -788,41 +789,41 @@ function AutopilotDetailModal({
           <Divider ui={ui} />
 
           <View style={{ gap: 8 }}>
-            <Text style={ui.s.label}>添加触发器</Text>
+            <Text style={ui.s.label}>{t("Automation.108")}</Text>
             <Chips<"schedule" | "webhook">
               ui={ui}
               value={kind}
               onChange={setKind}
               options={[
-                { value: "schedule", label: "定时", icon: "Clock" },
+                { value: "schedule", label: t("Automation.6"), icon: "Clock" },
                 { value: "webhook", label: "Webhook", icon: "Webhook" },
               ]}
             />
             {kind === "schedule" ? (
               <>
-                <Field ui={ui} label="Cron 表达式" value={cron} onChangeText={setCron} code />
+                <Field ui={ui} label={t("Automation.110")} value={cron} onChangeText={setCron} code />
                 <Chips<string> ui={ui} value={timezone} onChange={setTimezone} options={TIMEZONES.map((tz) => ({ value: tz, label: tz }))} />
                 <CronPreview ui={ui} api={api} cron={cron} timezone={timezone} />
               </>
             ) : (
-              <Text style={ui.s.muted}>添加后会立即生成 Webhook URL，向它 POST 即可触发。</Text>
+              <Text style={ui.s.muted}>{t("Automation.111")}</Text>
             )}
             <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end" }]}>
-              <Btn ui={ui} label="添加触发器" icon="Plus" tone="primary" busy={busy === "add"} onPress={() => void addTrigger()} />
+              <Btn ui={ui} label={t("Automation.108")} icon="Plus" tone="primary" busy={busy === "add"} onPress={() => void addTrigger()} />
             </View>
           </View>
 
           <Divider ui={ui} />
 
           <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
-            <Btn ui={ui} label="运行记录" icon="History" onPress={onRuns} />
-            <Btn ui={ui} label="编辑" icon="Pencil" onPress={onEdit} />
+            <Btn ui={ui} label={t("Execution.31")} icon="History" onPress={onRuns} />
+            <Btn ui={ui} label={t("AgentDetail.33")} icon="Pencil" onPress={onEdit} />
             <View style={ui.s.grow} />
-            <Btn ui={ui} label="删除自动化" icon="Trash2" tone="danger" onPress={onDelete} />
+            <Btn ui={ui} label={t("Automation.38")} icon="Trash2" tone="danger" onPress={onDelete} />
           </View>
           {live?.last_run_at ? (
             <Text style={ui.s.tiny}>
-              上次运行 {relTime(live.last_run_at)}
+              {t("Automation.36")} {relTime(live.last_run_at)}
               {live.last_run_status ? ` · ${RUN_STATUS[live.last_run_status]?.label ?? live.last_run_status}` : ""}
             </Text>
           ) : null}
@@ -873,7 +874,7 @@ function EditAutopilotModal({
   const save = async () => {
     if (!autopilot) return;
     if (!title.trim()) {
-      onError("请填写名称");
+      onError(t("AgentDetail.92"));
       return;
     }
     const [kind, id] = target.split(":");
@@ -890,41 +891,41 @@ function EditAutopilotModal({
     });
     setBusy(false);
     if (result.ok) onSaved();
-    else onError(result.error ?? "保存失败");
+    else onError(result.error ?? t("AgentDetail.64"));
   };
 
   return (
     <Modal
-      title="编辑自动化"
+      title={t("Automation.37")}
       icon={<Icon name="Pencil" size={16} color={ui.c.muted} />}
       open={Boolean(autopilot)}
       onOpenChange={(next) => !next && onClose()}
     >
       <Modal.Content>
         <ScrollView style={{ maxHeight: 460 }} contentContainerStyle={{ gap: 12 }}>
-          <Field ui={ui} label="名称" value={title} onChangeText={setTitle} />
-          <Field ui={ui} label="描述" value={description} onChangeText={setDescription} multiline />
+          <Field ui={ui} label={t("AgentDetail.95")} value={title} onChangeText={setTitle} />
+          <Field ui={ui} label={t("AgentDetail.97")} value={description} onChangeText={setDescription} multiline />
           <View style={{ gap: 6 }}>
-            <Text style={ui.s.label}>执行方式</Text>
+            <Text style={ui.s.label}>{t("Automation.57")}</Text>
             <Chips<"create_issue" | "run_only">
               ui={ui}
               value={mode}
               onChange={setMode}
               options={[
-                { value: "create_issue", label: "创建任务并执行", icon: "ListTodo" },
-                { value: "run_only", label: "直接执行", icon: "Play" },
+                { value: "create_issue", label: t("Automation.58"), icon: "ListTodo" },
+                { value: "run_only", label: t("Automation.34"), icon: "Play" },
               ]}
             />
           </View>
           <View style={{ gap: 6 }}>
-            <Text style={ui.s.label}>执行者</Text>
+            <Text style={ui.s.label}>{t("Automation.60")}</Text>
             <ScrollView style={{ maxHeight: 180 }} contentContainerStyle={{ gap: 6 }}>
               {targets.map((item) => {
                 const active = target === `${item.kind}:${item.id}`;
                 return (
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`选择执行者 ${item.name}`}
+                    accessibilityLabel={t("Automation.62", { a: item.name })}
                     key={`${item.kind}:${item.id}`}
                     onPress={() => setTarget(`${item.kind}:${item.id}`)}
                     style={({ pressed }) => [
@@ -950,8 +951,8 @@ function EditAutopilotModal({
           </View>
         </ScrollView>
         <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end", marginTop: 12 }]}>
-          <Btn ui={ui} label="取消" onPress={onClose} />
-          <Btn ui={ui} label="保存" tone="primary" busy={busy} onPress={() => void save()} />
+          <Btn ui={ui} label={t("AgentDetail.40")} onPress={onClose} />
+          <Btn ui={ui} label={t("AgentDetail.72")} tone="primary" busy={busy} onPress={() => void save()} />
         </View>
       </Modal.Content>
     </Modal>
@@ -978,12 +979,12 @@ function RunsModal({
     "runs",
   );
   return (
-    <Modal title={item ? `运行记录 · ${item.title}` : "运行记录"} open={Boolean(item)} onOpenChange={(next) => !next && onClose()}>
+    <Modal title={item ? t("Automation.129", { a: item.title }) : t("Execution.31")} open={Boolean(item)} onOpenChange={(next) => !next && onClose()}>
       <Modal.Content>
         {query.loading && query.items.length === 0 ? <LoadingRow ui={ui} /> : null}
         {query.error ? <ErrorNote ui={ui} message={query.error} onRetry={query.refresh} /> : null}
         {!query.loading && query.items.length === 0 ? (
-          <Empty ui={ui} icon="History" title="还没有运行记录" description="触发一次运行后，这里会显示结果。" />
+          <Empty ui={ui} icon="History" title={t("Automation.131")} description={t("Automation.132")} />
         ) : null}
         <ScrollView
           style={{ maxHeight: 420 }}
@@ -995,7 +996,7 @@ function RunsModal({
         >
           {query.items.map((run) => {
             const status = String(run.status ?? "");
-            const meta = RUN_STATUS[status] ?? { label: status || "未知", tone: "muted" as const };
+            const meta = RUN_STATUS[status] ?? { label: status || t("AgentDetail.57"), tone: "muted" as const };
             const issueId = typeof run.issue_id === "string" ? run.issue_id : null;
             return (
               <View
@@ -1013,7 +1014,7 @@ function RunsModal({
                 </View>
                 <Text style={ui.s.tiny}>{String(run.source ?? "")}</Text>
                 {issueId ? (
-                  <Btn ui={ui} label="任务" onPress={() => { onClose(); onOpenIssue(issueId); }} />
+                  <Btn ui={ui} label={t("AgentDetail.3")} onPress={() => { onClose(); onOpenIssue(issueId); }} />
                 ) : null}
               </View>
             );

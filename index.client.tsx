@@ -1,3 +1,4 @@
+import { t, messages } from "./client/workbench/i18n";
 import type {
   PluginClientContext,
   PluginScreenProps,
@@ -134,7 +135,7 @@ function WorkbenchSidebarRow({ currentScreen, openScreen, theme }: PluginSidebar
     unread > 0 ? (
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`查看 ${unread} 条未读通知`}
+        accessibilityLabel={t("index.client.1", { a: unread })}
         onPress={() => openScreen({ screenId: SCREEN_ID, params: { page: "inbox" } })}
         style={({ pressed }) => [
           {
@@ -158,7 +159,7 @@ function WorkbenchSidebarRow({ currentScreen, openScreen, theme }: PluginSidebar
   return (
     <SidebarRow
       icon={{ svg: MULTICA_LOGO_SVG }}
-      label={unread > 0 ? `Multica，${unread > 99 ? "99+" : unread} 条未读通知` : "Multica"}
+      label={unread > 0 ? t("index.client.2", { a: unread > 99 ? "99+" : unread }) : "Multica"}
       active={open}
       trailing={trailing}
       onPress={() => {
@@ -176,7 +177,7 @@ export default function contribute(client: PluginClientContext) {
     client.addScreen({ id: SCREEN_ID, title: "Multica", Component: WorkbenchScreen }),
     client.addSettingsScreen({
       id: SETTINGS_ID,
-      title: "Multica 连接",
+      title: messages.message("index.client.3"),
       icon: { svg: MULTICA_LOGO_SVG },
       Component: ConnectionsScreen,
     }),
@@ -187,9 +188,9 @@ export default function contribute(client: PluginClientContext) {
     }),
     client.addCommandCenterItem({
       id: "multica-open",
-      title: "打开 Multica",
+      title: messages.message("index.client.4"),
       icon: { svg: MULTICA_LOGO_SVG },
-      keywords: ["multica", "工作台", "issuance", "issue", "任务", "智能体"],
+      keywords: ["multica", "workbench", "工作台", "issuance", "issue", "任务", "智能体", "agent"],
       context: "global",
       onSelect({ openScreen }) {
         openScreen({ screenId: SCREEN_ID });
@@ -197,9 +198,9 @@ export default function contribute(client: PluginClientContext) {
     }),
     client.addCommandCenterItem({
       id: "multica-issues",
-      title: "搜索 Multica 需求",
+      title: messages.message("index.client.8"),
       icon: "ListTodo",
-      keywords: ["multica", "需求", "任务", "issue"],
+      keywords: ["multica", t("Labels.17"), t("AgentDetail.3"), "issue"],
       context: "global",
       onSelect({ openScreen }) {
         openScreen({ screenId: SCREEN_ID, params: { page: "issues" } });
@@ -207,9 +208,9 @@ export default function contribute(client: PluginClientContext) {
     }),
     client.addCommandCenterItem({
       id: "multica-chat",
-      title: "打开 Multica 对话",
+      title: messages.message("index.client.11"),
       icon: "MessagesSquare",
-      keywords: ["multica", "聊天", "对话", "chat", "智能体"],
+      keywords: ["multica", t("Nav.5"), t("Chat.5"), "chat", t("AgentDetail.23")],
       context: "global",
       onSelect({ openScreen }) {
         openScreen({ screenId: SCREEN_ID, params: { page: "chat" } });
@@ -217,9 +218,9 @@ export default function contribute(client: PluginClientContext) {
     }),
     client.addCommandCenterItem({
       id: "multica-automation",
-      title: "打开 Multica 自动化",
+      title: messages.message("index.client.15"),
       icon: "Bot",
-      keywords: ["multica", "自动化", "autopilot", "定时"],
+      keywords: ["multica", t("Nav.6"), "autopilot", t("Automation.6")],
       context: "global",
       onSelect({ openScreen }) {
         openScreen({ screenId: SCREEN_ID, params: { page: "autopilot" } });
@@ -227,9 +228,9 @@ export default function contribute(client: PluginClientContext) {
     }),
     client.addCommandCenterItem({
       id: "multica-api",
-      title: "Multica 接口调试",
+      title: messages.message("index.client.18"),
       icon: "Terminal",
-      keywords: ["multica", "api", "接口", "调试"],
+      keywords: ["multica", "api", "接口", "调试", "debug", "routes"],
       context: "global",
       onSelect({ openScreen }) {
         openScreen({ screenId: SCREEN_ID, params: { page: "settings", tab: "api" } });
@@ -237,9 +238,9 @@ export default function contribute(client: PluginClientContext) {
     }),
     client.addCommandCenterItem({
       id: "multica-settings",
-      title: "Multica 连接设置",
+      title: messages.message("index.client.21"),
       icon: "Settings2",
-      keywords: ["multica", "设置", "连接", "服务器", "api key"],
+      keywords: ["multica", "settings", "设置", "connections", "连接", "server", "服务器", "api key"],
       context: "global",
       onSelect({ openSettings }) {
         openSettings(SETTINGS_ID);

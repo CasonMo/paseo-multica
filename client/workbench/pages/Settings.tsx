@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { Icon, Modal, copyText, useToast } from "@getpaseo/plugin/client/ui";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -24,7 +25,7 @@ import { openExternalUrl } from "@getpaseo/plugin/client";
 
 export function SettingsPage({ initialTab }: { initialTab?: "connection" | "workspace" | "account" | "api" }) {
   const ctx = useWorkbench();
-  const { theme, compact, connections, server, servers, user, workspaces, workspaceId, toast } = ctx;
+  const { theme, compact, connections, server, servers, user, workspaces, workspaceId, toast, locale } = ctx;
   const ui = useUi(theme, compact);
   const saveRpc = useRpc(connectionsSaveRpc);
   const removeRpc = useRpc(connectionsRemoveRpc);
@@ -49,7 +50,7 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
     setBusyId(item.id);
     try {
       await activateRpc({ id: item.id });
-      await afterChange(`已切换到 ${item.name}`);
+      await afterChange(t("context.2", { a: item.name }));
     } catch (cause) {
       toast.error(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -62,7 +63,7 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
     setBusyId(item.id);
     try {
       await removeRpc({ id: item.id });
-      await afterChange("连接已删除");
+      await afterChange(t("Settings.2"));
     } catch (cause) {
       toast.error(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -76,7 +77,7 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
     try {
       await prefRpc({ allowInternal: !connections.allowInternal });
       await ctx.reloadConnections();
-      toast.show(connections.allowInternal ? "已隐藏内部接口" : "已显示内部接口", { variant: "success" });
+      toast.show(connections.allowInternal ? t("Settings.3") : t("Settings.4"), { variant: "success" });
     } catch (cause) {
       toast.error(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -88,8 +89,8 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
     <View style={{ flex: 1 }}>
       <View style={{ paddingHorizontal: compact ? 12 : 20, paddingTop: compact ? 12 : 20, gap: 14 }}>
         <View>
-          <Text style={ui.s.title}>设置</Text>
-          <Text style={ui.s.muted}>服务器连接、工作区、安全选项与接口调试 · v{PLUGIN_VERSION}</Text>
+          <Text style={ui.s.title}>{t("Nav.15")}</Text>
+          <Text style={ui.s.muted}>{t("Settings.6")}{PLUGIN_VERSION} · {locale}</Text>
         </View>
 
         {ctx.bootstrapError && server ? <ErrorNote ui={ui} message={ctx.bootstrapError} onRetry={() => void ctx.reloadBootstrap()} /> : null}
@@ -97,10 +98,10 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
         <Chips
           ui={ui}
           options={[
-            { value: "connection", label: "连接", icon: "Plug" },
-            { value: "workspace", label: "工作区", icon: "Users" },
-            { value: "api", label: "接口调试", icon: "Terminal" },
-            { value: "account", label: "账户", icon: "User" },
+            { value: "connection", label: t("Settings.7"), icon: "Plug" },
+            { value: "workspace", label: t("Nav.47"), icon: "Users" },
+            { value: "api", label: t("Nav.48"), icon: "Terminal" },
+            { value: "account", label: t("Nav.16"), icon: "User" },
           ] as const}
           value={tab}
           onChange={(next) => setTab(next as typeof tab)}
@@ -118,19 +119,19 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
       <Card ui={ui} style={{ gap: 10 }}>
         <View style={[ui.s.row, { justifyContent: "space-between" }]}>
           <View style={{ gap: 2 }}>
-            <Text style={ui.s.h2}>服务器连接</Text>
-            <Text style={ui.s.tiny}>API Key 仅保存在本机 Paseo 后台，不会发送到客户端。</Text>
+            <Text style={ui.s.h2}>{t("Nav.46")}</Text>
+            <Text style={ui.s.tiny}>{t("Settings.12")}</Text>
           </View>
-          <Btn ui={ui} label="添加" icon="Plus" tone="primary" onPress={() => setEditing("new")} />
+          <Btn ui={ui} label={t("IssueDetail.51")} icon="Plus" tone="primary" onPress={() => setEditing("new")} />
         </View>
 
         {servers.length === 0 ? (
           <Empty
             ui={ui}
             icon="ServerOff"
-            title="还没有连接"
-            description="连接官方 Multica 云，或填写自建服务器地址。"
-            action={<Btn ui={ui} label="连接官方云" icon="Cloud" tone="primary" onPress={() => setEditing("new")} />}
+            title={t("Settings.14")}
+            description={t("Settings.15")}
+            action={<Btn ui={ui} label={t("Settings.16")} icon="Cloud" tone="primary" onPress={() => setEditing("new")} />}
           />
         ) : (
           servers.map((item) => {
@@ -165,27 +166,27 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
                       <Text numberOfLines={1} style={[ui.s.body, { fontWeight: "700" }]}>
                         {item.name}
                       </Text>
-                      {active ? <Tag ui={ui} label="当前" tone="success" /> : null}
-                      {item.isOfficial ? <Tag ui={ui} label="官方" tone="accent" /> : null}
+                      {active ? <Tag ui={ui} label={t("Settings.17")} tone="success" /> : null}
+                      {item.isOfficial ? <Tag ui={ui} label={t("Settings.18")} tone="accent" /> : null}
                     </View>
                     <Text numberOfLines={1} style={[ui.s.tiny, { fontFamily: "Menlo" }]}>
                       {item.baseUrl}
                     </Text>
                     <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
                       <Text style={ui.s.tiny}>
-                        {item.tokenConfigured ? `Key ${item.tokenMasked}` : "未配置 Key"}
+                        {item.tokenConfigured ? `Key ${item.tokenMasked}` : t("Settings.19")}
                       </Text>
-                      {item.workspaceSlug ? <Text style={ui.s.tiny}>工作区 {item.workspaceSlug}</Text> : null}
-                      <Text style={ui.s.tiny}>更新 {relTime(item.updatedAt)}</Text>
+                      {item.workspaceSlug ? <Text style={ui.s.tiny}>{t("Nav.47")} {item.workspaceSlug}</Text> : null}
+                      <Text style={ui.s.tiny}>{t("Projects.48")} {relTime(item.updatedAt)}</Text>
                     </View>
                   </View>
                 </View>
                 <View style={[ui.s.row, { gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }]}>
                   {!active ? (
-                    <Btn ui={ui} label="启用" busy={busyId === item.id} onPress={() => void activate(item)} />
+                    <Btn ui={ui} label={t("Settings.22")} busy={busyId === item.id} onPress={() => void activate(item)} />
                   ) : null}
-                  <Btn ui={ui} label="编辑" icon="Pencil" onPress={() => setEditing(item)} />
-                  <Btn ui={ui} label="删除" icon="Trash2" tone="danger" onPress={() => setConfirmRemove(item)} />
+                  <Btn ui={ui} label={t("AgentDetail.33")} icon="Pencil" onPress={() => setEditing(item)} />
+                  <Btn ui={ui} label={t("SquadDetail.21")} icon="Trash2" tone="danger" onPress={() => setConfirmRemove(item)} />
                 </View>
               </View>
             );
@@ -199,11 +200,11 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
       {server ? (
         <Card ui={ui} style={{ gap: 10 }}>
           <View style={{ gap: 2 }}>
-            <Text style={ui.s.h2}>工作区</Text>
-            <Text style={ui.s.tiny}>当前连接下的工作区，切换后所有页面会按新工作区重新加载。</Text>
+            <Text style={ui.s.h2}>{t("Nav.47")}</Text>
+            <Text style={ui.s.tiny}>{t("Settings.26")}</Text>
           </View>
           {workspaces.length === 0 ? (
-            <Empty ui={ui} icon="Layers" title="没有可用工作区" description="确认 API Key 在此服务器上拥有工作区权限。" />
+            <Empty ui={ui} icon="Layers" title={t("Shell.2")} description={t("Settings.28")} />
           ) : (
             <View style={{ gap: 6 }}>
               {workspaces.map((workspace) => {
@@ -251,7 +252,7 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
       {tab === "connection" ? (
       <>
       <Card ui={ui} style={{ gap: 10 }}>
-        <Text style={ui.s.h2}>高级</Text>
+        <Text style={ui.s.h2}>{t("Settings.29")}</Text>
         <Pressable
           accessibilityRole="button"
           onPress={() => void toggleInternal()}
@@ -260,8 +261,8 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
         >
           <Icon name="ShieldAlert" size={17} color={connections?.allowInternal ? ui.c.warning : ui.c.muted} />
           <View style={{ flex: 1, gap: 2 }}>
-            <Text style={[ui.s.body, { fontWeight: "600" }]}>显示内部接口</Text>
-            <Text style={ui.s.tiny}>包含 /api/internal 与 /api/daemon，仅供调试使用。</Text>
+            <Text style={[ui.s.body, { fontWeight: "600" }]}>{t("Settings.30")}</Text>
+            <Text style={ui.s.tiny}>{t("Settings.31")}</Text>
           </View>
           <View
             style={{
@@ -278,27 +279,27 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
         </Pressable>
         <Divider ui={ui} />
         <View style={{ gap: 4 }}>
-          <Text style={ui.s.tiny}>本地存储位置</Text>
+          <Text style={ui.s.tiny}>{t("Settings.32")}</Text>
           <Text selectable style={[ui.s.tiny, { fontFamily: "Menlo" }]}>
             {connections?.storePath ?? "—"}
           </Text>
           <Btn
             ui={ui}
-            label="复制路径"
+            label={t("Settings.33")}
             icon="Copy"
             onPress={async () => {
               if (!connections?.storePath) return;
               await copyText(connections.storePath);
-              toast.show("已复制存储路径", { variant: "success" });
+              toast.show(t("Settings.34"), { variant: "success" });
             }}
           />
         </View>
       </Card>
 
       <Card ui={ui} style={{ gap: 8 }}>
-        <Text style={ui.s.h2}>关于</Text>
+        <Text style={ui.s.h2}>{t("Settings.35")}</Text>
         <Text style={ui.s.muted}>
-          本工作台直接调用 Multica 后台 API，每一项操作与服务端一一对应，不经过任何中转存储。
+          {t("Settings.36")}
         </Text>
         {user ? (
           <View style={[ui.s.row, { gap: 8, paddingVertical: 4 }]}>
@@ -310,12 +311,12 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
           </View>
         ) : null}
         <View style={[ui.s.row, { gap: 6, flexWrap: "wrap" }]}>
-          <Btn ui={ui} label="访问 Multica" icon="Globe" onPress={() => void openExternalUrl(OFFICIAL_WEB_URL)} />
-          <Btn ui={ui} label="API 文档" icon="BookOpen" onPress={() => void openExternalUrl(`${OFFICIAL_WEB_URL}/docs`)} />
-          <Btn ui={ui} label="去调试" icon="Terminal" onPress={() => setTab("api")} />
+          <Btn ui={ui} label={t("Settings.37")} icon="Globe" onPress={() => void openExternalUrl(OFFICIAL_WEB_URL)} />
+          <Btn ui={ui} label={t("Settings.38")} icon="BookOpen" onPress={() => void openExternalUrl(`${OFFICIAL_WEB_URL}/docs`)} />
+          <Btn ui={ui} label={t("Settings.39")} icon="Terminal" onPress={() => setTab("api")} />
         </View>
         <Text style={ui.s.tiny}>
-          已内置 {API_ROUTES.filter((route) => !isInternalRoute(route[1]) || connections?.allowInternal).length} 个接口入口 · 支持官方云与自建服务器
+          {t("Settings.40")} {API_ROUTES.filter((route) => !isInternalRoute(route[1]) || connections?.allowInternal).length} {t("Settings.41")}
         </Text>
       </Card>
       </>
@@ -331,7 +332,7 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
           try {
             await saveRpc(input);
             setEditing(null);
-            await afterChange("连接已保存");
+            await afterChange(t("Settings.42"));
             return null;
           } catch (cause) {
             return cause instanceof Error ? cause.message : String(cause);
@@ -341,16 +342,16 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
       />
 
       <Modal
-        title="删除连接"
+        title={t("Settings.43")}
         icon={<Icon name="Trash2" size={16} color={ui.c.danger} />}
         open={Boolean(confirmRemove)}
         onOpenChange={(next) => !next && setConfirmRemove(null)}
       >
         <Modal.Content>
-          <Text style={ui.s.body}>确定删除「{confirmRemove?.name}」吗？保存在本机的 API Key 会一并移除。</Text>
+          <Text style={ui.s.body}>{t("Automation.48")}{confirmRemove?.name}{t("Settings.45")}</Text>
           <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end", marginTop: 12 }]}>
-            <Btn ui={ui} label="取消" onPress={() => setConfirmRemove(null)} />
-            <Btn ui={ui} label="删除" tone="danger" onPress={() => confirmRemove && void remove(confirmRemove)} />
+            <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setConfirmRemove(null)} />
+            <Btn ui={ui} label={t("SquadDetail.21")} tone="danger" onPress={() => confirmRemove && void remove(confirmRemove)} />
           </View>
         </Modal.Content>
       </Modal>
@@ -385,7 +386,7 @@ function ConnectionModal({
   const targetKey = target ? (target === "new" ? "new" : target.id) : null;
 
   useEffect(() => {
-    setName(existing?.name ?? "Multica 官方云");
+    setName(existing?.name ?? t("Settings.48"));
     setBaseUrl(existing?.baseUrl ?? OFFICIAL_BASE_URL);
     setToken("");
     setError(null);
@@ -397,21 +398,21 @@ function ConnectionModal({
 
   return (
     <Modal
-      title={existing ? "编辑连接" : "添加连接"}
+      title={existing ? t("Settings.49") : t("Settings.50")}
       icon={<Icon name="Plug" size={16} color={ui.c.muted} />}
       open={Boolean(target)}
       onOpenChange={(next) => !next && onClose()}
     >
       <Modal.Content>
         <ScrollView style={{ maxHeight: 460 }} contentContainerStyle={{ gap: 12 }}>
-          <Field ui={ui} label="名称" value={name} onChangeText={setName} placeholder="例如：官方云 / 公司自建" />
+          <Field ui={ui} label={t("AgentDetail.95")} value={name} onChangeText={setName} placeholder={t("Settings.52")} />
           <Field
             ui={ui}
-            label="服务器地址"
+            label={t("Settings.53")}
             value={baseUrl}
             onChangeText={setBaseUrl}
             placeholder="https://api.multica.ai"
-            hint="官方云填 https://api.multica.ai；自建服务填你自己的 API 域名。"
+            hint={t("Settings.54")}
             code
           />
           <Field
@@ -419,15 +420,15 @@ function ConnectionModal({
             label="API Key"
             value={token}
             onChangeText={setToken}
-            placeholder={existing?.tokenConfigured ? `留空保持不变（${existing.tokenMasked}）` : "mul_…"}
+            placeholder={existing?.tokenConfigured ? t("Settings.55", { a: existing.tokenMasked }) : "mul_…"}
             secureTextEntry
-            hint="只保存在本机 Paseo 后台，界面只显示掩码。"
+            hint={t("Settings.56")}
           />
 
           <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
             <Btn
               ui={ui}
-              label="测试连接"
+              label={t("Settings.57")}
               icon="Activity"
               busy={testing}
               onPress={async () => {
@@ -440,10 +441,10 @@ function ConnectionModal({
                     id: existing?.id,
                   });
                   setResult(next);
-                  if (!next.ok) setError(next.error ?? "连接失败");
+                  if (!next.ok) setError(next.error ?? t("Settings.58"));
                   else {
                     setWorkspaceId(next.workspaces?.[0]?.id ?? workspaceId);
-                    toast.show(`连接成功，${next.workspaces?.length ?? 0} 个工作区`, { variant: "success" });
+                    toast.show(t("Settings.59", { a: next.workspaces?.length ?? 0 }), { variant: "success" });
                   }
                 } catch (cause) {
                   setError(cause instanceof Error ? cause.message : String(cause));
@@ -453,7 +454,7 @@ function ConnectionModal({
               }}
             />
             {existing?.isOfficial || baseUrl.includes("multica.ai") ? (
-              <Btn ui={ui} label="填入官方地址" icon="Cloud" onPress={() => setBaseUrl(OFFICIAL_BASE_URL)} />
+              <Btn ui={ui} label={t("Settings.60")} icon="Cloud" onPress={() => setBaseUrl(OFFICIAL_BASE_URL)} />
             ) : null}
           </View>
 
@@ -468,12 +469,12 @@ function ConnectionModal({
                     <Text style={ui.s.body}>{result.user.name}</Text>
                     <Text style={ui.s.tiny}>{result.user.email}</Text>
                   </View>
-                  <Tag ui={ui} label="已验证" tone="success" icon="Check" />
+                  <Tag ui={ui} label={t("Settings.61")} tone="success" icon="Check" />
                 </View>
               ) : null}
               {(result.workspaces ?? []).length > 0 ? (
                 <View style={{ gap: 6 }}>
-                  <Text style={ui.s.label}>默认工作区</Text>
+                  <Text style={ui.s.label}>{t("Settings.62")}</Text>
                   {(result.workspaces ?? []).map((workspace) => {
                     const active = workspaceId === workspace.id;
                     return (
@@ -508,16 +509,16 @@ function ConnectionModal({
         </ScrollView>
 
         <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end", marginTop: 12 }]}>
-          <Btn ui={ui} label="取消" onPress={onClose} />
+          <Btn ui={ui} label={t("AgentDetail.40")} onPress={onClose} />
           <Btn
             ui={ui}
-            label="保存"
+            label={t("AgentDetail.72")}
             tone="primary"
             busy={busy}
             onPress={async () => {
-              if (!name.trim()) return setError("请填写名称");
-              if (!baseUrl.trim()) return setError("请填写服务器地址");
-              if (!existing && !token.trim()) return setError("请填写 API Key");
+              if (!name.trim()) return setError(t("AgentDetail.92"));
+              if (!baseUrl.trim()) return setError(t("Settings.66"));
+              if (!existing && !token.trim()) return setError(t("Settings.67"));
               setBusy(true);
               setError(null);
               const failure = await onSave({

@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { Icon, Loading, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -70,7 +71,7 @@ export function Shell() {
       </View>
 
       <Modal
-        title="切换工作区"
+        title={t("Nav.9")}
         icon={<Icon name="Layers" size={16} color={ui.c.muted} />}
         open={pickerOpen}
         onOpenChange={setPickerOpen}
@@ -78,7 +79,7 @@ export function Shell() {
         <Modal.Content>
           <View style={{ gap: 8 }}>
             {workspaces.length === 0 ? (
-              <Empty ui={ui} icon="Layers" title="没有可用工作区" description="当前 API Key 在此服务器上还没有工作区。" />
+              <Empty ui={ui} icon="Layers" title={t("Shell.2")} description={t("Shell.3")} />
             ) : (
               workspaces.map((workspace) => {
                 const active = workspace.id === workspaceId;
@@ -86,7 +87,7 @@ export function Shell() {
                   <Pressable
                     accessibilityRole="button"
                     key={workspace.id}
-                    accessibilityLabel={`切换到 ${workspace.name}`}
+                    accessibilityLabel={t("Shell.4", { a: workspace.name })}
                     accessibilityState={{ selected: active }}
                     onPress={() => void switchWorkspace(workspace.id)}
                     style={({ pressed }) => [
@@ -132,7 +133,7 @@ export function Shell() {
             <View style={{ marginTop: 4 }}>
               <Btn
                 ui={ui}
-                label={busy ? "切换中…" : "管理服务器连接"}
+                label={busy ? t("Shell.5") : t("Shell.6")}
                 icon="Plug"
                 onPress={() => {
                   setPickerOpen(false);
@@ -174,13 +175,12 @@ function NoConnection({
         >
           <Icon name="PlugZap" size={22} color={ui.c.accent} />
         </View>
-        <Text style={{ color: ui.c.fg, fontSize: 18, fontWeight: "700" }}>连接你的 Multica</Text>
+        <Text style={{ color: ui.c.fg, fontSize: 18, fontWeight: "700" }}>{t("Shell.7")}</Text>
         <Text style={ui.s.muted}>
-          支持官方云与自建服务器。填入 API Key 后即可浏览需求、智能体、聊天、自动化，并直接调试全部
-          Multica 接口。
+          {t("Shell.8")}
         </Text>
         {error ? <ErrorNote ui={ui} message={error} /> : null}
-        <Btn ui={ui} label="配置连接" icon="ArrowRight" tone="primary" onPress={onSetup} />
+        <Btn ui={ui} label={t("Shell.9")} icon="ArrowRight" tone="primary" onPress={onSetup} />
       </Card>
     </ScrollView>
   );

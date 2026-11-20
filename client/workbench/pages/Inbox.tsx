@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
@@ -11,16 +12,16 @@ import { InboxRow } from "../parts";
 type Tab = "inbox" | "archived" | "snoozed";
 
 const TABS: { value: Tab; label: string }[] = [
-  { value: "inbox", label: "收件箱" },
-  { value: "archived", label: "已归档" },
-  { value: "snoozed", label: "已搁置" },
+  { value: "inbox", label: t("Nav.27") },
+  { value: "archived", label: t("AgentDetail.28") },
+  { value: "snoozed", label: t("Inbox.3") },
 ];
 
 const SNOOZE_OPTIONS: { label: string; until(): Date }[] = [
-  { label: "1 小时后", until: () => new Date(Date.now() + 3600_000) },
-  { label: "4 小时后", until: () => new Date(Date.now() + 4 * 3600_000) },
+  { label: t("Inbox.4"), until: () => new Date(Date.now() + 3600_000) },
+  { label: t("Inbox.5"), until: () => new Date(Date.now() + 4 * 3600_000) },
   {
-    label: "明天 9:00",
+    label: t("Inbox.6"),
     until: () => {
       const next = new Date();
       next.setDate(next.getDate() + 1);
@@ -28,7 +29,7 @@ const SNOOZE_OPTIONS: { label: string; until(): Date }[] = [
       return next;
     },
   },
-  { label: "1 周后", until: () => new Date(Date.now() + 7 * 86400_000) },
+  { label: t("Inbox.7"), until: () => new Date(Date.now() + 7 * 86400_000) },
 ];
 
 export function InboxPage() {
@@ -72,7 +73,7 @@ export function InboxPage() {
           type: item.type ?? "issue_updated",
           issue_id: item.issue_id ?? null,
           issue_identifier: issue?.identifier ?? null,
-          title: issue?.title ?? "需求更新",
+          title: issue?.title ?? t("Inbox.8"),
           read: true,
           archived: false,
           snoozed_until: item.snoozed_until ?? null,
@@ -106,15 +107,15 @@ export function InboxPage() {
     if (result.ok) {
       toast.show(message, { variant: "success" });
       refreshAll();
-    } else toast.error(result.error ?? "操作失败");
+    } else toast.error(result.error ?? t("Automation.13"));
   };
 
   const markAllRead = async (silent = false) => {
     const result = await api({ method: "POST", path: "/api/inbox/mark-all-read" });
     if (result.ok) {
-      if (!silent) toast.show("收件箱已全部标记为已读", { variant: "success" });
+      if (!silent) toast.show(t("Inbox.10"), { variant: "success" });
       refreshAll();
-    } else if (!silent) toast.error(result.error ?? "操作失败");
+    } else if (!silent) toast.error(result.error ?? t("Automation.13"));
   };
 
   // 进入收件箱即视为已读：自动清未读，避免侧栏小徽章必须手动点才消失。
@@ -140,9 +141,9 @@ export function InboxPage() {
     setBusy(false);
     setConfirmArchiveAll(false);
     if (result.ok) {
-      toast.show("已归档全部通知", { variant: "success" });
+      toast.show(t("Inbox.12"), { variant: "success" });
       refreshAll();
-    } else toast.error(result.error ?? "归档失败");
+    } else toast.error(result.error ?? t("AgentDetail.20"));
   };
 
   const remove = async () => {
@@ -151,10 +152,10 @@ export function InboxPage() {
     const result = await api({ method: "DELETE", path: `/api/inbox/${confirmDelete.id}` });
     setBusy(false);
     if (result.ok) {
-      toast.show("通知已删除", { variant: "success" });
+      toast.show(t("Inbox.14"), { variant: "success" });
       setConfirmDelete(null);
       refreshAll();
-    } else toast.error(result.error ?? "删除失败");
+    } else toast.error(result.error ?? t("Automation.15"));
   };
 
   const snooze = async (until: Date) => {
@@ -167,10 +168,10 @@ export function InboxPage() {
     });
     setBusy(false);
     if (result.ok) {
-      toast.show("已搁置该通知", { variant: "success" });
+      toast.show(t("Inbox.16"), { variant: "success" });
       setSnoozeItem(null);
       refreshAll();
-    } else toast.error(result.error ?? "搁置失败");
+    } else toast.error(result.error ?? t("Inbox.17"));
   };
 
   return (
@@ -189,12 +190,12 @@ export function InboxPage() {
         ]}
       >
         <Icon name="Bell" size={16} color={ui.c.muted} />
-        <Text style={{ color: ui.c.fg, fontSize: 14, fontWeight: "600" }}>收件箱</Text>
-        {unreadCount > 0 ? <Tag ui={ui} label={`${unreadCount} 未读`} tone="accent" /> : null}
+        <Text style={{ color: ui.c.fg, fontSize: 14, fontWeight: "600" }}>{t("Nav.27")}</Text>
+        {unreadCount > 0 ? <Tag ui={ui} label={t("Inbox.19", { a: unreadCount })} tone="accent" /> : null}
         <View style={ui.s.grow} />
-        <Btn ui={ui} label="全部已读" icon="CheckCheck" onPress={() => void markAllRead()} />
+        <Btn ui={ui} label={t("Inbox.20")} icon="CheckCheck" onPress={() => void markAllRead()} />
         {tab === "inbox" ? (
-          <Btn ui={ui} label="全部归档" icon="Archive" onPress={() => setConfirmArchiveAll(true)} />
+          <Btn ui={ui} label={t("Inbox.21")} icon="Archive" onPress={() => setConfirmArchiveAll(true)} />
         ) : null}
       </View>
 
@@ -230,7 +231,7 @@ export function InboxPage() {
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="搜索通知标题或需求编号…"
+            placeholder={t("Inbox.22")}
             placeholderTextColor={ui.c.faint}
             style={{ flex: 1, color: ui.c.fg, fontSize: 13, paddingVertical: 5 }}
             autoCapitalize="none"
@@ -239,7 +240,7 @@ export function InboxPage() {
           {search ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="清空搜索"
+              accessibilityLabel={t("ApiExplorer.3")}
               onPress={() => setSearch("")}
               style={({ pressed }) => pressed && ui.s.pressed}
             >
@@ -268,8 +269,8 @@ export function InboxPage() {
             <Empty
               ui={ui}
               icon={tab === "inbox" ? "BellOff" : tab === "archived" ? "Archive" : "AlarmClock"}
-              title={tab === "inbox" ? "收件箱已清空" : tab === "archived" ? "还没有归档通知" : "没有搁置的通知"}
-              description={tab === "inbox" ? "新的需求变更和智能体结果会出现在这里。" : undefined}
+              title={tab === "inbox" ? t("Inbox.24") : tab === "archived" ? t("Inbox.25") : t("Inbox.26")}
+              description={tab === "inbox" ? t("Inbox.27") : undefined}
             />
           ) : (
             <View>
@@ -284,7 +285,7 @@ export function InboxPage() {
                     }}
                     onRead={
                       tab === "inbox" && !item.read
-                        ? () => void action(`/api/inbox/${item.id}/read`, "POST", "已标记为已读")
+                        ? () => void action(`/api/inbox/${item.id}/read`, "POST", t("Inbox.28"))
                         : undefined
                     }
                     extra={
@@ -293,47 +294,47 @@ export function InboxPage() {
                           <IconBtnSmall
                             ui={ui}
                             icon="MailOpen"
-                            label="标记未读"
+                            label={t("Inbox.29")}
                             onPress={() => {
                               manualUnread.current = true;
-                              void action(`/api/inbox/${item.id}/unread`, "POST", "已标记为未读");
+                              void action(`/api/inbox/${item.id}/unread`, "POST", t("Inbox.30"));
                             }}
                           />
                         ) : null}
                         {tab === "inbox" ? (
-                          <IconBtnSmall ui={ui} icon="AlarmClock" label="搁置通知" onPress={() => setSnoozeItem(item)} />
+                          <IconBtnSmall ui={ui} icon="AlarmClock" label={t("Inbox.31")} onPress={() => setSnoozeItem(item)} />
                         ) : null}
                         {tab === "inbox" ? (
                           <IconBtnSmall
                             ui={ui}
                             icon="Archive"
-                            label="归档通知"
-                            onPress={() => void action(`/api/inbox/${item.id}/archive`, "POST", "已归档")}
+                            label={t("Inbox.32")}
+                            onPress={() => void action(`/api/inbox/${item.id}/archive`, "POST", t("AgentDetail.28"))}
                           />
                         ) : null}
                         {tab === "snoozed" && item.snoozed_until ? (
-                          <Text style={ui.s.tiny}>至 {shortTime(item.snoozed_until)}</Text>
+                          <Text style={ui.s.tiny}>{t("Inbox.34")} {shortTime(item.snoozed_until)}</Text>
                         ) : null}
                         {tab === "archived" ? (
                           <IconBtnSmall
                             ui={ui}
                             icon="ArchiveRestore"
-                            label="取消归档"
-                            onPress={() => void action(`/api/inbox/${item.id}/unarchive`, "POST", "已取消归档")}
+                            label={t("Inbox.35")}
+                            onPress={() => void action(`/api/inbox/${item.id}/unarchive`, "POST", t("Inbox.36"))}
                           />
                         ) : null}
                         {tab === "snoozed" ? (
                           <IconBtnSmall
                             ui={ui}
                             icon="AlarmClockOff"
-                            label="取消搁置"
-                            onPress={() => void action(`/api/inbox/${item.id}/unsnooze`, "POST", "已取消搁置")}
+                            label={t("Inbox.37")}
+                            onPress={() => void action(`/api/inbox/${item.id}/unsnooze`, "POST", t("Inbox.38"))}
                           />
                         ) : null}
                         <IconBtnSmall
                           ui={ui}
                           icon="Trash2"
-                          label="删除通知"
+                          label={t("Inbox.39")}
                           color={ui.c.danger}
                           onPress={() => setConfirmDelete(item)}
                         />
@@ -371,30 +372,30 @@ export function InboxPage() {
           ]}
         >
           <Text style={ui.s.tiny}>
-            共 {itemsQuery.total} 条 · 最近一条 {relTime(filtered[0]?.created_at)}
+            {t("Inbox.40")} {itemsQuery.total} {t("Inbox.41")} {relTime(filtered[0]?.created_at)}
           </Text>
         </View>
       ) : null}
 
       <Modal
-        title="归档全部通知"
+        title={t("Inbox.42")}
         icon={<Icon name="Archive" size={16} color={ui.c.muted} />}
         open={confirmArchiveAll}
         onOpenChange={setConfirmArchiveAll}
       >
         <Modal.Content>
           <View style={{ gap: 12 }}>
-            <Text style={ui.s.body}>把当前收件箱里的通知全部归档？归档后仍可在「已归档」里查看。</Text>
+            <Text style={ui.s.body}>{t("Inbox.43")}</Text>
             <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8 }]}>
-              <Btn ui={ui} label="取消" onPress={() => setConfirmArchiveAll(false)} />
-              <Btn ui={ui} label="全部归档" icon="Archive" busy={busy} onPress={() => void archiveAll()} />
+              <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setConfirmArchiveAll(false)} />
+              <Btn ui={ui} label={t("Inbox.21")} icon="Archive" busy={busy} onPress={() => void archiveAll()} />
             </View>
           </View>
         </Modal.Content>
       </Modal>
 
       <Modal
-        title="删除通知"
+        title={t("Inbox.39")}
         icon={<Icon name="TriangleAlert" size={16} color={ui.c.danger} />}
         open={Boolean(confirmDelete)}
         onOpenChange={(next) => {
@@ -403,17 +404,17 @@ export function InboxPage() {
       >
         <Modal.Content>
           <View style={{ gap: 12 }}>
-            <Text style={ui.s.body}>确定删除「{confirmDelete?.title}」？</Text>
+            <Text style={ui.s.body}>{t("Automation.48")}{confirmDelete?.title}{t("Inbox.149")}</Text>
             <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8 }]}>
-              <Btn ui={ui} label="取消" onPress={() => setConfirmDelete(null)} />
-              <Btn ui={ui} label="删除" tone="danger" busy={busy} onPress={() => void remove()} />
+              <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setConfirmDelete(null)} />
+              <Btn ui={ui} label={t("SquadDetail.21")} tone="danger" busy={busy} onPress={() => void remove()} />
             </View>
           </View>
         </Modal.Content>
       </Modal>
 
       <Modal
-        title="搁置通知"
+        title={t("Inbox.31")}
         icon={<Icon name="AlarmClock" size={16} color={ui.c.muted} />}
         open={Boolean(snoozeItem)}
         onOpenChange={(next) => {
@@ -422,13 +423,13 @@ export function InboxPage() {
       >
         <Modal.Content>
           <View style={{ gap: 10 }}>
-            <Text style={ui.s.muted}>「{snoozeItem?.title}」将在选定时间后重新回到收件箱。</Text>
+            <Text style={ui.s.muted}>{t("Inbox.150")}{snoozeItem?.title}{t("Inbox.51")}</Text>
             <View style={{ gap: 6 }}>
               {SNOOZE_OPTIONS.map((option) => (
                 <Btn ui={ui} key={option.label} label={option.label} icon="Clock" busy={busy} onPress={() => void snooze(option.until())} />
               ))}
             </View>
-            <Btn ui={ui} label="取消" onPress={() => setSnoozeItem(null)} />
+            <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setSnoozeItem(null)} />
           </View>
         </Modal.Content>
       </Modal>

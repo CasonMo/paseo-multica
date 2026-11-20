@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { Icon } from "@getpaseo/plugin/client/ui";
 import { Text, View } from "react-native";
 import { asList, num, str, useQuery } from "./api";
@@ -36,12 +37,12 @@ function compact(value: number): string {
 }
 
 function duration(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds <= 0) return "0 秒";
-  if (seconds < 60) return `${Math.round(seconds)} 秒`;
+  if (!Number.isFinite(seconds) || seconds <= 0) return t("UsageCard.1");
+  if (seconds < 60) return t("UsageCard.2", { a: Math.round(seconds) });
   const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes} 分钟`;
+  if (minutes < 60) return t("UsageCard.3", { a: minutes });
   const hours = Math.floor(minutes / 60);
-  return `${hours} 小时 ${minutes % 60} 分`;
+  return t("UsageCard.4", { a: hours, b: minutes % 60 });
 }
 
 export function UsageCard() {
@@ -92,34 +93,34 @@ export function UsageCard() {
     <Card ui={ui} style={{ gap: 12 }}>
       <SectionHeader
         ui={ui}
-        title="用量与稳定性"
-        trailing={<Btn ui={ui} label="刷新" icon="RefreshCw" onPress={refresh} />}
+        title={t("UsageCard.5")}
+        trailing={<Btn ui={ui} label={t("Nav.14")} icon="RefreshCw" onPress={refresh} />}
       />
       {daily.error ? <ErrorNote ui={ui} message={daily.error} onRetry={daily.refresh} /> : null}
       <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
-        <Stat ui={ui} label="Tokens" value={loading ? "…" : compact(totalTokens)} icon="Cpu" hint="输入 + 输出" />
-        <Stat ui={ui} label="任务数" value={loading ? "…" : totalTasks} icon="CheckCircle2" hint="近 7 天" />
+        <Stat ui={ui} label="Tokens" value={loading ? "…" : compact(totalTokens)} icon="Cpu" hint={t("UsageCard.7")} />
+        <Stat ui={ui} label={t("RuntimeDetail.9")} value={loading ? "…" : totalTasks} icon="CheckCircle2" hint={t("UsageCard.9")} />
         <Stat
           ui={ui}
-          label="失败任务"
+          label={t("UsageCard.10")}
           value={failures.loading && !failures.data ? "…" : failureCount}
           icon="AlertTriangle"
           tone={failureCount > 0 ? ui.c.danger : undefined}
-          hint={`${failureRows.length} 种原因`}
+          hint={t("UsageCard.11", { a: failureRows.length })}
         />
         <Stat
           ui={ui}
-          label="平均耗时"
+          label={t("UsageCard.12")}
           value={runtimeTasks > 0 ? duration(runtimeSeconds / runtimeTasks) : "—"}
           icon="Timer"
-          hint={`${runtimeTasks} 个已计量任务`}
+          hint={t("UsageCard.13", { a: runtimeTasks })}
         />
       </View>
 
       {points.length > 0 ? (
         <View style={{ gap: 6 }}>
           <View style={[ui.s.row, { justifyContent: "space-between" }]}>
-            <Text style={ui.s.label}>每日 Tokens</Text>
+            <Text style={ui.s.label}>{t("UsageCard.14")}</Text>
             <Text style={ui.s.tiny}>{points.map((point) => point.label).join(" · ")}</Text>
           </View>
           <Bars ui={ui} points={points} height={56} />
@@ -130,7 +131,7 @@ export function UsageCard() {
         <>
           <Divider ui={ui} />
           <View style={{ gap: 6 }}>
-            <Text style={ui.s.label}>失败原因</Text>
+            <Text style={ui.s.label}>{t("UsageCard.15")}</Text>
             {Array.from(reasons.entries())
               .sort(([, a], [, b]) => b - a)
               .slice(0, 4)
@@ -140,7 +141,7 @@ export function UsageCard() {
                   <Text numberOfLines={1} style={[ui.s.tiny, { flex: 1, fontFamily: "Menlo" }]}>
                     {reason}
                   </Text>
-                  <Tag ui={ui} label={`${count} 次`} tone="warning" />
+                  <Tag ui={ui} label={t("UsageCard.16", { a: count })} tone="warning" />
                 </View>
               ))}
           </View>

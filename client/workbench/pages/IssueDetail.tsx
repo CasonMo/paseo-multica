@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -153,22 +154,22 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     const result = await api({ method: "POST", path: `/api/tasks/${stopTask.id}/cancel` });
     setStopBusy(false);
     if (result.ok) {
-      toast.show("已停止该运行", { variant: "success" });
+      toast.show(t("IssueDetail.1"), { variant: "success" });
       setStopTask(null);
       activeTaskQuery.refresh();
       insights.refresh();
-    } else toast.error(result.error ?? "停止失败");
+    } else toast.error(result.error ?? t("IssueDetail.2"));
   };
 
   const assignee = useMemo(() => {
     if (!issue?.assignee_id) return null;
     if (issue.assignee_type === "agent") {
       const agent = agents.find((item) => item.id === issue.assignee_id);
-      return { name: agent?.name ?? "智能体", url: agent?.avatar_url ?? null, kind: "智能体" };
+      return { name: agent?.name ?? t("AgentDetail.23"), url: agent?.avatar_url ?? null, kind: t("AgentDetail.23") };
     }
-    if (issue.assignee_type === "squad") return { name: "小队", url: null, kind: "小队" };
+    if (issue.assignee_type === "squad") return { name: t("Nav.36"), url: null, kind: t("Nav.36") };
     const member = members.find((item) => item.id === issue.assignee_id);
-    return { name: member?.name || "成员", url: member?.avatar_url ?? null, kind: "成员" };
+    return { name: member?.name || t("Execution.11"), url: member?.avatar_url ?? null, kind: t("Execution.11") };
   }, [issue, agents, members]);
 
   const commentCount = insights.comments.length;
@@ -217,7 +218,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
       toast.show(success, { variant: "success" });
       issueQuery.refresh();
       invalidate();
-    } else toast.error(result.error ?? "更新失败");
+    } else toast.error(result.error ?? t("AgentDetail.42"));
   };
 
   const openEdit = () => {
@@ -229,11 +230,11 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
 
   const saveEdit = async () => {
     if (!editTitle.trim()) {
-      toast.error("标题不能为空");
+      toast.error(t("IssueDetail.10"));
       return;
     }
     setEditOpen(false);
-    await updateIssue({ title: editTitle.trim(), description: editDescription }, "任务已更新");
+    await updateIssue({ title: editTitle.trim(), description: editDescription }, t("IssueDetail.11"));
   };
 
   const closeComposer = () => {
@@ -259,8 +260,8 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
       setMentions((prev) => ({ ...prev, [key]: [] }));
       closeComposer();
       insights.refresh();
-      toast.show(parentId ? "回复已发送" : "评论已发送", { variant: "success" });
-    } else toast.error(result.error ?? "发送失败");
+      toast.show(parentId ? t("IssueDetail.12") : t("IssueDetail.13"), { variant: "success" });
+    } else toast.error(result.error ?? t("Chat.2"));
   };
 
   const insertMention = (agent: Agent) => {
@@ -281,8 +282,8 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     setThreadBusy(null);
     if (result.ok) {
       insights.refresh();
-      toast.show(resolved ? "已取消解决" : "已标记解决", { variant: "success" });
-    } else toast.error(result.error ?? "操作失败");
+      toast.show(resolved ? t("IssueDetail.15") : t("IssueDetail.16"), { variant: "success" });
+    } else toast.error(result.error ?? t("Automation.13"));
   };
 
   const addChild = async () => {
@@ -297,8 +298,8 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
       setChildOpen(false);
       childrenQuery.refresh();
       invalidate();
-      toast.show("子任务已创建", { variant: "success" });
-    } else toast.error(result.error ?? "创建子任务失败");
+      toast.show(t("IssueDetail.18"), { variant: "success" });
+    } else toast.error(result.error ?? t("IssueDetail.19"));
   };
 
   const attachLabel = async (label: Label) => {
@@ -307,21 +308,21 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     const result = await api({ method: "POST", path: `/api/issues/${issue.id}/labels`, body: { label_id: label.id } });
     setBusy(false);
     if (result.ok) {
-      toast.show(`已添加标签 ${label.name}`, { variant: "success" });
+      toast.show(t("IssueDetail.20", { a: label.name }), { variant: "success" });
       setLabelsOpen(false);
       issueLabelsQuery.refresh();
       invalidate();
-    } else toast.error(result.error ?? "添加标签失败");
+    } else toast.error(result.error ?? t("IssueDetail.21"));
   };
 
   const detachLabel = async (label: Label) => {
     if (!issue) return;
     const result = await api({ method: "DELETE", path: `/api/issues/${issue.id}/labels/${label.id}` });
     if (result.ok) {
-      toast.show(`已移除标签 ${label.name}`, { variant: "success" });
+      toast.show(t("IssueDetail.22", { a: label.name }), { variant: "success" });
       issueLabelsQuery.refresh();
       invalidate();
-    } else toast.error(result.error ?? "移除标签失败");
+    } else toast.error(result.error ?? t("IssueDetail.23"));
   };
 
   const rerun = async () => {
@@ -329,8 +330,8 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     setBusy(true);
     const result = await api({ method: "POST", path: `/api/issues/${issue.id}/rerun` });
     setBusy(false);
-    if (result.ok) toast.show("已触发重跑", { variant: "success" });
-    else toast.error(result.error ?? "重跑失败");
+    if (result.ok) toast.show(t("IssueDetail.24"), { variant: "success" });
+    else toast.error(result.error ?? t("IssueDetail.25"));
   };
 
   const quick = async (action: "read", message: string) => {
@@ -339,7 +340,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     if (result.ok) {
       toast.show(message, { variant: "success" });
       refreshInboxBadge();
-    } else toast.error(result.error ?? "操作失败");
+    } else toast.error(result.error ?? t("Automation.13"));
   };
 
   const removeIssue = async () => {
@@ -349,23 +350,23 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     setBusy(false);
     setConfirmDelete(false);
     if (result.ok) {
-      toast.show("任务已删除", { variant: "success" });
+      toast.show(t("IssueDetail.27"), { variant: "success" });
       invalidate();
       navigate("issues");
-    } else toast.error(result.error ?? "删除失败");
+    } else toast.error(result.error ?? t("Automation.15"));
   };
 
   if (!issueId) {
-    return <Empty ui={ui} icon="AlertCircle" title="缺少任务 ID" action={<Btn ui={ui} label="返回列表" onPress={() => navigate("issues")} />} />;
+    return <Empty ui={ui} icon="AlertCircle" title={t("IssueDetail.29")} action={<Btn ui={ui} label={t("IssueDetail.30")} onPress={() => navigate("issues")} />} />;
   }
 
-  if (issueQuery.loading && !issue) return <LoadingRow ui={ui} label="读取任务…" />;
+  if (issueQuery.loading && !issue) return <LoadingRow ui={ui} label={t("IssueDetail.31")} />;
   if (issueQuery.error && !issue) {
     return (
       <View style={{ padding: 16 }}>
         <ErrorNote ui={ui} message={issueQuery.error} onRetry={issueQuery.refresh} />
         <View style={{ marginTop: 10 }}>
-          <Btn ui={ui} label="返回任务列表" icon="ArrowLeft" onPress={() => navigate("issues")} />
+          <Btn ui={ui} label={t("IssueDetail.32")} icon="ArrowLeft" onPress={() => navigate("issues")} />
         </View>
       </View>
     );
@@ -399,11 +400,11 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     if (!id) return null;
     if (type === "agent") {
       const agent = agents.find((item) => item.id === id);
-      return { name: agent?.name ?? "智能体", url: agent?.avatar_url ?? null };
+      return { name: agent?.name ?? t("AgentDetail.23"), url: agent?.avatar_url ?? null };
     }
-    if (type === "squad") return { name: "小队", url: null };
+    if (type === "squad") return { name: t("Nav.36"), url: null };
     const member = members.find((item) => item.id === id);
-    return { name: member?.name || "成员", url: member?.avatar_url ?? null };
+    return { name: member?.name || t("Execution.11"), url: member?.avatar_url ?? null };
   };
   const openReply = (rootId: string, item: Comment) => {
     setReplyTo(item);
@@ -425,12 +426,12 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     >
       <Icon name="CornerDownRight" size={12} color={ui.c.brand} />
       <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, color: ui.c.fg }}>
-        回复 {commentAuthor(item, agents, members).name}：
+        {t("Execution.58")} {commentAuthor(item, agents, members).name}{t("IssueDetail.151")}
         {item.content.replace(/\[@([^\]]+)\]\(mention:\/\/[^)]+\)/g, "@$1").replace(/\s+/g, " ").slice(0, 40)}
       </Text>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="取消回复"
+        accessibilityLabel={t("IssueDetail.37")}
         onPress={closeComposer}
         style={({ pressed }) => [pressed && ui.s.pressed]}
       >
@@ -445,7 +446,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const jumpButton = scrollState.canScroll ? (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={scrollState.atBottom ? "回到顶部" : hasNew ? `到底部，有 ${newCount} 条新评论` : "到底部"}
+      accessibilityLabel={scrollState.atBottom ? t("IssueDetail.38") : hasNew ? t("IssueDetail.39", { a: newCount }) : t("IssueDetail.40")}
       onPress={jump}
       style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
         ui.s.row,
@@ -469,7 +470,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     >
       <Icon name={scrollState.atBottom ? "ArrowUp" : "ArrowDown"} size={14} color={hasNew ? ui.c.brand : ui.c.muted} />
       <Text style={{ fontSize: 12, fontWeight: "500", color: hasNew ? ui.c.brand : ui.c.fg }}>
-        {scrollState.atBottom ? "回顶部" : hasNew ? `${newCount} 条新评论` : "到底部"}
+        {scrollState.atBottom ? t("IssueDetail.41") : hasNew ? t("IssueDetail.42", { a: newCount }) : t("IssueDetail.40")}
       </Text>
     </Pressable>
   ) : null;
@@ -481,11 +482,11 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
           {issue.title}
         </Text>
         <View style={[ui.s.row, { gap: 10, flexWrap: "wrap" }]}>
-          <Text style={ui.s.tiny}>更新于 {relTime(issue.updated_at)}</Text>
+          <Text style={ui.s.tiny}>{t("AgentDetail.32")} {relTime(issue.updated_at)}</Text>
           {issue.due_date ? (
             <View style={[ui.s.row, { gap: 4 }]}>
               <Icon name="CalendarClock" size={12} color={ui.c.warning} />
-              <Text style={ui.s.tiny}>截止 {issue.due_date}</Text>
+              <Text style={ui.s.tiny}>{t("IssueDetail.45")} {issue.due_date}</Text>
             </View>
           ) : null}
         </View>
@@ -494,22 +495,22 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
       {issue.description ? (
         <Markdown>{issue.description}</Markdown>
       ) : (
-        <Text style={[ui.s.muted, { fontStyle: "italic" }]}>暂无描述</Text>
+        <Text style={[ui.s.muted, { fontStyle: "italic" }]}>{t("IssueDetail.46")}</Text>
       )}
 
       <View style={{ gap: 8 }}>
         <View style={[ui.s.row, { gap: 8 }]}>
           <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: ui.c.fg }}>
-            子任务{children.length > 0 ? ` · ${children.length}` : ""}
+            {t("IssueDetail.47")}{children.length > 0 ? ` · ${children.length}` : ""}
           </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="添加子任务"
+            accessibilityLabel={t("IssueDetail.48")}
             onPress={() => setChildOpen((value) => !value)}
             style={({ pressed }) => [ui.s.row, { gap: 4 }, pressed && ui.s.pressed]}
           >
             <Icon name="Plus" size={13} color={ui.c.muted} />
-            <Text style={ui.s.tiny}>添加子任务</Text>
+            <Text style={ui.s.tiny}>{t("IssueDetail.48")}</Text>
           </Pressable>
         </View>
 
@@ -534,7 +535,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
               <TextInput
                 value={childTitle}
                 onChangeText={setChildTitle}
-                placeholder="子任务标题，回车创建"
+                placeholder={t("IssueDetail.50")}
                 placeholderTextColor={ui.c.faint}
                 onSubmitEditing={() => void addChild()}
                 autoFocus
@@ -543,7 +544,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
             </View>
             <Btn
               ui={ui}
-              label="添加"
+              label={t("IssueDetail.51")}
               icon="Plus"
               tone="primary"
               busy={busy}
@@ -558,7 +559,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
             {parent ? (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`父任务 ${parent.identifier}`}
+                accessibilityLabel={t("IssueDetail.52", { a: parent.identifier })}
                 onPress={() => navigate("issue", { id: parent.id })}
                 style={({ pressed }) => [
                   ui.s.row,
@@ -566,7 +567,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                   pressed && ui.s.pressed,
                 ]}
               >
-                <Text style={{ fontSize: 12, color: ui.c.muted, fontWeight: "500" }}>父任务</Text>
+                <Text style={{ fontSize: 12, color: ui.c.muted, fontWeight: "500" }}>{t("IssueDetail.53")}</Text>
                 <Text style={ui.s.idText}>{parent.identifier}</Text>
                 <Text numberOfLines={1} style={{ flex: 1, fontSize: 14, color: ui.c.fg }}>
                   {parent.title}
@@ -604,13 +605,13 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
             })}
           </View>
         ) : !childOpen ? (
-          <Text style={ui.s.tiny}>暂无子任务</Text>
+          <Text style={ui.s.tiny}>{t("IssueDetail.54")}</Text>
         ) : null}
       </View>
 
       <View style={{ gap: 10 }}>
         <Text style={{ fontSize: 14, fontWeight: "500", color: ui.c.fg }}>
-          评论{comments.length > 0 ? ` · ${comments.length}` : ""}
+          {t("IssueDetail.55")}{comments.length > 0 ? ` · ${comments.length}` : ""}
         </Text>
         {insights.loading && comments.length === 0 ? (
           <View style={ui.s.panel}>
@@ -618,7 +619,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
           </View>
         ) : comments.length === 0 ? (
           <View style={ui.s.panel}>
-            <Text style={[ui.s.tiny, { padding: 16 }]}>还没有评论，@ 智能体即可触发协作。</Text>
+            <Text style={[ui.s.tiny, { padding: 16 }]}>{t("IssueDetail.56")}</Text>
             {activeTask ? (
               <RunningResponseRow ui={ui} task={activeTask} agent={activeAgent} onOpenLog={setRunLogId} onStop={setStopTask} />
             ) : null}
@@ -690,7 +691,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                         <Divider ui={ui} color={half} />
                         <Pressable
                           accessibilityRole="button"
-                          accessibilityLabel={actOpen ? `收起 ${activities.length} 条动态` : `展开 ${activities.length} 条动态`}
+                          accessibilityLabel={actOpen ? t("IssueDetail.57", { a: activities.length }) : t("IssueDetail.58", { a: activities.length })}
                           accessibilityState={{ expanded: actOpen }}
                           onPress={() => setOpenActivity((prev) => ({ ...prev, [root.id]: !actOpen }))}
                           style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
@@ -701,7 +702,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                           ]}
                         >
                           <Icon name={actOpen ? "ChevronDown" : "ChevronRight"} size={13} color={ui.c.muted} />
-                          <Text style={{ fontSize: 12, color: ui.c.muted }}>{activities.length} 条动态</Text>
+                          <Text style={{ fontSize: 12, color: ui.c.muted }}>{activities.length} {t("IssueDetail.59")}</Text>
                         </Pressable>
                         {actOpen ? (
                           <View style={{ paddingBottom: 8 }}>
@@ -714,7 +715,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                   {replies.length > 0 ? (
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={folded ? `展开 ${replies.length} 条回复` : `收起 ${replies.length} 条回复`}
+                      accessibilityLabel={folded ? t("IssueDetail.60", { a: replies.length }) : t("IssueDetail.61", { a: replies.length })}
                       accessibilityState={{ expanded: !folded }}
                       onPress={() => setCollapsed((prev) => ({ ...prev, [root.id]: !folded }))}
                       style={({ pressed }) => [
@@ -724,7 +725,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                       ]}
                     >
                       <Icon name={folded ? "ChevronRight" : "ChevronDown"} size={13} color={ui.c.muted} />
-                      <Text style={{ fontSize: 12, color: ui.c.muted }}>{replies.length} 条回复</Text>
+                      <Text style={{ fontSize: 12, color: ui.c.muted }}>{replies.length} {t("IssueDetail.62")}</Text>
                     </Pressable>
                   ) : null}
                 </View>
@@ -746,7 +747,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
       ui={ui}
       value={drafts.root ?? ""}
       onChangeText={(text) => setDrafts((prev) => ({ ...prev, root: text }))}
-      placeholder="留下评论，@ 智能体可触发协作…"
+      placeholder={t("IssueDetail.63")}
       busy={sendingKey === "root"}
       agents={agents}
       mentionOpen={mentionFor === "root"}
@@ -759,53 +760,53 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
 
   const panel = (
     <>
-      <PanelSection ui={ui} title="属性">
-        <PropRow ui={ui} label="状态" onPress={() => setPick("status")}>
+      <PanelSection ui={ui} title={t("IssueDetail.64")}>
+        <PropRow ui={ui} label={t("IssueDetail.65")} onPress={() => setPick("status")}>
           <StatusMark ui={ui} issue={issue} statuses={statuses} />
           <View style={ui.s.grow} />
           <Icon name="ChevronDown" size={13} color={ui.c.muted} />
         </PropRow>
-        <PropRow ui={ui} label="优先级" onPress={() => setPick("priority")}>
+        <PropRow ui={ui} label={t("IssueDetail.66")} onPress={() => setPick("priority")}>
           {issue.priority && issue.priority !== "none" ? (
             <PriorityMark ui={ui} priority={issue.priority} />
           ) : (
-            <Text style={{ fontSize: 13, color: ui.c.muted }}>无</Text>
+            <Text style={{ fontSize: 13, color: ui.c.muted }}>{t("model.20")}</Text>
           )}
           <View style={ui.s.grow} />
           <Icon name="ChevronDown" size={13} color={ui.c.muted} />
         </PropRow>
-        <PropRow ui={ui} label="负责人" onPress={() => setAssignOpen(true)}>
+        <PropRow ui={ui} label={t("IssueDetail.68")} onPress={() => setAssignOpen(true)}>
           {assignee ? <Avatar ui={ui} name={assignee.name} url={assignee.url} size={20} /> : null}
           <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, color: ui.c.fg }}>
-            {assignee?.name ?? "未指派"}
+            {assignee?.name ?? t("IssueDetail.69")}
           </Text>
           <Icon name="ChevronDown" size={13} color={ui.c.muted} />
         </PropRow>
         <PropRow
           ui={ui}
-          label="项目"
+          label={t("Nav.3")}
           onPress={project ? () => navigate("issues", { project: project.id }) : undefined}
         >
           <Icon name="FolderKanban" size={13} color={ui.c.muted} />
           <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, color: ui.c.fg }}>
-            {project?.title ?? "未关联"}
+            {project?.title ?? t("IssueDetail.71")}
           </Text>
         </PropRow>
-        <PropRow ui={ui} label="工作流" onPress={() => navigate("workflows")}>
+        <PropRow ui={ui} label={t("Nav.7")} onPress={() => navigate("workflows")}>
           <Icon name="Workflow" size={13} color={ui.c.muted} />
           <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, color: ui.c.fg }}>
-            {issue.stage || "默认流程"}
+            {issue.stage || t("IssueDetail.73")}
           </Text>
         </PropRow>
-        <PropRow ui={ui} label="标签">
+        <PropRow ui={ui} label={t("AgentDetail.5")}>
           <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
-            {issueLabels.length === 0 ? <Text style={{ fontSize: 13, color: ui.c.muted }}>未添加</Text> : null}
+            {issueLabels.length === 0 ? <Text style={{ fontSize: 13, color: ui.c.muted }}>{t("IssueDetail.75")}</Text> : null}
             {issueLabels.map((label) => {
               const ink = pickTextColor(label.color);
               return (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={`移除标签 ${label.name}`}
+                  accessibilityLabel={t("AgentDetail.88", { a: label.name })}
                   key={label.id}
                   onPress={() => void detachLabel(label)}
                   style={({ pressed }) => [
@@ -827,7 +828,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
             })}
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="添加标签"
+              accessibilityLabel={t("IssueDetail.77")}
               onPress={() => setLabelsOpen(true)}
               style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
             >
@@ -837,16 +838,16 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
         </PropRow>
       </PanelSection>
 
-      <PanelSection ui={ui} title="详情">
+      <PanelSection ui={ui} title={t("IssueDetail.78")}>
         <View style={{ paddingHorizontal: 7, gap: 6 }}>
-          <DetailLine ui={ui} label="编号" value={issue.identifier} />
-          <DetailLine ui={ui} label="创建于" value={fmtDateTime(issue.created_at)} />
-          <DetailLine ui={ui} label="更新于" value={fmtDateTime(issue.updated_at)} />
-          {assignee ? <DetailLine ui={ui} label="类型" value={assignee.kind} /> : null}
+          <DetailLine ui={ui} label={t("IssueDetail.79")} value={issue.identifier} />
+          <DetailLine ui={ui} label={t("IssueDetail.80")} value={fmtDateTime(issue.created_at)} />
+          <DetailLine ui={ui} label={t("AgentDetail.32")} value={fmtDateTime(issue.updated_at)} />
+          {assignee ? <DetailLine ui={ui} label={t("IssueDetail.82")} value={assignee.kind} /> : null}
         </View>
       </PanelSection>
 
-      <PanelSection ui={ui} title={`执行日志 · ${runs.length}`}>
+      <PanelSection ui={ui} title={t("IssueDetail.83", { a: runs.length })}>
         <ExecutionLogSection
           ui={ui}
           runs={runs}
@@ -857,11 +858,11 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
         />
       </PanelSection>
 
-      <PanelSection ui={ui} title="操作">
+      <PanelSection ui={ui} title={t("IssueDetail.84")}>
         <View style={{ gap: 6, paddingHorizontal: 7 }}>
-          <Btn ui={ui} label="标记已读" icon="CheckCheck" onPress={() => void quick("read", "已标记为已读")} />
-          <Btn ui={ui} label="强制重跑" icon="RotateCw" busy={busy} onPress={() => void rerun()} />
-          <Btn ui={ui} label="打开接口视图" icon="Plug" onPress={() => navigate("settings", { tab: "api" })} />
+          <Btn ui={ui} label={t("IssueDetail.85")} icon="CheckCheck" onPress={() => void quick("read", t("Inbox.28"))} />
+          <Btn ui={ui} label={t("IssueDetail.87")} icon="RotateCw" busy={busy} onPress={() => void rerun()} />
+          <Btn ui={ui} label={t("IssueDetail.88")} icon="Plug" onPress={() => navigate("settings", { tab: "api" })} />
         </View>
       </PanelSection>
     </>
@@ -882,17 +883,17 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
           },
         ]}
       >
-        <IconBtn ui={ui} icon="ArrowLeft" label="返回" onPress={() => navigate("issues")} />
+        <IconBtn ui={ui} icon="ArrowLeft" label={t("IssueDetail.89")} onPress={() => navigate("issues")} />
         <Text numberOfLines={1} style={{ fontSize: 14, color: ui.c.muted, flexShrink: 1 }}>
-          {project?.title ?? "任务"}
+          {project?.title ?? t("AgentDetail.3")}
         </Text>
         <Icon name="ChevronRight" size={12} color={ui.c.faint} />
         <Text style={{ fontSize: 12, color: ui.c.fg }}>{issue.identifier}</Text>
         {activeAgent ? <RunningChip ui={ui} agent={activeAgent} compact={compact || narrow} /> : null}
         <View style={ui.s.grow} />
-        <IconBtn ui={ui} icon="Pencil" label="编辑任务" onPress={openEdit} />
-        <IconBtn ui={ui} icon="RotateCw" label="重跑任务" onPress={() => void rerun()} />
-        <IconBtn ui={ui} icon="Trash2" label="删除任务" color={ui.c.danger} onPress={() => setConfirmDelete(true)} />
+        <IconBtn ui={ui} icon="Pencil" label={t("IssueDetail.91")} onPress={openEdit} />
+        <IconBtn ui={ui} icon="RotateCw" label={t("IssueDetail.92")} onPress={() => void rerun()} />
+        <IconBtn ui={ui} icon="Trash2" label={t("IssueDetail.93")} color={ui.c.danger} onPress={() => setConfirmDelete(true)} />
       </View>
 
       {compact || stacked ? (
@@ -943,7 +944,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
       )}
 
       <Modal
-        title={pick === "status" ? "选择状态" : "选择优先级"}
+        title={pick === "status" ? t("IssueDetail.94") : t("IssueDetail.95")}
         icon={<Icon name={pick === "status" ? "CircleDot" : "Flag"} size={16} color={ui.c.muted} />}
         open={pick !== null}
         onOpenChange={(next) => {
@@ -962,7 +963,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                       disabled={busy}
                       onPress={() => {
                         setPick(null);
-                        void updateIssue({ status: entry.key }, "状态已更新");
+                        void updateIssue({ status: entry.key }, t("IssueDetail.96"));
                       }}
                       style={({ pressed }) => [ui.s.menuItem, active && ui.s.hoverSurface, pressed && ui.s.pressed]}
                     >
@@ -984,7 +985,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                       disabled={busy}
                       onPress={() => {
                         setPick(null);
-                        void updateIssue({ priority: value }, "优先级已更新");
+                        void updateIssue({ priority: value }, t("IssueDetail.97"));
                       }}
                       style={({ pressed }) => [ui.s.menuItem, active && ui.s.hoverSurface, pressed && ui.s.pressed]}
                     >
@@ -1001,7 +1002,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
       </Modal>
 
       <Modal
-        title="指派负责人"
+        title={t("IssueDetail.98")}
         icon={<Icon name="UserPlus" size={16} color={ui.c.muted} />}
         open={assignOpen}
         onOpenChange={setAssignOpen}
@@ -1012,21 +1013,21 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
               accessibilityRole="button"
               onPress={() => {
                 setAssignOpen(false);
-                void updateIssue({ assignee_type: null, assignee_id: null }, "已取消指派");
+                void updateIssue({ assignee_type: null, assignee_id: null }, t("IssueDetail.99"));
               }}
               style={({ pressed }) => [ui.s.menuItem, pressed && ui.s.pressed]}
             >
               <Icon name="UserMinus" size={16} color={ui.c.muted} />
-              <Text style={{ flex: 1, fontSize: 14, color: ui.c.fg }}>取消指派</Text>
+              <Text style={{ flex: 1, fontSize: 14, color: ui.c.fg }}>{t("IssueDetail.100")}</Text>
             </Pressable>
-            <Text style={[ui.s.label, { paddingHorizontal: 8, paddingTop: 8 }]}>智能体</Text>
+            <Text style={[ui.s.label, { paddingHorizontal: 8, paddingTop: 8 }]}>{t("AgentDetail.23")}</Text>
             {agents.map((agent) => (
               <Pressable
                 accessibilityRole="button"
                 key={`agent-${agent.id}`}
                 onPress={() => {
                   setAssignOpen(false);
-                  void updateIssue({ assignee_type: "agent", assignee_id: agent.id }, `已指派给 ${agent.name}`);
+                  void updateIssue({ assignee_type: "agent", assignee_id: agent.id }, t("IssueDetail.102", { a: agent.name }));
                 }}
                 style={({ pressed }) => [ui.s.menuItem, pressed && ui.s.pressed]}
               >
@@ -1035,14 +1036,14 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                 {issue.assignee_id === agent.id ? <Icon name="Check" size={14} color={ui.c.brand} /> : null}
               </Pressable>
             ))}
-            <Text style={[ui.s.label, { paddingHorizontal: 8, paddingTop: 8 }]}>成员</Text>
+            <Text style={[ui.s.label, { paddingHorizontal: 8, paddingTop: 8 }]}>{t("Execution.11")}</Text>
             {members.map((member) => (
               <Pressable
                 accessibilityRole="button"
                 key={`member-${member.id}`}
                 onPress={() => {
                   setAssignOpen(false);
-                  void updateIssue({ assignee_type: "member", assignee_id: member.id }, `已指派给 ${member.name}`);
+                  void updateIssue({ assignee_type: "member", assignee_id: member.id }, t("IssueDetail.102", { a: member.name }));
                 }}
                 style={({ pressed }) => [ui.s.menuItem, pressed && ui.s.pressed]}
               >
@@ -1059,7 +1060,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
       </Modal>
 
       <Modal
-        title="添加标签"
+        title={t("IssueDetail.77")}
         icon={<Icon name="Tags" size={16} color={ui.c.muted} />}
         open={labelsOpen}
         onOpenChange={setLabelsOpen}
@@ -1068,12 +1069,12 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
           <ScrollView style={{ maxHeight: 380 }} contentContainerStyle={{ gap: 2 }}>
             {allLabelsQuery.loading && availableLabels.length === 0 ? <LoadingRow ui={ui} /> : null}
             {!allLabelsQuery.loading && availableLabels.length === 0 ? (
-              <Empty ui={ui} icon="Tags" title="没有可添加的标签" description="在标签页新建标签后即可绑定到任务。" />
+              <Empty ui={ui} icon="Tags" title={t("IssueDetail.106")} description={t("IssueDetail.107")} />
             ) : null}
             {availableLabels.map((label) => (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`添加标签 ${label.name}`}
+                accessibilityLabel={t("AgentDetail.91", { a: label.name })}
                 key={label.id}
                 disabled={busy}
                 onPress={() => void attachLabel(label)}
@@ -1092,42 +1093,42 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
       </Modal>
 
       <Modal
-        title="编辑任务"
+        title={t("IssueDetail.91")}
         icon={<Icon name="Pencil" size={16} color={ui.c.muted} />}
         open={editOpen}
         onOpenChange={setEditOpen}
       >
         <Modal.Content>
           <ScrollView style={{ maxHeight: 460 }} contentContainerStyle={{ gap: 12 }}>
-            <Field ui={ui} label="标题" value={editTitle} onChangeText={setEditTitle} placeholder="用一句话描述要做的事" />
+            <Field ui={ui} label={t("IssueDetail.110")} value={editTitle} onChangeText={setEditTitle} placeholder={t("IssueDetail.111")} />
             <Field
               ui={ui}
-              label="描述"
+              label={t("AgentDetail.97")}
               value={editDescription}
               onChangeText={setEditDescription}
               multiline
-              placeholder="补充背景、验收标准…（支持 Markdown）"
+              placeholder={t("IssueDetail.113")}
             />
           </ScrollView>
           <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8, marginTop: 12 }]}>
-            <Btn ui={ui} label="取消" onPress={() => setEditOpen(false)} />
-            <Btn ui={ui} label="保存" tone="primary" onPress={() => void saveEdit()} />
+            <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setEditOpen(false)} />
+            <Btn ui={ui} label={t("AgentDetail.72")} tone="primary" onPress={() => void saveEdit()} />
           </View>
         </Modal.Content>
       </Modal>
 
       <Modal
-        title="删除任务"
+        title={t("IssueDetail.93")}
         icon={<Icon name="TriangleAlert" size={16} color={ui.c.danger} />}
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
       >
         <Modal.Content>
           <View style={{ gap: 12 }}>
-            <Text style={ui.s.body}>确定删除 {issue.identifier}？此操作不可撤销。</Text>
+            <Text style={ui.s.body}>{t("IssueDetail.117")} {issue.identifier}{t("IssueDetail.118")}</Text>
             <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8 }]}>
-              <Btn ui={ui} label="取消" onPress={() => setConfirmDelete(false)} />
-              <Btn ui={ui} label="删除" tone="danger" busy={busy} onPress={() => void removeIssue()} />
+              <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setConfirmDelete(false)} />
+              <Btn ui={ui} label={t("SquadDetail.21")} tone="danger" busy={busy} onPress={() => void removeIssue()} />
             </View>
           </View>
         </Modal.Content>
@@ -1152,7 +1153,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
         onClose={() => setRunLogId(null)}
       />
       <Modal
-        title="停止运行"
+        title={t("Execution.6")}
         icon={<Icon name="Square" size={16} color={ui.c.danger} />}
         open={Boolean(stopTask)}
         onOpenChange={(next) => {
@@ -1162,11 +1163,11 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
         <Modal.Content>
           <View style={{ gap: 12 }}>
             <Text style={ui.s.body}>
-              停止 {stopTask ? (agents.find((agent) => agent.id === stopTask.agent_id)?.name ?? "智能体") : ""} 的这次运行？已产生的步骤与输出会保留，任务标记为已取消。
+              {t("IssueDetail.122")} {stopTask ? (agents.find((agent) => agent.id === stopTask.agent_id)?.name ?? t("AgentDetail.23")) : ""} {t("IssueDetail.124")}
             </Text>
             <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8 }]}>
-              <Btn ui={ui} label="取消" onPress={() => setStopTask(null)} />
-              <Btn ui={ui} label="停止运行" tone="danger" busy={stopBusy} onPress={() => void confirmStop()} />
+              <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setStopTask(null)} />
+              <Btn ui={ui} label={t("Execution.6")} tone="danger" busy={stopBusy} onPress={() => void confirmStop()} />
             </View>
           </View>
         </Modal.Content>
@@ -1243,11 +1244,11 @@ function commentAuthor(
   agents: Agent[],
   members: { id: string; name: string; avatar_url?: string | null }[],
 ) {
-  if (!item) return { name: "成员", url: null as string | null };
+  if (!item) return { name: t("Execution.11"), url: null as string | null };
   const agent = item.author_type === "agent" ? agents.find((entry) => entry.id === item.author_id) : undefined;
   const member = members.find((entry) => entry.id === item.author_id);
   return {
-    name: item.author_name || agent?.name || member?.name || (item.author_type === "agent" ? "智能体" : "成员"),
+    name: item.author_name || agent?.name || member?.name || (item.author_type === "agent" ? t("AgentDetail.23") : t("Execution.11")),
     url: agent?.avatar_url ?? member?.avatar_url ?? null,
   };
 }
@@ -1283,10 +1284,10 @@ function MentionPopover({
       }}
     >
       <View style={[ui.s.row, { paddingHorizontal: 12, paddingVertical: 5 }]}>
-        <Text style={{ flex: 1, fontSize: 11, fontWeight: "500", color: ui.c.muted }}>智能体</Text>
+        <Text style={{ flex: 1, fontSize: 11, fontWeight: "500", color: ui.c.muted }}>{t("AgentDetail.23")}</Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="关闭提及选择"
+          accessibilityLabel={t("IssueDetail.131")}
           onPress={onClose}
           style={({ pressed }) => [pressed && ui.s.pressed]}
         >
@@ -1295,12 +1296,12 @@ function MentionPopover({
       </View>
       <ScrollView style={{ maxHeight: 252 }} keyboardShouldPersistTaps="handled">
         {agents.length === 0 ? (
-          <Text style={[ui.s.tiny, { paddingHorizontal: 12, paddingVertical: 8 }]}>暂无智能体</Text>
+          <Text style={[ui.s.tiny, { paddingHorizontal: 12, paddingVertical: 8 }]}>{t("IssueDetail.132")}</Text>
         ) : (
           agents.map((agent) => (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`提及 ${agent.name}`}
+              accessibilityLabel={t("IssueDetail.133", { a: agent.name })}
               key={`mention-${agent.id}`}
               onPress={() => onPickAgent(agent)}
               style={({ pressed }) => [
@@ -1361,7 +1362,7 @@ function ReplyBand({
         <TextInput
           value={value}
           onChangeText={onChangeText}
-          placeholder="回复..."
+          placeholder={t("IssueDetail.134")}
           placeholderTextColor={ui.c.faint}
           multiline
           onSubmitEditing={onSend}
@@ -1378,7 +1379,7 @@ function ReplyBand({
         <IconBtn
           ui={ui}
           icon="AtSign"
-          label="提及智能体"
+          label={t("IssueDetail.135")}
           size={15}
           color={mentionOpen ? ui.c.brand : ui.c.muted}
           onPress={onMention}
@@ -1386,7 +1387,7 @@ function ReplyBand({
         <IconBtn
           ui={ui}
           icon="Send"
-          label="发送回复"
+          label={t("IssueDetail.136")}
           size={15}
           color={value.trim() ? ui.c.primary : ui.c.faint}
           busy={busy}
@@ -1455,12 +1456,12 @@ function CommentComposer({
         }}
       />
       <View style={[ui.s.row, { gap: 2 }]}>
-        <IconBtn ui={ui} icon="AtSign" label="提及智能体" onPress={onMention} color={mentionOpen ? ui.c.brand : ui.c.muted} />
+        <IconBtn ui={ui} icon="AtSign" label={t("IssueDetail.135")} onPress={onMention} color={mentionOpen ? ui.c.brand : ui.c.muted} />
         <View style={ui.s.grow} />
         <IconBtn
           ui={ui}
           icon="Send"
-          label="发送"
+          label={t("IssueDetail.138")}
           color={value.trim() ? ui.c.primary : ui.c.faint}
           busy={busy}
           onPress={onSend}
@@ -1512,20 +1513,20 @@ function CommentCard({
         <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "500", color: ui.c.fg, flexShrink: 1 }}>
           {author.name}
         </Text>
-        {item.author_type === "agent" ? <Tag ui={ui} label="智能体" tone="accent" /> : null}
+        {item.author_type === "agent" ? <Tag ui={ui} label={t("AgentDetail.23")} tone="accent" /> : null}
         {replyToName ? (
           <Text numberOfLines={1} style={[ui.s.tiny, { flexShrink: 1 }]}>
-            回复 {replyToName}
+            {t("Execution.58")} {replyToName}
           </Text>
         ) : null}
         <Text style={{ fontSize: 13, color: ui.c.muted }}>{relTime(item.created_at)}</Text>
         <View style={ui.s.grow} />
-        {resolved ? <Tag ui={ui} label="已解决" tone="success" icon="Check" /> : null}
-        <IconBtn ui={ui} icon="CornerDownRight" label="回复" onPress={onReply} />
+        {resolved ? <Tag ui={ui} label={t("IssueDetail.141")} tone="success" icon="Check" /> : null}
+        <IconBtn ui={ui} icon="CornerDownRight" label={t("Execution.58")} onPress={onReply} />
         <IconBtn
           ui={ui}
           icon={resolved ? "CircleX" : "Check"}
-          label={resolved ? "取消解决" : "解决"}
+          label={resolved ? t("IssueDetail.143") : t("IssueDetail.144")}
           color={resolved ? ui.c.success : ui.c.muted}
           busy={busy}
           onPress={onResolve}
@@ -1536,7 +1537,7 @@ function CommentCard({
           <Markdown>{item.content}</Markdown>
         </View>
       ) : liveTask ? null : (
-        <Text style={[ui.s.tiny, { paddingLeft: 32, fontStyle: "italic" }]}>（空评论）</Text>
+        <Text style={[ui.s.tiny, { paddingLeft: 32, fontStyle: "italic" }]}>{t("IssueDetail.145")}</Text>
       )}
       {liveTask ? (
         <RunningResponseRow
@@ -1550,7 +1551,7 @@ function CommentCard({
       {sourceTask && !running ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="查看该评论触发的运行日志"
+          accessibilityLabel={t("IssueDetail.146")}
           onPress={() => onOpenRun(sourceTask.id)}
           style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
             ui.s.row,
@@ -1560,12 +1561,12 @@ function CommentCard({
           ]}
         >
           <Icon name="ScrollText" size={13} color={ui.c.muted} />
-          <Text style={{ fontSize: 12, color: ui.c.muted }}>运行日志 · {fmtDuration(runDurationMs(sourceTask))}</Text>
+          <Text style={{ fontSize: 12, color: ui.c.muted }}>{t("IssueDetail.147")} {fmtDuration(runDurationMs(sourceTask))}</Text>
           <Icon name="ChevronRight" size={12} color={ui.c.faint} />
         </Pressable>
       ) : null}
       {item.resolved_at ? (
-        <Text style={[ui.s.tiny, { paddingLeft: 32 }]}>解决于 {fmtDateTime(item.resolved_at)}</Text>
+        <Text style={[ui.s.tiny, { paddingLeft: 32 }]}>{t("IssueDetail.148")} {fmtDateTime(item.resolved_at)}</Text>
       ) : null}
     </View>
   );

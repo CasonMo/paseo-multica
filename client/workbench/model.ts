@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 export type Tone = "default" | "accent" | "success" | "warning" | "danger" | "muted";
 
 export interface IssueStatusEntry {
@@ -213,23 +214,23 @@ export interface Workflow {
 }
 
 export const PROJECT_STATUS_META: Record<string, { label: string; tone: Tone }> = {
-  planned: { label: "规划中", tone: "muted" },
-  in_progress: { label: "进行中", tone: "accent" },
-  paused: { label: "已暂停", tone: "warning" },
-  completed: { label: "已完成", tone: "success" },
-  cancelled: { label: "已取消", tone: "danger" },
+  planned: { label: t("model.1"), tone: "muted" },
+  in_progress: { label: t("Execution.60"), tone: "accent" },
+  paused: { label: t("Nav.43"), tone: "warning" },
+  completed: { label: t("AgentDetail.6"), tone: "success" },
+  cancelled: { label: t("AgentDetail.9"), tone: "danger" },
 };
 
 export function projectStatusMeta(status?: string | null) {
-  return PROJECT_STATUS_META[status ?? "planned"] ?? { label: status ?? "未知", tone: "muted" as Tone };
+  return PROJECT_STATUS_META[status ?? "planned"] ?? { label: status ?? t("AgentDetail.57"), tone: "muted" as Tone };
 }
 
 export const HANDLER_LABEL: Record<string, string> = {
-  none: "无处理人",
-  project_lead: "项目负责人",
-  member: "成员",
-  agent: "智能体",
-  squad: "小队",
+  none: t("model.7"),
+  project_lead: t("model.8"),
+  member: t("Execution.11"),
+  agent: t("AgentDetail.23"),
+  squad: t("Nav.36"),
 };
 
 export interface Comment {
@@ -249,10 +250,10 @@ export interface Comment {
 }
 
 export const CATEGORY_META: Record<IssueCategory, { label: string; tone: Tone }> = {
-  unstarted: { label: "未开始", tone: "muted" },
-  started: { label: "进行中", tone: "accent" },
-  done: { label: "已完成", tone: "success" },
-  closed: { label: "已关闭", tone: "danger" },
+  unstarted: { label: t("model.12"), tone: "muted" },
+  started: { label: t("Execution.60"), tone: "accent" },
+  done: { label: t("AgentDetail.6"), tone: "success" },
+  closed: { label: t("model.15"), tone: "danger" },
 };
 
 const BUILTIN_CATEGORY: Record<string, IssueCategory> = {
@@ -324,11 +325,11 @@ export function statusColor(status: IssueStatusEntry): string {
 }
 
 export const PRIORITY_META: Record<string, { label: string; tone: Tone; icon: string }> = {
-  urgent: { label: "紧急", tone: "danger", icon: "Flame" },
-  high: { label: "高", tone: "warning", icon: "SignalHigh" },
-  medium: { label: "中", tone: "accent", icon: "SignalMedium" },
-  low: { label: "低", tone: "muted", icon: "SignalLow" },
-  none: { label: "无", tone: "muted", icon: "Minus" },
+  urgent: { label: t("model.16"), tone: "danger", icon: "Flame" },
+  high: { label: t("model.17"), tone: "warning", icon: "SignalHigh" },
+  medium: { label: t("model.18"), tone: "accent", icon: "SignalMedium" },
+  low: { label: t("model.19"), tone: "muted", icon: "SignalLow" },
+  none: { label: t("model.20"), tone: "muted", icon: "Minus" },
 };
 
 export function priorityMeta(priority?: string | null) {
@@ -336,15 +337,15 @@ export function priorityMeta(priority?: string | null) {
 }
 
 export const AGENT_STATUS_META: Record<string, { label: string; tone: Tone }> = {
-  idle: { label: "空闲", tone: "success" },
-  working: { label: "工作中", tone: "accent" },
-  blocked: { label: "阻塞", tone: "warning" },
-  error: { label: "异常", tone: "danger" },
-  offline: { label: "离线", tone: "muted" },
+  idle: { label: t("model.21"), tone: "success" },
+  working: { label: t("model.22"), tone: "accent" },
+  blocked: { label: t("model.23"), tone: "warning" },
+  error: { label: t("model.24"), tone: "danger" },
+  offline: { label: t("RuntimeDetail.4"), tone: "muted" },
 };
 
 export function agentStatusMeta(status?: string | null) {
-  return AGENT_STATUS_META[status ?? "offline"] ?? { label: status ?? "未知", tone: "muted" as Tone };
+  return AGENT_STATUS_META[status ?? "offline"] ?? { label: status ?? t("AgentDetail.57"), tone: "muted" as Tone };
 }
 
 export function runtimeName(runtime: AgentRuntime): string {
@@ -397,17 +398,17 @@ export function relTime(value?: string | null): string {
   const diff = Date.now() - time;
   if (diff < 0) {
     const ahead = -diff;
-    if (ahead < 60_000) return "即将";
-    if (ahead < 3_600_000) return `${Math.round(ahead / 60_000)} 分钟后`;
-    if (ahead < 86_400_000) return `${Math.round(ahead / 3_600_000)} 小时后`;
-    return `${Math.round(ahead / 86_400_000)} 天后`;
+    if (ahead < 60_000) return t("model.27");
+    if (ahead < 3_600_000) return t("model.28", { a: Math.round(ahead / 60_000) });
+    if (ahead < 86_400_000) return t("model.29", { a: Math.round(ahead / 3_600_000) });
+    return t("model.30", { a: Math.round(ahead / 86_400_000) });
   }
-  if (diff < 60_000) return "刚刚";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} 小时前`;
-  if (diff < 7 * 86_400_000) return `${Math.floor(diff / 86_400_000)} 天前`;
+  if (diff < 60_000) return t("model.31");
+  if (diff < 3_600_000) return t("model.32", { a: Math.floor(diff / 60_000) });
+  if (diff < 86_400_000) return t("model.33", { a: Math.floor(diff / 3_600_000) });
+  if (diff < 7 * 86_400_000) return t("model.34", { a: Math.floor(diff / 86_400_000) });
   const date = new Date(time);
-  return `${date.getMonth() + 1}月${date.getDate()}日`;
+  return t("Execution.9", { a: date.getMonth() + 1, b: date.getDate() });
 }
 
 export function fmtDateTime(value?: string | null): string {

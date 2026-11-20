@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { Icon } from "@getpaseo/plugin/client/ui";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Btn, Card, Divider, Empty, ErrorNote, LoadingRow, LoadMore, nearBottom, SectionHeader, Stat, Tag, useUi } from "../bits";
@@ -43,19 +44,19 @@ export function OverviewPage() {
   const markRead = async (item: InboxItem) => {
     const result = await api({ method: "POST", path: `/api/inbox/${item.id}/read` });
     if (result.ok) {
-      toast.show("已标记为已读", { variant: "success" });
+      toast.show(t("Inbox.28"), { variant: "success" });
       inbox.refresh();
       unread.refresh();
-    } else toast.error(result.error ?? "操作失败");
+    } else toast.error(result.error ?? t("Automation.13"));
   };
 
   const archive = async (item: InboxItem) => {
     const result = await api({ method: "POST", path: `/api/inbox/${item.id}/archive` });
     if (result.ok) {
-      toast.show("已归档", { variant: "success" });
+      toast.show(t("AgentDetail.28"), { variant: "success" });
       inbox.refresh();
       unread.refresh();
-    } else toast.error(result.error ?? "操作失败");
+    } else toast.error(result.error ?? t("Automation.13"));
   };
 
   const openItem = (item: InboxItem) => {
@@ -64,8 +65,8 @@ export function OverviewPage() {
 
   const heroActions = (
     <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
-      <Btn ui={ui} label="新建需求" icon="Plus" tone="primary" onPress={() => navigate("issues", { create: "1" })} />
-      <Btn ui={ui} label="团队" icon="Users" onPress={() => navigate("team")} />
+      <Btn ui={ui} label={t("Overview.5")} icon="Plus" tone="primary" onPress={() => navigate("issues", { create: "1" })} />
+      <Btn ui={ui} label={t("Nav.4")} icon="Users" onPress={() => navigate("team")} />
     </View>
   );
 
@@ -92,10 +93,10 @@ export function OverviewPage() {
             </View>
             <View style={{ flex: 1, gap: 3 }}>
               <Text style={{ color: ui.c.fg, fontSize: compact ? 17 : 19, fontWeight: "700" }}>
-                {greeting()}，{user?.name ?? "朋友"}
+                {greeting()}{t("Overview.153")}{user?.name ?? t("Overview.7")}
               </Text>
               <Text style={ui.s.muted}>
-                这里汇总了工作区的需求流转、收件箱与智能体状态。上次同步 {relTime(new Date().toISOString())}。
+                {t("Overview.8")} {relTime(new Date().toISOString())}{t("Overview.154")}
               </Text>
             </View>
           </View>
@@ -109,12 +110,12 @@ export function OverviewPage() {
             backgroundColor: ui.c.surface2,
           }}
         >
-          <HeroMetric ui={ui} label="需求总数" value={totalIssues} loading={recent.loading} icon="ListTodo" />
-          <HeroMetric ui={ui} label="进行中" value={startedTotal} loading={started.loading} icon="Loader" />
-          <HeroMetric ui={ui} label="未读通知" value={unreadCount} loading={unread.loading} icon="Bell" />
+          <HeroMetric ui={ui} label={t("Overview.9")} value={totalIssues} loading={recent.loading} icon="ListTodo" />
+          <HeroMetric ui={ui} label={t("Execution.60")} value={startedTotal} loading={started.loading} icon="Loader" />
+          <HeroMetric ui={ui} label={t("Overview.11")} value={unreadCount} loading={unread.loading} icon="Bell" />
           <HeroMetric
             ui={ui}
-            label="在线运行时"
+            label={t("Overview.12")}
             value={`${onlineRuntimes.length}/${runtimeList.length || 0}`}
             loading={runtimes.loading}
             icon="Server"
@@ -130,8 +131,8 @@ export function OverviewPage() {
             <View style={{ paddingHorizontal: 14, paddingTop: 14 }}>
               <SectionHeader
                 ui={ui}
-                title="最近更新的需求"
-                trailing={<LinkBtn ui={ui} label="全部" onPress={() => navigate("issues")} />}
+                title={t("Overview.13")}
+                trailing={<LinkBtn ui={ui} label={t("ApiExplorer.4")} onPress={() => navigate("issues")} />}
               />
             </View>
             {recent.loading && recentList.length === 0 ? (
@@ -141,7 +142,7 @@ export function OverviewPage() {
                 <ErrorNote ui={ui} message={recent.error} onRetry={recent.refresh} />
               </View>
             ) : recentList.length === 0 ? (
-              <Empty ui={ui} icon="Inbox" title="还没有需求" description="创建第一条需求，让智能体开始协作。" action={<Btn ui={ui} label="新建需求" tone="primary" icon="Plus" onPress={() => navigate("issues", { create: "1" })} />} />
+              <Empty ui={ui} icon="Inbox" title={t("Overview.15")} description={t("Overview.16")} action={<Btn ui={ui} label={t("Overview.5")} tone="primary" icon="Plus" onPress={() => navigate("issues", { create: "1" })} />} />
             ) : (
               <View style={{ flex: compact ? 0 : 1 }}>
                 <ScrollView
@@ -178,12 +179,12 @@ export function OverviewPage() {
             <View style={{ paddingHorizontal: 14, paddingTop: 14 }}>
               <SectionHeader
                 ui={ui}
-                title="项目进展"
-                trailing={<LinkBtn ui={ui} label="全部" onPress={() => navigate("projects")} />}
+                title={t("Overview.18")}
+                trailing={<LinkBtn ui={ui} label={t("ApiExplorer.4")} onPress={() => navigate("projects")} />}
               />
             </View>
             {projectList.length === 0 ? (
-              <Empty ui={ui} icon="FolderKanban" title="暂无项目" />
+              <Empty ui={ui} icon="FolderKanban" title={t("Nav.33")} />
             ) : (
               <View style={{ paddingHorizontal: 14, paddingBottom: 14, gap: 12 }}>
                 {projectList.slice(0, 5).map((project) => (
@@ -199,11 +200,11 @@ export function OverviewPage() {
             <View style={{ paddingHorizontal: 14, paddingTop: 14 }}>
               <SectionHeader
                 ui={ui}
-                title="收件箱"
+                title={t("Nav.27")}
                 trailing={
                   <View style={[ui.s.row, { gap: 6 }]}>
-                    {unreadCount > 0 ? <Tag ui={ui} label={`${unreadCount} 未读`} tone="accent" /> : null}
-                    <Btn ui={ui} label="全部已读" onPress={() => void markAll()} />
+                    {unreadCount > 0 ? <Tag ui={ui} label={t("Inbox.19", { a: unreadCount })} tone="accent" /> : null}
+                    <Btn ui={ui} label={t("Inbox.20")} onPress={() => void markAll()} />
                   </View>
                 }
               />
@@ -211,7 +212,7 @@ export function OverviewPage() {
             {inbox.loading && inboxList.length === 0 ? (
               <LoadingRow ui={ui} />
             ) : inboxList.length === 0 ? (
-              <Empty ui={ui} icon="BellOff" title="收件箱已清空" />
+              <Empty ui={ui} icon="BellOff" title={t("Inbox.24")} />
             ) : (
               <View>
                 <ScrollView
@@ -243,8 +244,8 @@ export function OverviewPage() {
                     },
                   ]}
                 >
-                  <Text style={ui.s.tiny}>共 {inboxTotal} 条</Text>
-                  <LinkBtn ui={ui} label="查看全部" onPress={() => navigate("inbox")} />
+                  <Text style={ui.s.tiny}>{t("Inbox.40")} {inboxTotal} {t("Issues.16")}</Text>
+                  <LinkBtn ui={ui} label={t("Overview.27")} onPress={() => navigate("inbox")} />
                 </View>
               </View>
             )}
@@ -254,14 +255,14 @@ export function OverviewPage() {
             <View style={{ paddingHorizontal: 14, paddingTop: 14 }}>
               <SectionHeader
                 ui={ui}
-                title="智能体"
-                trailing={<LinkBtn ui={ui} label="管理" onPress={() => navigate("team")} />}
+                title={t("AgentDetail.23")}
+                trailing={<LinkBtn ui={ui} label={t("Overview.29")} onPress={() => navigate("team")} />}
               />
             </View>
             {agents.loading && agentList.length === 0 ? (
               <LoadingRow ui={ui} />
             ) : agentList.length === 0 ? (
-              <Empty ui={ui} icon="Bot" title="还没有智能体" description="在 Multica 后台创建智能体后会显示在这里。" />
+              <Empty ui={ui} icon="Bot" title={t("Overview.30")} description={t("Overview.31")} />
             ) : (
               <View style={{ flex: compact ? 0 : 1 }}>
                 <ScrollView
@@ -306,11 +307,11 @@ export function OverviewPage() {
   async function markAll() {
     const result = await api({ method: "POST", path: "/api/inbox/mark-all-read" });
     if (result.ok) {
-      toast.show("收件箱已全部标记为已读", { variant: "success" });
+      toast.show(t("Inbox.10"), { variant: "success" });
       inbox.refresh();
       unread.refresh();
       invalidate();
-    } else toast.error(result.error ?? "操作失败");
+    } else toast.error(result.error ?? t("Automation.13"));
   }
 }
 
@@ -376,7 +377,7 @@ function ProjectBar({ ui, project }: { ui: ReturnType<typeof useUi>; project: Pr
           }}
         />
       </View>
-      {project.due_date ? <Text style={ui.s.tiny}>截止 {project.due_date}</Text> : null}
+      {project.due_date ? <Text style={ui.s.tiny}>{t("IssueDetail.45")} {project.due_date}</Text> : null}
     </View>
   );
 }
@@ -384,15 +385,15 @@ function ProjectBar({ ui, project }: { ui: ReturnType<typeof useUi>; project: Pr
 export function runtimeLabelFor(agent: Agent, runtimes: AgentRuntime[]): string | undefined {
   if (!agent.runtime_id) return undefined;
   const runtime = runtimes.find((item) => item.id === agent.runtime_id);
-  if (!runtime) return agent.runtime_bound ? "运行时" : "未绑定";
+  if (!runtime) return agent.runtime_bound ? t("AgentDetail.16") : t("Overview.36");
   return runtime.custom_name?.trim() || runtime.name;
 }
 
 function greeting(): string {
   const hour = new Date().getHours();
-  if (hour < 6) return "夜深了";
-  if (hour < 11) return "早上好";
-  if (hour < 14) return "中午好";
-  if (hour < 18) return "下午好";
-  return "晚上好";
+  if (hour < 6) return t("Overview.37");
+  if (hour < 11) return t("Overview.38");
+  if (hour < 14) return t("Overview.39");
+  if (hour < 18) return t("Overview.40");
+  return t("Overview.41");
 }

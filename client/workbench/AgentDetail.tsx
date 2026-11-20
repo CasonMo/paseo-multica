@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
@@ -9,12 +10,12 @@ import { agentStatusMeta, fmtDateTime, relTime, type Agent, type AgentRuntime, t
 type DetailTab = "overview" | "skills" | "tasks" | "env" | "mcp" | "labels";
 
 const TABS: { key: DetailTab; label: string; icon: string }[] = [
-  { key: "overview", label: "概览", icon: "Info" },
-  { key: "skills", label: "技能", icon: "Blocks" },
-  { key: "tasks", label: "任务", icon: "ListChecks" },
-  { key: "env", label: "环境变量", icon: "KeyRound" },
+  { key: "overview", label: t("AgentDetail.1"), icon: "Info" },
+  { key: "skills", label: t("AgentDetail.2"), icon: "Blocks" },
+  { key: "tasks", label: t("AgentDetail.3"), icon: "ListChecks" },
+  { key: "env", label: t("AgentDetail.4"), icon: "KeyRound" },
   { key: "mcp", label: "MCP", icon: "Plug" },
-  { key: "labels", label: "标签", icon: "Tags" },
+  { key: "labels", label: t("AgentDetail.5"), icon: "Tags" },
 ];
 
 type AgentTask = {
@@ -30,21 +31,21 @@ type AgentTask = {
 };
 
 const TASK_STATUS: Record<string, { label: string; tone: "success" | "danger" | "accent" | "warning" | "muted" }> = {
-  completed: { label: "已完成", tone: "success" },
-  failed: { label: "失败", tone: "danger" },
-  error: { label: "失败", tone: "danger" },
-  cancelled: { label: "已取消", tone: "muted" },
-  running: { label: "运行中", tone: "accent" },
-  started: { label: "运行中", tone: "accent" },
-  dispatched: { label: "已派发", tone: "warning" },
-  claimed: { label: "已领取", tone: "warning" },
+  completed: { label: t("AgentDetail.6"), tone: "success" },
+  failed: { label: t("AgentDetail.7"), tone: "danger" },
+  error: { label: t("AgentDetail.7"), tone: "danger" },
+  cancelled: { label: t("AgentDetail.9"), tone: "muted" },
+  running: { label: t("AgentDetail.10"), tone: "accent" },
+  started: { label: t("AgentDetail.10"), tone: "accent" },
+  dispatched: { label: t("AgentDetail.12"), tone: "warning" },
+  claimed: { label: t("AgentDetail.13"), tone: "warning" },
 };
 
 function runtimeLabelOf(agent: Agent, runtimes: AgentRuntime[]): string {
-  if (!agent.runtime_id) return "未绑定运行时";
+  if (!agent.runtime_id) return t("AgentDetail.14");
   const runtime = runtimes.find((item) => item.id === agent.runtime_id);
-  if (!runtime) return agent.runtime_availability === "offline" ? "运行时离线" : "运行时";
-  return `${runtime.custom_name || runtime.name}${runtime.status === "online" ? "" : "（离线）"}`;
+  if (!runtime) return agent.runtime_availability === "offline" ? t("AgentDetail.15") : t("AgentDetail.16");
+  return t("AgentDetail.17", { a: runtime.custom_name || runtime.name, b: runtime.status === "online" ? "" : t("AgentDetail.18") });
 }
 
 export function AgentDetailModal({
@@ -91,10 +92,10 @@ export function AgentDetailModal({
     setBusy(false);
     if (result.ok) {
       setArchiveOpen(false);
-      toast.show("智能体已归档", { variant: "success" });
+      toast.show(t("AgentDetail.19"), { variant: "success" });
       invalidate();
       onClose();
-    } else toast.error(result.error ?? "归档失败");
+    } else toast.error(result.error ?? t("AgentDetail.20"));
   };
 
   const restore = async () => {
@@ -103,16 +104,16 @@ export function AgentDetailModal({
     const result = await api({ method: "POST", path: `/api/agents/${agent.id}/restore` });
     setBusy(false);
     if (result.ok) {
-      toast.show("智能体已恢复", { variant: "success" });
+      toast.show(t("AgentDetail.21"), { variant: "success" });
       invalidate();
       detail.refresh();
-    } else toast.error(result.error ?? "恢复失败");
+    } else toast.error(result.error ?? t("AgentDetail.22"));
   };
 
   return (
     <>
       <Modal
-        title={agent?.name ?? "智能体"}
+        title={agent?.name ?? t("AgentDetail.23")}
         icon={<Icon name="Bot" size={16} color={ui.c.muted} />}
         open={Boolean(agentId)}
         onOpenChange={(next) => {
@@ -131,7 +132,7 @@ export function AgentDetailModal({
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={{ color: ui.c.fg, fontSize: 17, fontWeight: "700" }}>{agent.name}</Text>
                   <Text style={ui.s.tiny}>
-                    {agent.model || "未设置模型"} · 最大并发 {agent.max_concurrent_tasks ?? "—"}
+                    {agent.model || t("AgentDetail.24")} {t("AgentDetail.25")} {agent.max_concurrent_tasks ?? "—"}
                   </Text>
                 </View>
                 <Tag ui={ui} label={agentStatusMeta(agent.status).label} tone={agentStatusMeta(agent.status).tone} />
@@ -162,22 +163,22 @@ export function AgentDetailModal({
                       <Tag ui={ui} label={runtimeLabelOf(agent, runtimeList)} tone="muted" icon="Server" />
                       <Tag
                         ui={ui}
-                        label={agent.permission_mode === "private" ? "私有调用" : "公开调用"}
+                        label={agent.permission_mode === "private" ? t("AgentDetail.26") : t("AgentDetail.27")}
                         tone="muted"
                         icon="Shield"
                       />
-                      {agent.archived_at ? <Tag ui={ui} label="已归档" tone="danger" /> : null}
+                      {agent.archived_at ? <Tag ui={ui} label={t("AgentDetail.28")} tone="danger" /> : null}
                     </View>
 
                     {agent.skills && agent.skills.length > 0 ? (
                       <View style={{ gap: 6 }}>
-                        <Text style={ui.s.label}>技能</Text>
+                        <Text style={ui.s.label}>{t("AgentDetail.2")}</Text>
                         <View style={[ui.s.row, { gap: 6, flexWrap: "wrap" }]}>
                           {agent.skills.map((skill, index) => (
                             <Tag
                               key={`${skill.id ?? skill.name ?? index}`}
                               ui={ui}
-                              label={skill.name ?? skill.slug ?? "技能"}
+                              label={skill.name ?? skill.slug ?? t("AgentDetail.2")}
                               tone="accent"
                             />
                           ))}
@@ -187,12 +188,12 @@ export function AgentDetailModal({
 
                     {agent.instructions ? (
                       <View style={{ gap: 6 }}>
-                        <Text style={ui.s.label}>指令</Text>
+                        <Text style={ui.s.label}>{t("AgentDetail.31")}</Text>
                         <Markdown>{agent.instructions}</Markdown>
                       </View>
                     ) : null}
 
-                    <Text style={ui.s.tiny}>更新于 {fmtDateTime(agent.updated_at)}</Text>
+                    <Text style={ui.s.tiny}>{t("AgentDetail.32")} {fmtDateTime(agent.updated_at)}</Text>
                   </>
                 ) : null}
 
@@ -206,13 +207,13 @@ export function AgentDetailModal({
               <Divider ui={ui} />
 
               <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }]}>
-                <Btn ui={ui} label="编辑" icon="Pencil" onPress={() => setEditOpen(true)} />
+                <Btn ui={ui} label={t("AgentDetail.33")} icon="Pencil" onPress={() => setEditOpen(true)} />
                 {agent.archived_at ? (
-                  <Btn ui={ui} label="恢复" icon="ArchiveRestore" busy={busy} onPress={() => void restore()} />
+                  <Btn ui={ui} label={t("AgentDetail.34")} icon="ArchiveRestore" busy={busy} onPress={() => void restore()} />
                 ) : (
-                  <Btn ui={ui} label="归档" icon="Archive" tone="danger" busy={busy} onPress={() => setArchiveOpen(true)} />
+                  <Btn ui={ui} label={t("AgentDetail.35")} icon="Archive" tone="danger" busy={busy} onPress={() => setArchiveOpen(true)} />
                 )}
-                <Btn ui={ui} label="开始聊天" icon="MessagesSquare" tone="primary" onPress={() => onChat(agent)} />
+                <Btn ui={ui} label={t("AgentDetail.36")} icon="MessagesSquare" tone="primary" onPress={() => onChat(agent)} />
               </View>
             </View>
           ) : null}
@@ -220,18 +221,18 @@ export function AgentDetailModal({
       </Modal>
 
       <Modal
-        title="归档智能体"
+        title={t("AgentDetail.37")}
         icon={<Icon name="Archive" size={16} color={ui.c.danger} />}
         open={archiveOpen && Boolean(agent)}
         onOpenChange={(next) => !next && setArchiveOpen(false)}
       >
         <Modal.Content>
           <Text style={ui.s.body}>
-            归档后「{agent?.name ?? ""}」将不再出现在智能体列表中，已派发的任务不受影响。可在归档区恢复。
+            {t("AgentDetail.38")}{agent?.name ?? ""}{t("AgentDetail.39")}
           </Text>
           <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end", marginTop: 12 }]}>
-            <Btn ui={ui} label="取消" onPress={() => setArchiveOpen(false)} />
-            <Btn ui={ui} label="归档" tone="danger" busy={busy} onPress={() => void archive()} />
+            <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setArchiveOpen(false)} />
+            <Btn ui={ui} label={t("AgentDetail.35")} tone="danger" busy={busy} onPress={() => void archive()} />
           </View>
         </Modal.Content>
       </Modal>
@@ -280,7 +281,7 @@ function SkillsPanel({
       : await api({ method: "DELETE", path: `/api/agents/${agentId}/skills/${skill.id}` });
     setBusyId(null);
     if (result.ok) bound.refresh();
-    else toast.error(result.error ?? "更新失败");
+    else toast.error(result.error ?? t("AgentDetail.42"));
   };
 
   const setEnabled = async (skill: Skill, next: boolean) => {
@@ -292,15 +293,15 @@ function SkillsPanel({
     });
     setBusyId(null);
     if (result.ok) bound.refresh();
-    else toast.error(result.error ?? "更新失败");
+    else toast.error(result.error ?? t("AgentDetail.42"));
   };
 
   return (
     <View style={{ gap: 8 }}>
-      <Text style={ui.s.tiny}>技能为智能体提供可复用的工具与知识，绑定后可在开关里单独停用。</Text>
+      <Text style={ui.s.tiny}>{t("AgentDetail.44")}</Text>
       {all.loading && items.length === 0 ? <LoadingRow ui={ui} /> : null}
       {!all.loading && items.length === 0 ? (
-        <Empty ui={ui} icon="Blocks" title="工作区还没有技能" description="在 Multica 后台创建技能后回到「团队 → 技能」即可看到并绑定。" />
+        <Empty ui={ui} icon="Blocks" title={t("AgentDetail.45")} description={t("AgentDetail.46")} />
       ) : null}
       {items.map((skill) => {
         const linked = boundMap.get(skill.id);
@@ -316,12 +317,12 @@ function SkillsPanel({
                 {skill.description || skill.slug || "—"}
               </Text>
             </View>
-            {linked ? <Tag ui={ui} label={enabled ? "已启用" : "已停用"} tone={enabled ? "success" : "muted"} /> : null}
+            {linked ? <Tag ui={ui} label={enabled ? t("AgentDetail.47") : t("AgentDetail.48")} tone={enabled ? "success" : "muted"} /> : null}
             {linked ? (
               <IconBtn
                 ui={ui}
                 icon={enabled ? "ToggleRight" : "ToggleLeft"}
-                label={enabled ? "停用技能" : "启用技能"}
+                label={enabled ? t("AgentDetail.49") : t("AgentDetail.50")}
                 color={enabled ? ui.c.accent : ui.c.muted}
                 busy={busyId === skill.id}
                 onPress={() => void setEnabled(skill, !enabled)}
@@ -330,7 +331,7 @@ function SkillsPanel({
             <IconBtn
               ui={ui}
               icon={linked ? "Minus" : "Plus"}
-              label={linked ? `解绑技能 ${skill.name}` : `绑定技能 ${skill.name}`}
+              label={linked ? t("AgentDetail.51", { a: skill.name }) : t("AgentDetail.52", { a: skill.name })}
               color={linked ? ui.c.danger : ui.c.accent}
               busy={busyId === skill.id}
               onPress={() => void setBound(skill, !linked)}
@@ -364,16 +365,16 @@ function TasksPanel({
   return (
     <View style={{ gap: 8 }}>
       <View style={[ui.s.row, { justifyContent: "space-between" }]}>
-        <Text style={ui.s.tiny}>任务派发记录</Text>
-        <IconBtn ui={ui} icon="RefreshCw" label="刷新任务" busy={query.loadingMore} onPress={query.refresh} />
+        <Text style={ui.s.tiny}>{t("AgentDetail.53")}</Text>
+        <IconBtn ui={ui} icon="RefreshCw" label={t("AgentDetail.54")} busy={query.loadingMore} onPress={query.refresh} />
       </View>
       {query.loading && items.length === 0 ? <LoadingRow ui={ui} /> : null}
       {query.error ? <ErrorNote ui={ui} message={query.error} onRetry={query.refresh} /> : null}
       {!query.loading && !query.error && items.length === 0 ? (
-        <Empty ui={ui} icon="ListChecks" title="暂无任务" description="智能体被派发需求或对话后会在这里留下记录。" />
+        <Empty ui={ui} icon="ListChecks" title={t("AgentDetail.55")} description={t("AgentDetail.56")} />
       ) : null}
       {items.map((task) => {
-        const meta = TASK_STATUS[task.status ?? ""] ?? { label: task.status || "未知", tone: "muted" as const };
+        const meta = TASK_STATUS[task.status ?? ""] ?? { label: task.status || t("AgentDetail.57"), tone: "muted" as const };
         const output = task.result?.output?.trim();
         const cost = task.completed_at
           ? Math.max(0, Math.round((Date.parse(task.completed_at) - Date.parse(task.dispatched_at ?? task.completed_at)) / 1000))
@@ -383,8 +384,8 @@ function TasksPanel({
             <View style={[ui.s.row, { gap: 8 }]}>
               <Tag ui={ui} label={meta.label} tone={meta.tone} />
               <Text numberOfLines={1} style={[ui.s.tiny, ui.s.grow]}>
-                {task.issue_id ? `需求 ${task.issue_id.slice(0, 8)}` : "对话任务"} · 第 {task.attempt ?? 1}/
-                {task.max_attempts ?? 1} 次
+                {task.issue_id ? t("AgentDetail.58", { a: task.issue_id.slice(0, 8) }) : t("AgentDetail.59")} {t("AgentDetail.60")} {task.attempt ?? 1}/
+                {task.max_attempts ?? 1} {t("AgentDetail.61")}
               </Text>
               <Text style={ui.s.tiny}>{cost === null ? relTime(task.dispatched_at) : `${cost}s`}</Text>
             </View>
@@ -447,7 +448,7 @@ function EnvPanel({
       const name = row.key.trim();
       if (!name) continue;
       if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-        setError(`变量名 ${name} 不合法`);
+        setError(t("AgentDetail.62", { a: name }));
         return;
       }
       custom_env[name] = row.value;
@@ -457,10 +458,10 @@ function EnvPanel({
     const result = await api({ method: "PUT", path: `/api/agents/${agentId}/env`, body: { custom_env } });
     setBusy(false);
     if (result.ok) {
-      toast.show("环境变量已保存", { variant: "success" });
+      toast.show(t("AgentDetail.63"), { variant: "success" });
       query.refresh();
       ctx.invalidate();
-    } else setError(result.error ?? "保存失败");
+    } else setError(result.error ?? t("AgentDetail.64"));
   };
 
   const update = (index: number, patch: Partial<{ key: string; value: string }>) =>
@@ -470,13 +471,13 @@ function EnvPanel({
     <View style={{ gap: 10 }}>
       <View style={[ui.s.row, { justifyContent: "space-between" }]}>
         <View style={{ flex: 1, gap: 2 }}>
-          <Text style={[ui.s.body, { fontWeight: "600" }]}>自定义环境变量</Text>
-          <Text style={ui.s.tiny}>在每次运行该智能体时注入，值可以为空。</Text>
+          <Text style={[ui.s.body, { fontWeight: "600" }]}>{t("AgentDetail.65")}</Text>
+          <Text style={ui.s.tiny}>{t("AgentDetail.66")}</Text>
         </View>
-        <IconBtn ui={ui} icon={reveal ? "EyeOff" : "Eye"} label={reveal ? "隐藏变量值" : "显示变量值"} onPress={() => setReveal((v) => !v)} />
+        <IconBtn ui={ui} icon={reveal ? "EyeOff" : "Eye"} label={reveal ? t("AgentDetail.67") : t("AgentDetail.68")} onPress={() => setReveal((v) => !v)} />
       </View>
 
-      {rows.length === 0 ? <Text style={ui.s.muted}>还没有自定义环境变量。</Text> : null}
+      {rows.length === 0 ? <Text style={ui.s.muted}>{t("AgentDetail.69")}</Text> : null}
 
       {rows.map((row, index) => (
         <View key={index} style={[ui.s.row, { gap: 6 }]}>
@@ -502,7 +503,7 @@ function EnvPanel({
           <IconBtn
             ui={ui}
             icon="X"
-            label="删除变量"
+            label={t("AgentDetail.70")}
             onPress={() => setRows((list) => list.filter((_, i) => i !== index))}
           />
         </View>
@@ -511,9 +512,9 @@ function EnvPanel({
       {error ? <ErrorNote ui={ui} message={error} /> : null}
 
       <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
-        <Btn ui={ui} label="添加变量" icon="Plus" onPress={() => setRows((list) => [...list, { key: "", value: "" }])} />
+        <Btn ui={ui} label={t("AgentDetail.71")} icon="Plus" onPress={() => setRows((list) => [...list, { key: "", value: "" }])} />
         <View style={ui.s.grow} />
-        <Btn ui={ui} label="保存" icon="Save" tone="primary" busy={busy} onPress={() => void save()} />
+        <Btn ui={ui} label={t("AgentDetail.72")} icon="Save" tone="primary" busy={busy} onPress={() => void save()} />
       </View>
     </View>
   );
@@ -552,7 +553,7 @@ function McpPanel({
     });
     setBusyId(null);
     if (result.ok) query.refresh();
-    else toast.error(result.error ?? "更新失败");
+    else toast.error(result.error ?? t("AgentDetail.42"));
   };
 
   const remove = async (item: Record<string, unknown>) => {
@@ -562,17 +563,17 @@ function McpPanel({
     const result = await api({ method: "DELETE", path: `/api/agents/${agentId}/mcp-servers/${serverId}` });
     setBusyId(null);
     if (result.ok) {
-      toast.show("已移除 MCP 服务器", { variant: "success" });
+      toast.show(t("AgentDetail.74"), { variant: "success" });
       query.refresh();
-    } else toast.error(result.error ?? "移除失败");
+    } else toast.error(result.error ?? t("AgentDetail.75"));
   };
 
   return (
     <View style={{ gap: 8 }}>
-      <Text style={ui.s.tiny}>管理员在 Multica 后台或此处添加的 MCP 服务器，可按智能体启用或移除。</Text>
+      <Text style={ui.s.tiny}>{t("AgentDetail.76")}</Text>
       {query.loading && items.length === 0 ? <LoadingRow ui={ui} /> : null}
       {!query.loading && items.length === 0 ? (
-        <Empty ui={ui} icon="Plug" title="未连接 MCP 服务器" description="在工作区设置中添加 MCP 服务器后，可在这里为智能体启用。" />
+        <Empty ui={ui} icon="Plug" title={t("AgentDetail.77")} description={t("AgentDetail.78")} />
       ) : null}
       {items.map((item, index) => {
         const id = str(item.id ?? item.server_id ?? index);
@@ -594,16 +595,16 @@ function McpPanel({
                 </Text>
               ) : null}
             </View>
-            <Tag ui={ui} label={enabled ? "已启用" : "已停用"} tone={enabled ? "success" : "muted"} />
+            <Tag ui={ui} label={enabled ? t("AgentDetail.47") : t("AgentDetail.48")} tone={enabled ? "success" : "muted"} />
             <IconBtn
               ui={ui}
               icon={enabled ? "ToggleRight" : "ToggleLeft"}
-              label={enabled ? "停用 MCP 服务器" : "启用 MCP 服务器"}
+              label={enabled ? t("AgentDetail.81") : t("AgentDetail.82")}
               color={enabled ? ui.c.accent : ui.c.muted}
               busy={busyId === id}
               onPress={() => void toggle(item)}
             />
-            <IconBtn ui={ui} icon="Trash2" label="移除 MCP 服务器" color={ui.c.danger} busy={busyId === id} onPress={() => void remove(item)} />
+            <IconBtn ui={ui} icon="Trash2" label={t("AgentDetail.83")} color={ui.c.danger} busy={busyId === id} onPress={() => void remove(item)} />
           </View>
         );
       })}
@@ -646,7 +647,7 @@ function LabelPanel({
     if (result.ok) {
       attached.refresh();
       ctx.invalidate();
-    } else toast.error(result.error ?? "添加失败");
+    } else toast.error(result.error ?? t("AgentDetail.84"));
   };
 
   const detach = async (label: Label) => {
@@ -656,21 +657,21 @@ function LabelPanel({
     if (result.ok) {
       attached.refresh();
       ctx.invalidate();
-    } else toast.error(result.error ?? "移除失败");
+    } else toast.error(result.error ?? t("AgentDetail.75"));
   };
 
   return (
     <View style={{ gap: 12 }}>
       <View style={{ gap: 6 }}>
-        <Text style={ui.s.label}>已绑定</Text>
+        <Text style={ui.s.label}>{t("AgentDetail.86")}</Text>
         {current.length === 0 ? (
-          <Text style={ui.s.muted}>该智能体还没有标签。</Text>
+          <Text style={ui.s.muted}>{t("AgentDetail.87")}</Text>
         ) : (
           <View style={[ui.s.row, { gap: 6, flexWrap: "wrap" }]}>
             {current.map((label) => (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`移除标签 ${label.name}`}
+                accessibilityLabel={t("AgentDetail.88", { a: label.name })}
                 key={label.id}
                 onPress={() => void detach(label)}
                 style={({ pressed }) => [ui.s.row, { gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: `${label.color || ui.c.accent}66`, backgroundColor: `${label.color || ui.c.accent}18` }, pressed && ui.s.pressed]}
@@ -685,15 +686,15 @@ function LabelPanel({
       </View>
 
       <View style={{ gap: 6 }}>
-        <Text style={ui.s.label}>可添加</Text>
+        <Text style={ui.s.label}>{t("AgentDetail.89")}</Text>
         {available.length === 0 ? (
-          <Text style={ui.s.muted}>没有可用的智能体标签，可在「标签」页新建。</Text>
+          <Text style={ui.s.muted}>{t("AgentDetail.90")}</Text>
         ) : (
           <View style={[ui.s.row, { gap: 6, flexWrap: "wrap" }]}>
             {available.map((label) => (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`添加标签 ${label.name}`}
+                accessibilityLabel={t("AgentDetail.91", { a: label.name })}
                 key={label.id}
                 disabled={busyId === label.id}
                 onPress={() => void attach(label)}
@@ -752,7 +753,7 @@ function EditAgentModal({
   const save = async () => {
     if (!agent) return;
     if (!name.trim()) {
-      setError("请填写名称");
+      setError(t("AgentDetail.92"));
       return;
     }
     setBusy(true);
@@ -773,39 +774,39 @@ function EditAgentModal({
     });
     setBusy(false);
     if (result.ok) onSaved();
-    else setError(result.error ?? "保存失败");
+    else setError(result.error ?? t("AgentDetail.64"));
   };
 
   return (
-    <Modal title="编辑智能体" icon={<Icon name="Pencil" size={16} color={ui.c.muted} />} open={Boolean(agent)} onOpenChange={(next) => !next && onClose()}>
+    <Modal title={t("AgentDetail.94")} icon={<Icon name="Pencil" size={16} color={ui.c.muted} />} open={Boolean(agent)} onOpenChange={(next) => !next && onClose()}>
       <Modal.Content>
         <ScrollView style={{ maxHeight: 520 }} contentContainerStyle={{ gap: 12 }}>
-          <Field ui={ui} label="名称" value={name} onChangeText={setName} placeholder="智能体名称" />
-          <Field ui={ui} label="描述" value={description} onChangeText={setDescription} multiline placeholder="这个智能体负责什么" />
-          <Field ui={ui} label="模型" value={model} onChangeText={setModel} placeholder="例如 gpt-5.1-codex" hint="留空则使用运行时默认模型。" />
+          <Field ui={ui} label={t("AgentDetail.95")} value={name} onChangeText={setName} placeholder={t("AgentDetail.96")} />
+          <Field ui={ui} label={t("AgentDetail.97")} value={description} onChangeText={setDescription} multiline placeholder={t("AgentDetail.98")} />
+          <Field ui={ui} label={t("AgentDetail.99")} value={model} onChangeText={setModel} placeholder={t("AgentDetail.100")} hint={t("AgentDetail.101")} />
           <Field
             ui={ui}
-            label="最大并发任务"
+            label={t("AgentDetail.102")}
             value={maxTasks}
             onChangeText={setMaxTasks}
-            placeholder="留空表示不限制"
+            placeholder={t("AgentDetail.103")}
           />
           <View style={{ gap: 6 }}>
-            <Text style={ui.s.label}>调用权限</Text>
+            <Text style={ui.s.label}>{t("AgentDetail.104")}</Text>
             <Chips<"public" | "private">
               ui={ui}
               value={permission}
               onChange={setPermission}
               options={[
-                { value: "public", label: "公开调用", icon: "Globe" },
-                { value: "private", label: "仅私有", icon: "Lock" },
+                { value: "public", label: t("AgentDetail.27"), icon: "Globe" },
+                { value: "private", label: t("AgentDetail.106"), icon: "Lock" },
               ]}
             />
           </View>
           <View style={{ gap: 6 }}>
-            <Text style={ui.s.label}>运行时</Text>
+            <Text style={ui.s.label}>{t("AgentDetail.16")}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-              <ChipButton ui={ui} active={!runtimeId} label="不绑定" onPress={() => setRuntimeId("")} />
+              <ChipButton ui={ui} active={!runtimeId} label={t("AgentDetail.108")} onPress={() => setRuntimeId("")} />
               {runtimes.map((runtime) => (
                 <ChipButton
                   key={runtime.id}
@@ -817,12 +818,12 @@ function EditAgentModal({
               ))}
             </ScrollView>
           </View>
-          <Field ui={ui} label="指令" value={instructions} onChangeText={setInstructions} multiline placeholder="系统提示词 / 工作规则" hint="支持 Markdown。" />
+          <Field ui={ui} label={t("AgentDetail.31")} value={instructions} onChangeText={setInstructions} multiline placeholder={t("AgentDetail.110")} hint={t("AgentDetail.111")} />
           {error ? <ErrorNote ui={ui} message={error} /> : null}
         </ScrollView>
         <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end", marginTop: 12 }]}>
-          <Btn ui={ui} label="取消" onPress={onClose} />
-          <Btn ui={ui} label="保存" tone="primary" busy={busy} onPress={() => void save()} />
+          <Btn ui={ui} label={t("AgentDetail.40")} onPress={onClose} />
+          <Btn ui={ui} label={t("AgentDetail.72")} tone="primary" busy={busy} onPress={() => void save()} />
         </View>
       </Modal.Content>
     </Modal>

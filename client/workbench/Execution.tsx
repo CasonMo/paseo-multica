@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { Icon } from "@getpaseo/plugin/client/ui";
 import { useRpc } from "@getpaseo/plugin/client";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -46,7 +47,7 @@ export function RunningChip({ ui, agent, compact }: { ui: Ui; agent: { name: str
     >
       <Avatar ui={ui} name={agent.name} url={agent.avatar_url} size={16} />
       <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: "500", color: ui.c.success, maxWidth: compact ? 90 : 160 }}>
-        {agent.name} 在工作
+        {agent.name} {t("Execution.1")}
       </Text>
       <ActivityIndicator size="small" color={ui.c.success} />
     </View>
@@ -87,7 +88,7 @@ export function RunningResponseRow({
           const input = m.input ?? {};
           const text =
             m.type === "tool_use"
-              ? str(input.description) || str(input.command).split("\n")[0] || str(input.file_path) || str(input.pattern) || (m.tool ? `调用 ${m.tool}` : "")
+              ? str(input.description) || str(input.command).split("\n")[0] || str(input.file_path) || str(input.pattern) || (m.tool ? t("Execution.2", { a: m.tool }) : "")
               : m.type === "text" || m.type === "assistant" || m.type === "thinking" || m.type === "think"
                 ? (m.content ?? "").split("\n")[0]
                 : "";
@@ -116,12 +117,12 @@ export function RunningResponseRow({
     return () => clearInterval(timer);
   }, [taskId]);
 
-  const name = agent?.name ?? "智能体";
+  const name = agent?.name ?? t("AgentDetail.23");
   return (
     <View style={[ui.s.row, { gap: 4, paddingLeft: 32, paddingRight: 8, paddingVertical: 6 }]}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`查看 ${name} 的运行日志`}
+        accessibilityLabel={t("Execution.4", { a: name })}
         onPress={() => onOpenLog(task.id)}
         style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
           ui.s.row,
@@ -136,12 +137,12 @@ export function RunningResponseRow({
         </Text>
         <ActivityIndicator size="small" color={ui.c.brand} />
         <Text numberOfLines={1} style={{ fontSize: 13, color: ui.c.muted, flex: 1 }}>
-          {step ?? "等待智能体响应。"}
+          {step ?? t("Execution.5")}
         </Text>
         <Text style={ui.s.tiny}>{fmtDuration(runDurationMs(task))}</Text>
         <Icon name="ChevronRight" size={12} color={ui.c.faint} />
       </Pressable>
-      <IconBtn ui={ui} icon="Square" label="停止运行" onPress={() => onStop(task)} />
+      <IconBtn ui={ui} icon="Square" label={t("Execution.6")} onPress={() => onStop(task)} />
     </View>
   );
 }
@@ -212,9 +213,9 @@ function dayLabel(iso: string): string {
   const now = new Date();
   const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
   const diff = Math.round((startOf(now) - startOf(d)) / 86400_000);
-  if (diff === 0) return "今天";
-  if (diff === 1) return "昨天";
-  return `${d.getMonth() + 1}月${d.getDate()}日`;
+  if (diff === 0) return t("Execution.7");
+  if (diff === 1) return t("Execution.8");
+  return t("Execution.9", { a: d.getMonth() + 1, b: d.getDate() });
 }
 
 export interface WorkingAgent {
@@ -313,22 +314,22 @@ export function activitiesByRoot(timeline: TimelineEntry[], roots: Comment[]): M
 function activityText(entry: TimelineEntry, statuses: IssueStatusEntry[], agents: Agent[], runs: TaskRun[]): string {
   const statusName = (key: string) => statuses.find((s) => s.key === key)?.name ?? key;
   const actorName = (type: string | undefined, id: string | undefined) =>
-    type === "agent" ? agents.find((a) => a.id === id)?.name ?? "智能体" : entry.actor_name ?? "成员";
+    type === "agent" ? agents.find((a) => a.id === id)?.name ?? t("AgentDetail.23") : entry.actor_name ?? t("Execution.11");
   switch (entry.action) {
     case "status_changed":
-      return `状态从 ${statusName(str(entry.details?.from))} 改为 ${statusName(str(entry.details?.to))}`;
+      return t("Execution.12", { a: statusName(str(entry.details?.from)), b: statusName(str(entry.details?.to)) });
     case "task_completed": {
       const prior = runs.filter((r) => r.agent_id === entry.actor_id && r.completed_at && Date.parse(r.completed_at) <= Date.parse(entry.created_at)).length;
-      return `完成了运行${prior > 0 ? `（${prior} 次）` : ""}`;
+      return t("Execution.13", { a: prior > 0 ? t("Execution.14", { a: prior }) : "" });
     }
     case "task_failed":
-      return "运行失败";
+      return t("Execution.15");
     case "assignee_changed":
-      return `负责人从 ${actorName(str(entry.details?.from_type), str(entry.details?.from_id))} 改为 ${actorName(str(entry.details?.to_type), str(entry.details?.to_id))}`;
+      return t("Execution.16", { a: actorName(str(entry.details?.from_type), str(entry.details?.from_id)), b: actorName(str(entry.details?.to_type), str(entry.details?.to_id)) });
     case "created":
-      return "创建了任务";
+      return t("Execution.17");
     default:
-      return entry.action ?? "动态";
+      return entry.action ?? t("Execution.18");
   }
 }
 
@@ -363,7 +364,7 @@ export function ActivityList({
           <View key={entry.id} style={[ui.s.row, { gap: 8, paddingHorizontal: 16, paddingVertical: 6 }]}>
             {actor ? <Avatar ui={ui} name={actor.name} url={actor.avatar_url} size={16} /> : <Icon name={meta.icon} size={14} color={color} />}
             <Text style={{ flex: 1, fontSize: 12.5, lineHeight: 18, color: ui.c.fg }}>
-              <Text style={{ fontWeight: "600" }}>{actor?.name ?? entry.actor_name ?? "成员"}</Text>
+              <Text style={{ fontWeight: "600" }}>{actor?.name ?? entry.actor_name ?? t("Execution.11")}</Text>
               {" "}{activityText(entry, statuses, agents, runs)}
             </Text>
             <Text style={ui.s.tiny}>{relTime(entry.created_at)}</Text>
@@ -399,7 +400,7 @@ export function ExecutionLogSection({
       <View style={[ui.s.row, { gap: 10, paddingHorizontal: 7 }]}>
         <View style={{ flex: 1, gap: 1 }}>
           <Text style={{ fontSize: 13, fontWeight: "600", color: ui.c.fg }}>${((usage?.cost_usd_ticks ?? 0) / 1_000_000).toFixed(2)}</Text>
-          <Text style={ui.s.tiny}>已花费</Text>
+          <Text style={ui.s.tiny}>{t("Execution.20")}</Text>
         </View>
         <View style={{ flex: 1, gap: 1 }}>
           <Text style={{ fontSize: 13, fontWeight: "600", color: ui.c.fg }}>{fmtTokens(totalTokens)}</Text>
@@ -407,7 +408,7 @@ export function ExecutionLogSection({
         </View>
         <View style={{ flex: 1, gap: 1 }}>
           <Text style={{ fontSize: 13, fontWeight: "600", color: ui.c.fg }}>{fmtDuration(workMs)}</Text>
-          <Text style={ui.s.tiny}>智能体工作</Text>
+          <Text style={ui.s.tiny}>{t("Execution.21")}</Text>
         </View>
       </View>
       <View style={{ gap: 2 }}>
@@ -417,7 +418,7 @@ export function ExecutionLogSection({
           return (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`查看运行 ${run.id.slice(0, 8)}`}
+              accessibilityLabel={t("Execution.22", { a: run.id.slice(0, 8) })}
               key={run.id}
               onPress={() => onOpenRun(run.id)}
               style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
@@ -429,7 +430,7 @@ export function ExecutionLogSection({
             >
               {agent ? <Avatar ui={ui} name={agent.name} url={agent.avatar_url} size={16} /> : <Icon name="Bot" size={14} color={ui.c.muted} />}
               <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, color: ui.c.fg }}>
-                {run.attribution?.evidence?.kind === "comment" ? "评论触发" : run.kind === "direct" ? "手动触发" : "自动触发"}
+                {run.attribution?.evidence?.kind === "comment" ? t("Execution.23") : run.kind === "direct" ? t("Execution.24") : t("Execution.25")}
                 {run.result?.output ? ` · ${run.result.output.slice(0, 24)}` : ""}
               </Text>
               <Icon name={ok ? "CheckCircle2" : run.status === "running" ? "Loader" : "TriangleAlert"} size={13} color={ok ? ui.c.success : run.status === "running" ? ui.c.brand : ui.c.danger} />
@@ -439,7 +440,7 @@ export function ExecutionLogSection({
       </View>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="打开运行记录"
+        accessibilityLabel={t("Execution.26")}
         onPress={onOpenRuns}
         style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
           ui.s.row,
@@ -448,7 +449,7 @@ export function ExecutionLogSection({
           pressed && ui.s.pressed,
         ]}
       >
-        <Text style={{ fontSize: 12, color: ui.c.muted }}>详情 · {runs.length} 次运行{failed > 0 ? ` · ${failed} 失败` : ""}</Text>
+        <Text style={{ fontSize: 12, color: ui.c.muted }}>{t("Execution.27")} {runs.length} {t("Execution.28")}{failed > 0 ? t("Execution.29", { a: failed }) : ""}</Text>
         <Icon name="ChevronRight" size={12} color={ui.c.muted} />
       </Pressable>
     </View>
@@ -520,38 +521,38 @@ export function RunsModal({
   if (!open) return null;
   return (
     <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 60, backgroundColor: ui.c.scrim, alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <Pressable accessibilityLabel="关闭运行记录" onPress={onClose} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+      <Pressable accessibilityLabel={t("Execution.30")} onPress={onClose} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
       <View style={{ width: "100%", maxWidth: 860, maxHeight: "92%", borderRadius: 12, borderWidth: 1, borderColor: ui.c.border, backgroundColor: ui.c.card, boxShadow: ui.c.shadowLift, overflow: "hidden" }}>
         <View style={[ui.s.row, { gap: 8, paddingHorizontal: 18, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: ui.c.line }]}>
           <View style={{ flex: 1, gap: 2 }}>
-            <Text style={{ fontSize: 15, fontWeight: "600", color: ui.c.fg }}>运行记录</Text>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: ui.c.fg }}>{t("Execution.31")}</Text>
             <Text numberOfLines={1} style={ui.s.tiny}>{issueIdentifier} · {issueTitle}</Text>
           </View>
-          <Pressable accessibilityRole="button" accessibilityLabel="关闭" onPress={onClose} style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("Execution.32")} onPress={onClose} style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}>
             <Icon name="X" size={16} color={ui.c.muted} />
           </Pressable>
         </View>
         <ScrollView style={{ maxHeight: 620 }} contentContainerStyle={{ padding: 18, gap: 16 }}>
           <View style={[ui.s.row, { gap: 18, flexWrap: "wrap" }]}>
-            <StatBlock ui={ui} value={`$${((usage?.cost_usd_ticks ?? 0) / 1_000_000).toFixed(2)}`} label="已花费" />
-            <StatBlock ui={ui} value={fmtTokens(totalTokens)} label={`Token · 输入 ${fmtTokens(usage?.total_input_tokens ?? 0)}`} />
-            <StatBlock ui={ui} value={fmtTokens(usage?.total_output_tokens ?? 0)} label="输出" />
-            <StatBlock ui={ui} value={fmtDuration(workMs)} label="智能体工作" />
-            <StatBlock ui={ui} value={`${runs.length}`} label={`运行次数 · ${failed} 失败 · ${cancelled} 取消`} />
+            <StatBlock ui={ui} value={`$${((usage?.cost_usd_ticks ?? 0) / 1_000_000).toFixed(2)}`} label={t("Execution.20")} />
+            <StatBlock ui={ui} value={fmtTokens(totalTokens)} label={t("Execution.34", { a: fmtTokens(usage?.total_input_tokens ?? 0) })} />
+            <StatBlock ui={ui} value={fmtTokens(usage?.total_output_tokens ?? 0)} label={t("Execution.35")} />
+            <StatBlock ui={ui} value={fmtDuration(workMs)} label={t("Execution.21")} />
+            <StatBlock ui={ui} value={`${runs.length}`} label={t("Execution.37", { a: failed, b: cancelled })} />
           </View>
 
           <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
             <View style={[ui.s.row, { gap: 2, padding: 2, borderRadius: 8, backgroundColor: ui.c.fill }]}>
               {(["per", "cum"] as const).map((m) => (
-                <Pressable accessibilityRole="button" accessibilityLabel={m === "per" ? "按次" : "累计"} key={m} onPress={() => setMode(m)} style={({ pressed }) => [ui.s.row, { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 6, backgroundColor: mode === m ? ui.c.card : "transparent" }, pressed && ui.s.pressed]}>
-                  <Text style={{ fontSize: 12, color: mode === m ? ui.c.fg : ui.c.muted, fontWeight: mode === m ? "600" : "400" }}>{m === "per" ? "按次" : "累计"}</Text>
+                <Pressable accessibilityRole="button" accessibilityLabel={m === "per" ? t("Execution.38") : t("Execution.39")} key={m} onPress={() => setMode(m)} style={({ pressed }) => [ui.s.row, { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 6, backgroundColor: mode === m ? ui.c.card : "transparent" }, pressed && ui.s.pressed]}>
+                  <Text style={{ fontSize: 12, color: mode === m ? ui.c.fg : ui.c.muted, fontWeight: mode === m ? "600" : "400" }}>{m === "per" ? t("Execution.38") : t("Execution.39")}</Text>
                 </Pressable>
               ))}
             </View>
             <View style={[ui.s.row, { gap: 2, padding: 2, borderRadius: 8, backgroundColor: ui.c.fill }]}>
               {(["cost", "token", "work"] as const).map((m) => (
-                <Pressable accessibilityRole="button" accessibilityLabel={m === "cost" ? "费用" : m === "token" ? "Token" : "智能体工作"} key={m} onPress={() => setMetric(m)} style={({ pressed }) => [ui.s.row, { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 6, backgroundColor: metric === m ? ui.c.card : "transparent" }, pressed && ui.s.pressed]}>
-                  <Text style={{ fontSize: 12, color: metric === m ? ui.c.fg : ui.c.muted, fontWeight: metric === m ? "600" : "400" }}>{m === "cost" ? "费用" : m === "token" ? "Token" : "智能体工作"}</Text>
+                <Pressable accessibilityRole="button" accessibilityLabel={m === "cost" ? t("Execution.42") : m === "token" ? "Token" : t("Execution.21")} key={m} onPress={() => setMetric(m)} style={({ pressed }) => [ui.s.row, { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 6, backgroundColor: metric === m ? ui.c.card : "transparent" }, pressed && ui.s.pressed]}>
+                  <Text style={{ fontSize: 12, color: metric === m ? ui.c.fg : ui.c.muted, fontWeight: metric === m ? "600" : "400" }}>{m === "cost" ? t("Execution.42") : m === "token" ? "Token" : t("Execution.21")}</Text>
                 </Pressable>
               ))}
             </View>
@@ -566,7 +567,7 @@ export function RunsModal({
           </View>
 
           <View style={{ gap: 3, minHeight: 90, justifyContent: "flex-end" }}>
-            {bars.length === 0 ? <Text style={ui.s.tiny}>暂无运行</Text> : null}
+            {bars.length === 0 ? <Text style={ui.s.tiny}>{t("Execution.46")}</Text> : null}
             <View style={[ui.s.row, { gap: 2, alignItems: "flex-end", height: 80 }]}>
               {bars.slice(-60).map((b) => (
                 <Pressable
@@ -586,11 +587,11 @@ export function RunsModal({
 
           <View style={{ gap: 10 }}>
             <View style={[ui.s.row, { gap: 8, paddingHorizontal: 4 }]}>
-              <Text style={[ui.s.tiny, { width: 44 }]}>时间</Text>
-              <Text style={[ui.s.tiny, { flex: 1 }]}>触发</Text>
-              <Text style={[ui.s.tiny, { width: 90 }]}>智能体</Text>
-              <Text style={[ui.s.tiny, { width: 90 }]}>模型</Text>
-              <Text style={[ui.s.tiny, { width: 56, textAlign: "right" }]}>时长</Text>
+              <Text style={[ui.s.tiny, { width: 44 }]}>{t("Execution.47")}</Text>
+              <Text style={[ui.s.tiny, { flex: 1 }]}>{t("Execution.48")}</Text>
+              <Text style={[ui.s.tiny, { width: 90 }]}>{t("AgentDetail.23")}</Text>
+              <Text style={[ui.s.tiny, { width: 90 }]}>{t("AgentDetail.99")}</Text>
+              <Text style={[ui.s.tiny, { width: 56, textAlign: "right" }]}>{t("Execution.51")}</Text>
               <Text style={[ui.s.tiny, { width: 56, textAlign: "right" }]}>Token</Text>
             </View>
             {days.map((day) => (
@@ -601,7 +602,7 @@ export function RunsModal({
                   return (
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={`运行 ${fmtClock(run.created_at)} ${agent?.name ?? ""}`}
+                      accessibilityLabel={t("Execution.52", { a: fmtClock(run.created_at), b: agent?.name ?? "" })}
                       key={run.id}
                       onPress={() => onOpenRun(run.id)}
                       style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
@@ -613,7 +614,7 @@ export function RunsModal({
                     >
                       <Text style={[ui.s.tiny, { width: 44 }]}>{fmtClock(run.created_at)}</Text>
                       <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, color: ui.c.fg }}>
-                        {run.attribution?.evidence?.kind === "comment" ? "评论触发" : run.kind === "direct" ? "首次运行" : "自动触发"}
+                        {run.attribution?.evidence?.kind === "comment" ? t("Execution.23") : run.kind === "direct" ? t("Execution.54") : t("Execution.25")}
                         {run.result?.output ? ` · ${run.result.output.slice(0, 30)}` : ""}
                       </Text>
                       <View style={[ui.s.row, { gap: 4, width: 90 }]}>
@@ -706,12 +707,12 @@ export function RunLogModal({
         const input = m.input ?? {};
         const res = m.call_id ? results.get(m.call_id) : undefined;
         const dur = res?.created_at ? Math.max(0, Date.parse(res.created_at) - at) : null;
-        const title = str(input.description) || str(input.command).split("\n")[0] || str(input.file_path) || str(input.pattern) || m.tool || "工具";
+        const title = str(input.description) || str(input.command).split("\n")[0] || str(input.file_path) || str(input.pattern) || m.tool || t("Execution.56");
         list.push({ id: m.call_id ?? `s${m.seq}`, offsetMs: Math.max(0, at - started), durationMs: dur, kind: "tool", tool: m.tool ?? "Tool", title, detail: str(input.command) || str(input.file_path) || str(input.pattern) || "" });
       } else if (m.type === "thinking" || m.type === "think") {
-        list.push({ id: `t${m.seq}`, offsetMs: Math.max(0, at - started), durationMs: null, kind: "think", tool: "思考", title: (m.content ?? "").split("\n")[0].slice(0, 140), detail: m.content ?? "" });
+        list.push({ id: `t${m.seq}`, offsetMs: Math.max(0, at - started), durationMs: null, kind: "think", tool: t("Execution.57"), title: (m.content ?? "").split("\n")[0].slice(0, 140), detail: m.content ?? "" });
       } else if (m.type === "text" || m.type === "assistant") {
-        list.push({ id: `x${m.seq}`, offsetMs: Math.max(0, at - started), durationMs: null, kind: "text", tool: "回复", title: (m.content ?? "").split("\n")[0].slice(0, 140), detail: m.content ?? "" });
+        list.push({ id: `x${m.seq}`, offsetMs: Math.max(0, at - started), durationMs: null, kind: "text", tool: t("Execution.58"), title: (m.content ?? "").split("\n")[0].slice(0, 140), detail: m.content ?? "" });
       }
     }
     return list.sort((a, b) => a.offsetMs - b.offsetMs);
@@ -730,43 +731,43 @@ export function RunLogModal({
   const axisMax = Math.max(totalMs, 1000);
   return (
     <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 70, backgroundColor: ui.c.scrim, alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <Pressable accessibilityLabel="关闭运行日志" onPress={onClose} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+      <Pressable accessibilityLabel={t("Execution.59")} onPress={onClose} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
       <View style={{ width: "100%", maxWidth: 860, maxHeight: "92%", borderRadius: 12, borderWidth: 1, borderColor: ui.c.border, backgroundColor: ui.c.card, boxShadow: ui.c.shadowLift, overflow: "hidden" }}>
         <View style={[ui.s.row, { gap: 8, paddingHorizontal: 18, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: ui.c.line, flexWrap: "wrap" }]}>
-          <Tag ui={ui} label={run.status === "running" ? "进行中" : run.status === "completed" ? "已完成" : run.status === "failed" || run.status === "error" ? "失败" : run.status} tone={run.status === "running" ? "accent" : run.status === "completed" ? "success" : "danger"} />
+          <Tag ui={ui} label={run.status === "running" ? t("Execution.60") : run.status === "completed" ? t("AgentDetail.6") : run.status === "failed" || run.status === "error" ? t("AgentDetail.7") : run.status} tone={run.status === "running" ? "accent" : run.status === "completed" ? "success" : "danger"} />
           {agent ? <Avatar ui={ui} name={agent.name} url={agent.avatar_url} size={18} /> : null}
-          <Text style={{ fontSize: 13, fontWeight: "600", color: ui.c.fg }}>{agent?.name ?? "智能体"}</Text>
-          <Text style={ui.s.tiny}>{run.attribution?.initiator?.name ?? ""} · {run.attribution?.evidence?.kind === "comment" ? "评论触发" : run.kind === "direct" ? "手动触发" : "自动触发"} · 用时 {fmtDuration(totalMs)}</Text>
+          <Text style={{ fontSize: 13, fontWeight: "600", color: ui.c.fg }}>{agent?.name ?? t("AgentDetail.23")}</Text>
+          <Text style={ui.s.tiny}>{run.attribution?.initiator?.name ?? ""} · {run.attribution?.evidence?.kind === "comment" ? t("Execution.23") : run.kind === "direct" ? t("Execution.24") : t("Execution.25")} {t("Execution.67")} {fmtDuration(totalMs)}</Text>
           <View style={{ flex: 1 }} />
-          <Pressable accessibilityRole="button" accessibilityLabel="关闭" onPress={onClose} style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("Execution.32")} onPress={onClose} style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}>
             <Icon name="X" size={16} color={ui.c.muted} />
           </Pressable>
         </View>
         <ScrollView style={{ maxHeight: 600 }} contentContainerStyle={{ padding: 18, gap: 14 }}>
           <View style={{ gap: 4 }}>
-            <Text style={ui.s.label}>触发内容</Text>
+            <Text style={ui.s.label}>{t("Execution.69")}</Text>
             <Text style={{ fontSize: 13, color: ui.c.fg }}>
               {triggerComment?.content?.slice(0, 300) ??
                 (run.attribution?.evidence?.kind === "comment"
-                  ? "评论触发"
+                  ? t("Execution.23")
                   : run.attribution?.source === "direct_human"
-                    ? `手动触发 · ${run.attribution?.initiator?.name ?? "成员"}`
+                    ? t("Execution.71", { a: run.attribution?.initiator?.name ?? t("Execution.11") })
                     : run.attribution?.source === "schedule" || run.attribution?.source === "autopilot"
-                      ? "自动化触发"
+                      ? t("Execution.73")
                       : run.attribution?.source ?? "—")}
             </Text>
           </View>
           <View style={[ui.s.row, { gap: 8 }]}>
-            <Text style={ui.s.label}>产出</Text>
+            <Text style={ui.s.label}>{t("Execution.74")}</Text>
             <View style={[ui.s.row, { gap: 5, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, backgroundColor: ui.c.fill }]}>
               <Icon name="Terminal" size={12} color={ui.c.muted} />
-              <Text style={{ fontSize: 12, color: ui.c.fg }}>{commandCount} 条命令</Text>
+              <Text style={{ fontSize: 12, color: ui.c.fg }}>{commandCount} {t("Execution.75")}</Text>
             </View>
           </View>
           <View style={{ gap: 6 }}>
             {[
-              { label: "模型", ms: modelMs, hue: ui.c.brand },
-              { label: "工具", ms: toolMs, hue: ui.c.success },
+              { label: t("AgentDetail.99"), ms: modelMs, hue: ui.c.brand },
+              { label: t("Execution.56"), ms: toolMs, hue: ui.c.success },
             ].map((row) => (
               <View key={row.label} style={[ui.s.row, { gap: 8 }]}>
                 <Text style={[ui.s.tiny, { width: 34 }]}>{row.label}</Text>
@@ -784,14 +785,14 @@ export function RunLogModal({
           </View>
           <View style={[ui.s.row, { gap: 8, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, borderColor: ui.c.border, backgroundColor: ui.c.card, height: 32 }]}>
             <Icon name="Search" size={13} color={ui.c.muted} />
-            <TextInput value={search} onChangeText={setSearch} placeholder="搜索这次运行…" placeholderTextColor={ui.c.faint} style={{ flex: 1, fontSize: 12.5, color: ui.c.fg, paddingVertical: 4 }} />
-            <Text style={ui.s.tiny}>{visible.length} 个步骤</Text>
+            <TextInput value={search} onChangeText={setSearch} placeholder={t("Execution.78")} placeholderTextColor={ui.c.faint} style={{ flex: 1, fontSize: 12.5, color: ui.c.fg, paddingVertical: 4 }} />
+            <Text style={ui.s.tiny}>{visible.length} {t("Execution.79")}</Text>
           </View>
           <View style={{ gap: 2 }}>
             {logLoading && steps.length === 0 ? (
               <View style={[ui.s.row, { gap: 8, justifyContent: "center", padding: 14 }]}>
                 <ActivityIndicator size="small" color={ui.c.muted} />
-                <Text style={ui.s.muted}>读取步骤…</Text>
+                <Text style={ui.s.muted}>{t("Execution.80")}</Text>
               </View>
             ) : null}
             {visible.map((step) => {
@@ -800,7 +801,7 @@ export function RunLogModal({
                 <View key={step.id}>
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`步骤 +${fmtDuration(step.offsetMs)} ${step.title}`}
+                    accessibilityLabel={t("Execution.81", { a: fmtDuration(step.offsetMs), b: step.title })}
                     accessibilityState={{ expanded: open }}
                     onPress={() => setOpenStep(open ? null : step.id)}
                     style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
@@ -824,7 +825,7 @@ export function RunLogModal({
                 </View>
               );
             })}
-            {!logLoading && visible.length === 0 ? <Text style={[ui.s.tiny, { padding: 8 }]}>没有匹配的步骤。</Text> : null}
+            {!logLoading && visible.length === 0 ? <Text style={[ui.s.tiny, { padding: 8 }]}>{t("Execution.82")}</Text> : null}
           </View>
         </ScrollView>
       </View>

@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
@@ -10,29 +11,29 @@ import { IssueRow } from "../parts";
 type StatusFilter = "all" | "planned" | "in_progress" | "paused" | "completed" | "cancelled" | "archived";
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "全部" },
-  { value: "planned", label: "规划中" },
-  { value: "in_progress", label: "进行中" },
-  { value: "paused", label: "已暂停" },
-  { value: "completed", label: "已完成" },
-  { value: "cancelled", label: "已取消" },
-  { value: "archived", label: "已归档" },
+  { value: "all", label: t("ApiExplorer.4") },
+  { value: "planned", label: t("model.1") },
+  { value: "in_progress", label: t("Execution.60") },
+  { value: "paused", label: t("Nav.43") },
+  { value: "completed", label: t("AgentDetail.6") },
+  { value: "cancelled", label: t("AgentDetail.9") },
+  { value: "archived", label: t("AgentDetail.28") },
 ];
 
 const EDIT_STATUS: { value: string; label: string }[] = [
-  { value: "planned", label: "规划中" },
-  { value: "in_progress", label: "进行中" },
-  { value: "paused", label: "已暂停" },
-  { value: "completed", label: "已完成" },
-  { value: "cancelled", label: "已取消" },
+  { value: "planned", label: t("model.1") },
+  { value: "in_progress", label: t("Execution.60") },
+  { value: "paused", label: t("Nav.43") },
+  { value: "completed", label: t("AgentDetail.6") },
+  { value: "cancelled", label: t("AgentDetail.9") },
 ];
 
 const EDIT_PRIORITY: { value: string; label: string }[] = [
-  { value: "none", label: "无" },
-  { value: "low", label: "低" },
-  { value: "medium", label: "中" },
-  { value: "high", label: "高" },
-  { value: "urgent", label: "紧急" },
+  { value: "none", label: t("model.20") },
+  { value: "low", label: t("model.19") },
+  { value: "medium", label: t("model.18") },
+  { value: "high", label: t("model.17") },
+  { value: "urgent", label: t("model.16") },
 ];
 
 export function ProjectsPage() {
@@ -69,7 +70,7 @@ export function ProjectsPage() {
       (membersQuery.data ?? []).map((item) => ({
         id: String(item.id ?? ""),
         userId: String(item.user_id ?? ""),
-        name: String(item.name ?? item.email ?? "成员"),
+        name: String(item.name ?? item.email ?? t("Execution.11")),
         email: String(item.email ?? ""),
         avatarUrl: (item.avatar_url as string | null) ?? null,
         role: String(item.role ?? ""),
@@ -121,10 +122,10 @@ export function ProjectsPage() {
     const result = await api({ method: "POST", path: `/api/projects/${project.id}/archive` });
     setBusy(false);
     if (result.ok) {
-      toast.show("项目已归档", { variant: "success" });
+      toast.show(t("Projects.19"), { variant: "success" });
       projectsQuery.refresh();
       invalidate();
-    } else toast.error(result.error ?? "归档失败");
+    } else toast.error(result.error ?? t("AgentDetail.20"));
   };
 
   const restore = async (project: Project) => {
@@ -132,11 +133,11 @@ export function ProjectsPage() {
     const result = await api({ method: "POST", path: `/api/projects/${project.id}/restore` });
     setBusy(false);
     if (result.ok) {
-      toast.show("项目已取消归档", { variant: "success" });
+      toast.show(t("Projects.21"), { variant: "success" });
       setActiveId(null);
       projectsQuery.refresh();
       invalidate();
-    } else toast.error(result.error ?? "取消归档失败");
+    } else toast.error(result.error ?? t("Projects.22"));
   };
 
   const remove = async () => {
@@ -145,12 +146,12 @@ export function ProjectsPage() {
     const result = await api({ method: "DELETE", path: `/api/projects/${confirmDelete.id}` });
     setBusy(false);
     if (result.ok) {
-      toast.show("项目已删除", { variant: "success" });
+      toast.show(t("Projects.23"), { variant: "success" });
       setConfirmDelete(null);
       setActiveId(null);
       projectsQuery.refresh();
       invalidate();
-    } else toast.error(result.error ?? "删除失败");
+    } else toast.error(result.error ?? t("Automation.15"));
   };
 
   return (
@@ -164,13 +165,13 @@ export function ProjectsPage() {
       >
         <View style={[ui.s.row, { gap: 10 }]}>
           <View style={ui.s.grow}>
-            <Text style={[ui.s.title, { fontSize: compact ? 18 : 21 }]}>项目</Text>
+            <Text style={[ui.s.title, { fontSize: compact ? 18 : 21 }]}>{t("Nav.3")}</Text>
             <Text style={ui.s.muted}>
-              共 {list.length - archivedCount} 个项目
-              {archivedCount > 0 ? ` · 已归档 ${archivedCount}` : ""} · 跟踪交付进度与关联需求
+              {t("Inbox.40")} {list.length - archivedCount} {t("Projects.27")}
+              {archivedCount > 0 ? t("Projects.28", { a: archivedCount }) : ""} {t("Projects.29")}
             </Text>
           </View>
-          <Btn ui={ui} label="新建" icon="Plus" tone="primary" onPress={openCreate} />
+          <Btn ui={ui} label={t("Nav.10")} icon="Plus" tone="primary" onPress={openCreate} />
         </View>
 
         <View
@@ -191,7 +192,7 @@ export function ProjectsPage() {
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="搜索项目名称或描述…"
+            placeholder={t("Projects.31")}
             placeholderTextColor={ui.c.muted}
             style={{ flex: 1, color: ui.c.fg, fontSize: 13, paddingVertical: 8 }}
             autoCapitalize="none"
@@ -200,7 +201,7 @@ export function ProjectsPage() {
           {search ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="清空搜索"
+              accessibilityLabel={t("ApiExplorer.3")}
               onPress={() => setSearch("")}
               style={({ pressed }) => pressed && ui.s.pressed}
             >
@@ -224,9 +225,9 @@ export function ProjectsPage() {
             <Empty
               ui={ui}
               icon="FolderKanban"
-              title={needle || status !== "all" ? "没有匹配的项目" : "还没有项目"}
-              description="项目把需求、进度与负责人聚在一起，便于按里程碑推进。"
-              action={<Btn ui={ui} label="新建项目" icon="Plus" tone="primary" onPress={openCreate} />}
+              title={needle || status !== "all" ? t("Projects.33") : t("Projects.34")}
+              description={t("Projects.35")}
+              action={<Btn ui={ui} label={t("Nav.34")} icon="Plus" tone="primary" onPress={openCreate} />}
             />
           </Card>
         ) : (
@@ -255,7 +256,7 @@ export function ProjectsPage() {
       </ScrollView>
 
       <Modal
-        title={active ? active.title : "项目详情"}
+        title={active ? active.title : t("Projects.37")}
         icon={<Icon name="FolderKanban" size={16} color={ui.c.muted} />}
         open={Boolean(active)}
         onOpenChange={(next) => {
@@ -274,27 +275,27 @@ export function ProjectsPage() {
             >
               <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
                 <Tag ui={ui} label={projectStatusMeta(active.status).label} tone={projectStatusMeta(active.status).tone} />
-                {active.archived_at ? <Tag ui={ui} label="已归档" tone="danger" /> : null}
+                {active.archived_at ? <Tag ui={ui} label={t("AgentDetail.28")} tone="danger" /> : null}
                 {active.priority && active.priority !== "none" ? (
                   <Tag ui={ui} label={priorityMeta(active.priority).label} tone={priorityMeta(active.priority).tone} />
                 ) : null}
                 <View style={ui.s.grow} />
-                <IconBtn ui={ui} icon="Pencil" label="编辑项目" onPress={() => openEdit(active)} />
+                <IconBtn ui={ui} icon="Pencil" label={t("Projects.39")} onPress={() => openEdit(active)} />
                 {active.archived_at ? (
-                  <IconBtn ui={ui} icon="ArchiveRestore" label="取消归档" busy={busy} onPress={() => void restore(active)} />
+                  <IconBtn ui={ui} icon="ArchiveRestore" label={t("Inbox.35")} busy={busy} onPress={() => void restore(active)} />
                 ) : (
-                  <IconBtn ui={ui} icon="Archive" label="归档项目" busy={busy} onPress={() => void archive(active)} />
+                  <IconBtn ui={ui} icon="Archive" label={t("Projects.41")} busy={busy} onPress={() => void archive(active)} />
                 )}
-                <IconBtn ui={ui} icon="Trash2" label="删除项目" color={ui.c.danger} onPress={() => setConfirmDelete(active)} />
+                <IconBtn ui={ui} icon="Trash2" label={t("Projects.42")} color={ui.c.danger} onPress={() => setConfirmDelete(active)} />
               </View>
 
               <View style={{ gap: 6 }}>
                 <Progress value={active.done_count ?? 0} total={active.issue_count ?? 0} ui={ui} />
                 <View style={[ui.s.row, { gap: 12, flexWrap: "wrap" }]}>
-                  <Text style={ui.s.tiny}>需求 {active.issue_count ?? 0} 条</Text>
-                  <Text style={ui.s.tiny}>已完成 {active.done_count ?? 0} 条</Text>
-                  {active.due_date ? <Text style={ui.s.tiny}>截止 {active.due_date}</Text> : null}
-                  <Text style={ui.s.tiny}>更新 {relTime(active.updated_at)}</Text>
+                  <Text style={ui.s.tiny}>{t("Labels.17")} {active.issue_count ?? 0} {t("Issues.16")}</Text>
+                  <Text style={ui.s.tiny}>{t("AgentDetail.6")} {active.done_count ?? 0} {t("Issues.16")}</Text>
+                  {active.due_date ? <Text style={ui.s.tiny}>{t("IssueDetail.45")} {active.due_date}</Text> : null}
+                  <Text style={ui.s.tiny}>{t("Projects.48")} {relTime(active.updated_at)}</Text>
                 </View>
               </View>
 
@@ -303,7 +304,7 @@ export function ProjectsPage() {
                   <Avatar ui={ui} name={leadOf(active)!.name} url={leadOf(active)!.avatarUrl} size={26} />
                   <View style={{ flex: 1 }}>
                     <Text style={ui.s.body}>{leadOf(active)!.name}</Text>
-                    <Text style={ui.s.tiny}>项目负责人</Text>
+                    <Text style={ui.s.tiny}>{t("model.8")}</Text>
                   </View>
                 </View>
               ) : null}
@@ -313,12 +314,12 @@ export function ProjectsPage() {
                   <Markdown>{active.description}</Markdown>
                 </Card>
               ) : (
-                <Text style={[ui.s.muted, { fontStyle: "italic" }]}>暂无项目描述</Text>
+                <Text style={[ui.s.muted, { fontStyle: "italic" }]}>{t("Projects.50")}</Text>
               )}
 
               {members.length > 0 ? (
                 <View style={{ gap: 6 }}>
-                  <Text style={ui.s.label}>工作区成员</Text>
+                  <Text style={ui.s.label}>{t("Projects.51")}</Text>
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                     {members.map((member) => (
                       <View
@@ -334,12 +335,12 @@ export function ProjectsPage() {
               ) : null}
 
               <View style={{ gap: 6 }}>
-                <Text style={ui.s.label}>关联需求</Text>
+                <Text style={ui.s.label}>{t("Projects.52")}</Text>
                 <Card ui={ui} padded={false}>
                   {issuesQuery.loading && projectIssues.length === 0 ? (
                     <LoadingRow ui={ui} />
                   ) : projectIssues.length === 0 ? (
-                    <Empty ui={ui} icon="ListTodo" title="还没有关联需求" description="新建需求时选择该项目，或把已有需求移入。" />
+                    <Empty ui={ui} icon="ListTodo" title={t("Projects.53")} description={t("Projects.54")} />
                   ) : (
                     <View style={{ paddingBottom: 4 }}>
                       {projectIssues.map((issue, index) => (
@@ -370,7 +371,7 @@ export function ProjectsPage() {
                 />
                 <Btn
                   ui={ui}
-                  label="查看全部需求"
+                  label={t("Projects.55")}
                   icon="ArrowRight"
                   onPress={() => {
                     setActiveId(null);
@@ -397,7 +398,7 @@ export function ProjectsPage() {
       />
 
       <Modal
-        title="删除项目"
+        title={t("Projects.42")}
         icon={<Icon name="TriangleAlert" size={16} color={ui.c.danger} />}
         open={Boolean(confirmDelete)}
         onOpenChange={(next) => {
@@ -406,10 +407,10 @@ export function ProjectsPage() {
       >
         <Modal.Content>
           <View style={{ gap: 12 }}>
-            <Text style={ui.s.body}>确定删除「{confirmDelete?.title}」？项目下的需求不会被删除，但会解除关联。</Text>
+            <Text style={ui.s.body}>{t("Automation.48")}{confirmDelete?.title}{t("Projects.58")}</Text>
             <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8 }]}>
-              <Btn ui={ui} label="取消" onPress={() => setConfirmDelete(null)} />
-              <Btn ui={ui} label="删除" tone="danger" busy={busy} onPress={() => void remove()} />
+              <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setConfirmDelete(null)} />
+              <Btn ui={ui} label={t("SquadDetail.21")} tone="danger" busy={busy} onPress={() => void remove()} />
             </View>
           </View>
         </Modal.Content>
@@ -435,7 +436,7 @@ function ProjectCard({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`打开项目 ${project.title}`}
+      accessibilityLabel={t("Projects.61", { a: project.title })}
       onPress={onPress}
       style={({ pressed }) => [
         ui.s.card,
@@ -468,8 +469,8 @@ function ProjectCard({
             {project.title}
           </Text>
           <Text style={ui.s.tiny}>
-            {project.archived_at ? "已归档" : meta.label}
-            {project.due_date ? ` · 截止 ${project.due_date}` : ""}
+            {project.archived_at ? t("AgentDetail.28") : meta.label}
+            {project.due_date ? t("Projects.63", { a: project.due_date }) : ""}
           </Text>
         </View>
       </View>
@@ -486,10 +487,10 @@ function ProjectCard({
             <Text style={ui.s.tiny}>{lead.name}</Text>
           </View>
         ) : (
-          <Text style={ui.s.tiny}>未指派负责人</Text>
+          <Text style={ui.s.tiny}>{t("Projects.64")}</Text>
         )}
         <Text style={ui.s.tiny}>
-          {project.done_count ?? 0}/{project.issue_count ?? 0} 需求
+          {project.done_count ?? 0}/{project.issue_count ?? 0} {t("Labels.17")}
         </Text>
       </View>
     </Pressable>
@@ -555,7 +556,7 @@ function ProjectFormModal({
 
   const submit = async () => {
     if (!title.trim()) {
-      toast.error("请填写项目名称");
+      toast.error(t("Projects.66"));
       return;
     }
     setBusy(true);
@@ -572,15 +573,15 @@ function ProjectFormModal({
       : await api({ method: "POST", path: "/api/projects", body });
     setBusy(false);
     if (result.ok) {
-      toast.show(project ? "项目已更新" : "项目已创建", { variant: "success" });
+      toast.show(project ? t("Projects.67") : t("Projects.68"), { variant: "success" });
       const saved = result.data && typeof result.data === "object" ? (result.data as Project) : null;
       onSaved(saved);
-    } else toast.error(result.error ?? "保存失败");
+    } else toast.error(result.error ?? t("AgentDetail.64"));
   };
 
   return (
     <Modal
-      title={project ? "编辑项目" : "新建项目"}
+      title={project ? t("Projects.39") : t("Nav.34")}
       icon={<Icon name={project ? "Pencil" : "FolderKanban"} size={16} color={ui.c.muted} />}
       open={open}
       onOpenChange={(next) => {
@@ -589,34 +590,34 @@ function ProjectFormModal({
     >
       <Modal.Content>
         <ScrollView style={{ maxHeight: 520 }} contentContainerStyle={{ gap: 12 }}>
-          <Field ui={ui} label="项目名称" value={title} onChangeText={setTitle} placeholder="例如：Q4 增长实验" autoFocus />
+          <Field ui={ui} label={t("Projects.72")} value={title} onChangeText={setTitle} placeholder={t("Projects.73")} autoFocus />
           <Field
             ui={ui}
-            label="描述"
+            label={t("AgentDetail.97")}
             value={description}
             onChangeText={setDescription}
-            placeholder="目标、范围、里程碑…（支持 Markdown）"
+            placeholder={t("Projects.75")}
             multiline
           />
           <View style={{ gap: 6 }}>
-            <Text style={ui.s.label}>状态</Text>
+            <Text style={ui.s.label}>{t("IssueDetail.65")}</Text>
             <Chips ui={ui} options={EDIT_STATUS} value={status} onChange={setStatus} />
           </View>
           <View style={{ gap: 6 }}>
-            <Text style={ui.s.label}>优先级</Text>
+            <Text style={ui.s.label}>{t("IssueDetail.66")}</Text>
             <Chips ui={ui} options={EDIT_PRIORITY} value={priority} onChange={setPriority} />
           </View>
           <View style={[ui.s.row, { gap: 10 }]}>
             <View style={{ flex: 1 }}>
-              <Field ui={ui} label="开始日期" value={startDate} onChangeText={setStartDate} placeholder="YYYY-MM-DD" />
+              <Field ui={ui} label={t("Projects.78")} value={startDate} onChangeText={setStartDate} placeholder="YYYY-MM-DD" />
             </View>
             <View style={{ flex: 1 }}>
-              <Field ui={ui} label="截止日期" value={dueDate} onChangeText={setDueDate} placeholder="YYYY-MM-DD" />
+              <Field ui={ui} label={t("Projects.79")} value={dueDate} onChangeText={setDueDate} placeholder="YYYY-MM-DD" />
             </View>
           </View>
           <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8, paddingTop: 4 }]}>
-            <Btn ui={ui} label="取消" onPress={onClose} />
-            <Btn ui={ui} label={project ? "保存" : "创建项目"} icon="Check" tone="primary" busy={busy} onPress={() => void submit()} />
+            <Btn ui={ui} label={t("AgentDetail.40")} onPress={onClose} />
+            <Btn ui={ui} label={project ? t("AgentDetail.72") : t("Projects.82")} icon="Check" tone="primary" busy={busy} onPress={() => void submit()} />
           </View>
         </ScrollView>
       </Modal.Content>

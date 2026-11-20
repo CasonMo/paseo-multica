@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import type { PluginTheme } from "@getpaseo/plugin";
 import { Icon } from "@getpaseo/plugin/client/ui";
 import type { ReactNode } from "react";
@@ -541,8 +542,8 @@ export function LoadMore({
   if (loading && loaded === 0) return null;
   return (
     <View style={[ui.s.row, { justifyContent: "space-between", gap: 8, paddingHorizontal: 14, paddingVertical: 10 }]}>
-      <Text style={ui.s.tiny}>{hasMore ? `已加载 ${loaded} / ${total}` : `共 ${total} 条 · 已全部加载`}</Text>
-      {hasMore ? <Btn ui={ui} label="加载更多" icon="ChevronDown" busy={loadingMore} onPress={onLoadMore} /> : null}
+      <Text style={ui.s.tiny}>{hasMore ? t("bits.1", { a: loaded, b: total }) : t("bits.2", { a: total })}</Text>
+      {hasMore ? <Btn ui={ui} label={t("bits.3")} icon="ChevronDown" busy={loadingMore} onPress={onLoadMore} /> : null}
     </View>
   );
 }
@@ -662,7 +663,7 @@ export function Empty({
   );
 }
 
-export function LoadingRow({ ui, label = "加载中…" }: { ui: Ui; label?: string }) {
+export function LoadingRow({ ui, label = t("bits.4") }: { ui: Ui; label?: string }) {
   return (
     <View style={[ui.s.row, ui.s.gap8, { paddingVertical: 24, justifyContent: "center" }]}>
       <ActivityIndicator size="small" color={ui.c.muted} />
@@ -687,7 +688,7 @@ export function ErrorNote({ ui, message, onRetry }: { ui: Ui; message: string; o
     >
       <Icon name="AlertCircle" size={16} color={ui.c.danger} />
       <Text style={[ui.s.muted, { color: ui.c.danger, flex: 1 }]}>{message}</Text>
-      {onRetry ? <Btn ui={ui} label="重试" onPress={onRetry} /> : null}
+      {onRetry ? <Btn ui={ui} label={t("bits.5")} onPress={onRetry} /> : null}
     </View>
   );
 }
