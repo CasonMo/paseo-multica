@@ -299,6 +299,25 @@ export function issueStatusColor(issue: Issue, statuses: IssueStatusEntry[]): st
   return BUILTIN_COLOR[issue.status] ?? "#8b8b93";
 }
 
+const STATUS_ICON: Record<string, string> = {
+  backlog: "CircleDashed",
+  todo: "Circle",
+  unstarted: "Circle",
+  in_progress: "CircleDot",
+  started: "CircleDot",
+  blocked: "CircleAlert",
+  in_review: "CircleCheck",
+  review: "CircleCheck",
+  done: "CheckCheck",
+  completed: "CheckCheck",
+  cancelled: "CircleSlash",
+  closed: "CircleSlash",
+};
+
+export function issueStatusIcon(issue: Issue, statuses: IssueStatusEntry[]): string {
+  return STATUS_ICON[issue.status] ?? STATUS_ICON[issueCategory(issue, statuses)] ?? "Circle";
+}
+
 export function statusColor(status: IssueStatusEntry): string {
   return status.color || BUILTIN_COLOR[status.key] || "#8b8b93";
 }
@@ -351,13 +370,23 @@ export function withAlpha(hex: string, alpha: number): string {
   return hex + value.toString(16).padStart(2, "0");
 }
 
+function channelLuminance(hex: string): number {
+  const value = parseInt(hex.slice(1), 16);
+  const linear = (shift: number) => {
+    const channel = ((value >> shift) & 255) / 255;
+    return channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * linear(16) + 0.7152 * linear(8) + 0.0722 * linear(0);
+}
+
 export function pickTextColor(hex: string): string {
   if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return "#ffffff";
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.62 ? "#111111" : "#ffffff";
+  const background = channelLuminance(hex);
+  const contrast = (ink: string) => {
+    const other = channelLuminance(ink);
+    return (Math.max(background, other) + 0.05) / (Math.min(background, other) + 0.05);
+  };
+  return contrast("#ffffff") >= contrast("#111111") ? "#ffffff" : "#111111";
 }
 
 export function relTime(value?: string | null): string {

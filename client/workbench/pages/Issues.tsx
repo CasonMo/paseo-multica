@@ -1,10 +1,10 @@
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { Avatar, Btn, Card, Chips, Divider, Empty, ErrorNote, Field, LoadingRow, useUi } from "../bits";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Avatar, Btn, Chips, Empty, ErrorNote, Field, LoadingRow, useUi } from "../bits";
 import { asList, asRecord, num, str, useQuery } from "../api";
 import { useWorkbench } from "../context";
-import { issueStatusColor, relTime, type Agent, type Issue, type IssueStatusEntry, type Project } from "../model";
+import { priorityMeta, relTime, type Agent, type Issue, type IssueStatusEntry, type Project } from "../model";
 import { IssueRow } from "../parts";
 
 const VIEW_LABEL: Record<string, string> = {
@@ -15,14 +15,13 @@ const VIEW_LABEL: Record<string, string> = {
   closed: "已取消",
 };
 
-const BOARD: { key: string; label: string; icon: string; color: string; categories: string[]; status: string }[] = [
-  { key: "backlog", label: "待规划", icon: "CircleDashed", color: "#9CA3AF", categories: ["backlog"], status: "backlog" },
-  { key: "todo", label: "待办", icon: "Circle", color: "#9CA3AF", categories: ["todo", "unstarted"], status: "todo" },
+const BOARD: { key: string; label: string; icon: string; categories: string[]; status: string }[] = [
+  { key: "backlog", label: "待规划", icon: "CircleDashed", categories: ["backlog"], status: "backlog" },
+  { key: "todo", label: "待办", icon: "Circle", categories: ["todo", "unstarted"], status: "todo" },
   {
     key: "started",
     label: "进行中",
     icon: "CircleDot",
-    color: "#F59E0B",
     categories: ["in_progress", "started", "blocked"],
     status: "in_progress",
   },
@@ -30,16 +29,14 @@ const BOARD: { key: string; label: string; icon: string; color: string; categori
     key: "review",
     label: "审核中",
     icon: "CircleCheck",
-    color: "#22C55E",
     categories: ["in_review", "review"],
     status: "in_review",
   },
-  { key: "done", label: "已完成", icon: "CheckCheck", color: "#16A34A", categories: ["done", "completed"], status: "done" },
+  { key: "done", label: "已完成", icon: "CheckCheck", categories: ["done", "completed"], status: "done" },
   {
     key: "closed",
     label: "已取消",
     icon: "CircleSlash",
-    color: "#9CA3AF",
     categories: ["cancelled", "closed"],
     status: "cancelled",
   },
@@ -152,10 +149,10 @@ export function IssuesPage() {
           {
             gap: 8,
             paddingHorizontal: compact ? 12 : 16,
-            paddingVertical: 9,
-            borderBottomWidth: 1,
-            borderBottomColor: ui.c.border,
-            backgroundColor: ui.c.surface1,
+            height: 48,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: ui.c.line,
+            backgroundColor: ui.c.canvas,
           },
         ]}
       >
@@ -170,12 +167,12 @@ export function IssuesPage() {
                 paddingHorizontal: 7,
                 paddingVertical: 2,
                 borderRadius: 6,
-                backgroundColor: ui.c.surface2,
+                backgroundColor: ui.c.fill,
               },
             ]}
           >
             <Icon name="FolderKanban" size={11} color={ui.c.muted} />
-            <Text style={{ fontSize: 11.5, color: ui.c.fg }}>{activeProject.title}</Text>
+            <Text style={{ fontSize: 12, color: ui.c.fg }}>{activeProject.title}</Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="清除项目筛选"
@@ -198,25 +195,25 @@ export function IssuesPage() {
               borderRadius: 8,
               borderWidth: 1,
               borderColor: ui.c.border,
-              backgroundColor: ui.c.surface2,
-              minHeight: 30,
+              backgroundColor: ui.c.card,
+              height: 32,
             },
           ]}
         >
-          <Icon name="Search" size={13} color={ui.c.muted} />
+          <Icon name="Search" size={14} color={ui.c.muted} />
           <TextInput
             value={query}
             onChangeText={setQuery}
             placeholder="搜索任务…"
-            placeholderTextColor={ui.c.muted}
+            placeholderTextColor={ui.c.faint}
             autoFocus={params.focus === "search"}
-            style={{ flex: 1, color: ui.c.fg, fontSize: 12.5, paddingVertical: 5 }}
+            style={{ flex: 1, color: ui.c.fg, fontSize: 13, paddingVertical: 5 }}
             autoCapitalize="none"
             autoCorrect={false}
           />
         </View>
 
-        <View style={[ui.s.row, { gap: 2, padding: 2, borderRadius: 8, backgroundColor: ui.c.surface2 }]}>
+        <View style={[ui.s.row, { gap: 2, padding: 2, borderRadius: 8, backgroundColor: ui.c.fill }]}>
           {(["board", "list"] as const).map((entry) => {
             const active = mode === entry;
             return (
@@ -233,13 +230,14 @@ export function IssuesPage() {
                     paddingHorizontal: 8,
                     paddingVertical: 4,
                     borderRadius: 6,
-                    backgroundColor: active ? ui.c.surface1 : "transparent",
+                    backgroundColor: active ? ui.c.card : "transparent",
+                    boxShadow: active ? ui.c.shadow : undefined,
                   },
                   pressed && ui.s.pressed,
                 ]}
               >
                 <Icon name={entry === "board" ? "Columns3" : "List"} size={13} color={active ? ui.c.fg : ui.c.muted} />
-                <Text style={{ fontSize: 12, color: active ? ui.c.fg : ui.c.muted, fontWeight: active ? "600" : "400" }}>
+                <Text style={{ fontSize: 13, color: active ? ui.c.fg : ui.c.muted, fontWeight: active ? "500" : "400" }}>
                   {entry === "board" ? "看板" : "列表"}
                 </Text>
               </Pressable>
@@ -247,7 +245,7 @@ export function IssuesPage() {
           })}
         </View>
 
-        <Btn ui={ui} label="新建" icon="Plus" tone="primary" onPress={() => openCreate()} />
+        <Btn ui={ui} label="新建" icon="Plus" onPress={() => openCreate()} />
       </View>
 
       {issues.loading && list.length === 0 ? (
@@ -265,20 +263,25 @@ export function IssuesPage() {
           action={<Btn ui={ui} label="新建任务" icon="Plus" tone="primary" onPress={() => openCreate()} />}
         />
       ) : mode === "board" ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
-          {columns.map((column, index) => (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1, gap: 16, padding: compact ? 12 : 16 }}
+        >
+          {columns.map((column) => (
             <View
               key={column.key}
               style={{
-                width: compact ? 230 : 268,
+                width: compact ? 240 : 280,
                 flexGrow: 1,
-                borderRightWidth: index === columns.length - 1 ? 0 : 1,
-                borderRightColor: ui.c.border,
+                borderRadius: 12,
+                backgroundColor: `${ui.c.fill}66`,
+                padding: 8,
               }}
             >
-              <View style={[ui.s.row, { gap: 6, paddingHorizontal: 12, paddingVertical: 9 }]}>
-                <Icon name={column.icon} size={14} color={column.color} />
-                <Text style={{ fontSize: 13, fontWeight: "600", color: ui.c.fg }}>{column.label}</Text>
+              <View style={[ui.s.row, { gap: 6, height: 28, paddingHorizontal: 6, marginBottom: 8 }]}>
+                <Icon name={column.icon} size={12} color={ui.c.muted} />
+                <Text style={{ fontSize: 13, fontWeight: "500", color: ui.c.fg }}>{column.label}</Text>
                 <Text style={{ fontSize: 12, color: ui.c.muted }}>{column.items.length}</Text>
                 <View style={ui.s.grow} />
                 <Pressable
@@ -290,7 +293,7 @@ export function IssuesPage() {
                   <Icon name="Plus" size={14} color={ui.c.muted} />
                 </Pressable>
               </View>
-              <ScrollView contentContainerStyle={{ paddingHorizontal: 10, paddingBottom: 24, gap: 8 }}>
+              <ScrollView contentContainerStyle={{ paddingBottom: 16, gap: 8 }} showsVerticalScrollIndicator={false}>
                 {column.items.length === 0 ? (
                   <Text style={[ui.s.tiny, { textAlign: "center", paddingVertical: 26 }]}>无任务</Text>
                 ) : (
@@ -299,7 +302,6 @@ export function IssuesPage() {
                       key={issue.id}
                       ui={ui}
                       issue={issue}
-                      statuses={statuses}
                       project={issue.project_id ? projectMap.get(issue.project_id) : undefined}
                       assignee={issue.assignee_id ? assigneeMap.get(issue.assignee_id) : undefined}
                       onPress={() => navigate("issue", { id: issue.id })}
@@ -312,21 +314,17 @@ export function IssuesPage() {
         </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={{ padding: compact ? 12 : 16, paddingBottom: 40 }}>
-          <Card ui={ui} padded={false}>
-            <View style={{ paddingBottom: 6 }}>
-              {list.map((issue, index) => (
-                <View key={issue.id}>
-                  {index > 0 ? <Divider ui={ui} style={{ marginHorizontal: 14 }} /> : null}
-                  <IssueRow
-                    ui={ui}
-                    issue={issue}
-                    statuses={statuses}
-                    onPress={() => navigate("issue", { id: issue.id })}
-                  />
-                </View>
-              ))}
-            </View>
-          </Card>
+          <View>
+            {list.map((issue) => (
+              <IssueRow
+                key={issue.id}
+                ui={ui}
+                issue={issue}
+                statuses={statuses}
+                onPress={() => navigate("issue", { id: issue.id })}
+              />
+            ))}
+          </View>
           {list.length < total ? (
             <View style={{ alignItems: "center", marginTop: 12 }}>
               <Btn
@@ -360,18 +358,25 @@ export function IssuesPage() {
 function IssueCard({
   ui,
   issue,
-  statuses,
   project,
   assignee,
   onPress,
 }: {
   ui: ReturnType<typeof useUi>;
   issue: Issue;
-  statuses: IssueStatusEntry[];
   project?: Project;
   assignee?: { name: string; url?: string | null };
   onPress(): void;
 }) {
+  const priority = priorityMeta(issue.priority);
+  const priorityColor =
+    priority.tone === "danger"
+      ? ui.c.danger
+      : priority.tone === "warning"
+        ? ui.c.high
+        : priority.tone === "accent"
+          ? ui.c.brand
+          : ui.c.muted;
   return (
     <Pressable
       accessibilityRole="button"
@@ -379,37 +384,39 @@ function IssueCard({
       onPress={onPress}
       style={({ pressed }) => [
         {
-          gap: 6,
-          padding: 10,
-          borderRadius: 10,
+          paddingVertical: 12,
+          paddingHorizontal: 10,
+          borderRadius: 8,
           borderWidth: 1,
           borderColor: ui.c.border,
-          backgroundColor: ui.c.surface1,
+          backgroundColor: ui.c.card,
+          boxShadow: ui.c.shadow,
         },
         pressed && ui.s.pressed,
       ]}
     >
       <View style={[ui.s.row, { gap: 6 }]}>
-        <Text style={{ fontSize: 11, color: ui.c.muted, fontFamily: "Menlo" }}>{issue.identifier}</Text>
-        <View style={ui.s.grow} />
-        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: issueStatusColor(issue, statuses) }} />
+        {issue.priority && issue.priority !== "none" ? (
+          <Icon name={priority.icon} size={14} color={priorityColor} />
+        ) : null}
+        <Text style={ui.s.idText}>{issue.identifier}</Text>
       </View>
-      <Text numberOfLines={2} style={{ fontSize: 13.5, lineHeight: 19, fontWeight: "600", color: ui.c.fg }}>
+      <Text numberOfLines={2} style={{ fontSize: 14, lineHeight: 21, fontWeight: "500", color: ui.c.fg, marginTop: 4 }}>
         {issue.title}
       </Text>
       {project ? (
-        <View style={[ui.s.row, { gap: 4, alignSelf: "flex-start" }]}>
+        <View style={[ui.s.row, { gap: 4, alignSelf: "flex-start", marginTop: 6 }]}>
           <Icon name="FolderKanban" size={11} color={ui.c.muted} />
-          <Text numberOfLines={1} style={{ fontSize: 11.5, color: ui.c.muted }}>
+          <Text numberOfLines={1} style={{ fontSize: 12, color: ui.c.muted }}>
             {project.title}
           </Text>
         </View>
       ) : null}
-      <View style={[ui.s.row, { gap: 6, marginTop: 1 }]}>
+      <View style={[ui.s.row, { gap: 6, marginTop: 8 }]}>
         {assignee ? (
-          <Avatar ui={ui} name={assignee.name} url={assignee.url} size={16} />
+          <Avatar ui={ui} name={assignee.name} url={assignee.url} size={20} />
         ) : (
-          <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 1, borderColor: ui.c.border }} />
+          <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 1, borderColor: ui.c.border }} />
         )}
         <Text numberOfLines={1} style={[ui.s.tiny, { flex: 1 }]}>
           {assignee?.name ?? "未指派"}

@@ -1,13 +1,15 @@
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View, type ViewStyle } from "react-native";
-import { Avatar, Btn, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, Tag, useUi } from "../bits";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Avatar, Btn, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, Tag, useUi, type Ui } from "../bits";
 import { asList, asRecord, useQuery } from "../api";
 import { useWorkbench } from "../context";
 import {
   fmtDateTime,
   issueStatusColor,
+  issueStatusIcon,
   issueStatusLabel,
+  pickTextColor,
   priorityMeta,
   relTime,
   type Agent,
@@ -16,17 +18,9 @@ import {
   type Label,
   type Project,
 } from "../model";
-import { PriorityTag, StatusPill } from "../parts";
+import { PriorityMark, StatusMark } from "../parts";
 
 const PRIORITIES = ["urgent", "high", "medium", "low", "none"] as const;
-
-const groupStyle = (ui: ReturnType<typeof useUi>): ViewStyle => ({
-  borderWidth: 1,
-  borderColor: ui.c.border,
-  borderRadius: 10,
-  overflow: "hidden",
-  backgroundColor: ui.c.surface2,
-});
 
 export function IssueDetailPage({ issueId }: { issueId: string }) {
   const ctx = useWorkbench();
@@ -48,6 +42,8 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const [childOpen, setChildOpen] = useState(false);
   const [childTitle, setChildTitle] = useState("");
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
+  const [composerFor, setComposerFor] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [threadBusy, setThreadBusy] = useState<string | null>(null);
 
   const issueQuery = useQuery(api, issueId ? `/api/issues/${issueId}` : null, {}, key);
@@ -147,6 +143,12 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     await updateIssue({ title: editTitle.trim(), description: editDescription }, "任务已更新");
   };
 
+  const closeComposer = () => {
+    setReplyTo(null);
+    setComposerFor(null);
+    setMentionFor(null);
+  };
+
   const sendComment = async (key: string, parentId: string | null) => {
     if (!issue) return;
     const draft = (drafts[key] ?? "").trim();
@@ -163,7 +165,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     if (result.ok) {
       setDrafts((prev) => ({ ...prev, [key]: "" }));
       setMentions((prev) => ({ ...prev, [key]: [] }));
-      setReplyTo(null);
+      closeComposer();
       commentsQuery.refresh();
       toast.show(parentId ? "回复已发送" : "评论已发送", { variant: "success" });
     } else toast.error(result.error ?? "发送失败");
@@ -296,7 +298,6 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const availableLabels = (allLabelsQuery.data ?? []).filter(
     (label) => (label.resource_type ?? "issue") === "issue" && !attachedIds.has(label.id),
   );
-  const statusColor = issueStatusColor(issue, statuses);
   const project = (projectsQuery.data ?? []).find((item) => item.id === issue.project_id) ?? null;
   const personOf = (type?: string | null, id?: string | null) => {
     if (!id) return null;
@@ -308,6 +309,12 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     const member = members.find((item) => item.id === id);
     return { name: member?.name || "成员", url: member?.avatar_url ?? null };
   };
+  const openReply = (rootId: string, item: Comment) => {
+    setReplyTo(item);
+    setComposerFor(rootId);
+    setCollapsed((prev) => ({ ...prev, [rootId]: false }));
+    setMentionFor(null);
+  };
   const replyChip = (item: Comment) => (
     <View
       style={[
@@ -316,26 +323,381 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
           gap: 6,
           paddingHorizontal: 8,
           paddingVertical: 5,
-          borderRadius: 8,
-          borderWidth: 1,
-          borderColor: `${ui.c.accent}55`,
-          backgroundColor: `${ui.c.accent}14`,
+          borderRadius: 6,
+          backgroundColor: `${ui.c.brand}14`,
         },
       ]}
     >
-      <Icon name="CornerDownRight" size={12} color={ui.c.accent} />
+      <Icon name="CornerDownRight" size={12} color={ui.c.brand} />
       <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, color: ui.c.fg }}>
-        回复 {commentAuthor(item, agents, members).name}：{item.content.replace(/\s+/g, " ").slice(0, 40)}
+        回复 {commentAuthor(item, agents, members).name}：
+        {item.content.replace(/\[@([^\]]+)\]\(mention:\/\/[^)]+\)/g, "@$1").replace(/\s+/g, " ").slice(0, 40)}
       </Text>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="取消回复"
-        onPress={() => setReplyTo(null)}
+        onPress={closeComposer}
         style={({ pressed }) => [pressed && ui.s.pressed]}
       >
         <Icon name="X" size={12} color={ui.c.muted} />
       </Pressable>
     </View>
+  );
+
+  const pad = compact ? 16 : 32;
+  const half = `${ui.c.line}80`;
+
+  const content = (
+    <>
+      <View style={{ gap: 8 }}>
+        <Text style={{ color: ui.c.fg, fontSize: compact ? 20 : 24, fontWeight: "600", lineHeight: compact ? 28 : 32 }}>
+          {issue.title}
+        </Text>
+        <View style={[ui.s.row, { gap: 10, flexWrap: "wrap" }]}>
+          <Text style={ui.s.tiny}>更新于 {relTime(issue.updated_at)}</Text>
+          {issue.due_date ? (
+            <View style={[ui.s.row, { gap: 4 }]}>
+              <Icon name="CalendarClock" size={12} color={ui.c.warning} />
+              <Text style={ui.s.tiny}>截止 {issue.due_date}</Text>
+            </View>
+          ) : null}
+        </View>
+      </View>
+
+      {issue.description ? (
+        <Markdown>{issue.description}</Markdown>
+      ) : (
+        <Text style={[ui.s.muted, { fontStyle: "italic" }]}>暂无描述</Text>
+      )}
+
+      <View style={{ gap: 8 }}>
+        <View style={[ui.s.row, { gap: 8 }]}>
+          <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: ui.c.fg }}>
+            子任务{children.length > 0 ? ` · ${children.length}` : ""}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="添加子任务"
+            onPress={() => setChildOpen((value) => !value)}
+            style={({ pressed }) => [ui.s.row, { gap: 4 }, pressed && ui.s.pressed]}
+          >
+            <Icon name="Plus" size={13} color={ui.c.muted} />
+            <Text style={ui.s.tiny}>添加子任务</Text>
+          </Pressable>
+        </View>
+
+        {childOpen ? (
+          <View style={[ui.s.row, { gap: 6 }]}>
+            <View
+              style={[
+                ui.s.row,
+                {
+                  flex: 1,
+                  gap: 6,
+                  paddingHorizontal: 8,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: ui.c.border,
+                  backgroundColor: ui.c.card,
+                  height: 32,
+                },
+              ]}
+            >
+              <Icon name="CornerDownRight" size={13} color={ui.c.muted} />
+              <TextInput
+                value={childTitle}
+                onChangeText={setChildTitle}
+                placeholder="子任务标题，回车创建"
+                placeholderTextColor={ui.c.faint}
+                onSubmitEditing={() => void addChild()}
+                autoFocus
+                style={{ flex: 1, color: ui.c.fg, fontSize: 13, paddingVertical: 5 }}
+              />
+            </View>
+            <Btn
+              ui={ui}
+              label="添加"
+              icon="Plus"
+              tone="primary"
+              busy={busy}
+              disabled={!childTitle.trim()}
+              onPress={() => void addChild()}
+            />
+          </View>
+        ) : null}
+
+        {parent || children.length > 0 ? (
+          <View style={[ui.s.panel, { borderRadius: 8, borderColor: ui.c.line }]}>
+            {parent ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`父任务 ${parent.identifier}`}
+                onPress={() => navigate("issue", { id: parent.id })}
+                style={({ pressed }) => [
+                  ui.s.row,
+                  { gap: 8, paddingHorizontal: 12, paddingVertical: 8, minHeight: 37 },
+                  pressed && ui.s.pressed,
+                ]}
+              >
+                <Text style={{ fontSize: 12, color: ui.c.muted, fontWeight: "500" }}>父任务</Text>
+                <Text style={ui.s.idText}>{parent.identifier}</Text>
+                <Text numberOfLines={1} style={{ flex: 1, fontSize: 14, color: ui.c.fg }}>
+                  {parent.title}
+                </Text>
+                <Icon name={issueStatusIcon(parent, statuses)} size={14} color={issueStatusColor(parent, statuses)} />
+              </Pressable>
+            ) : null}
+            {children.map((child, index) => {
+              const owner = personOf(child.assignee_type, child.assignee_id);
+              return (
+                <View key={child.id}>
+                  {index > 0 || parent ? <Divider ui={ui} color={half} /> : null}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`${child.identifier} ${child.title}`}
+                    onPress={() => navigate("issue", { id: child.id })}
+                    style={({ pressed }) => [
+                      ui.s.row,
+                      { gap: 10, paddingHorizontal: 12, paddingVertical: 8, minHeight: 37 },
+                      pressed && ui.s.pressed,
+                    ]}
+                  >
+                    <Icon name={issueStatusIcon(child, statuses)} size={14} color={issueStatusColor(child, statuses)} />
+                    <Text style={ui.s.idText}>{child.identifier}</Text>
+                    <Text numberOfLines={1} style={{ flex: 1, fontSize: 14, color: ui.c.fg }}>
+                      {child.title}
+                    </Text>
+                    {owner ? <Avatar ui={ui} name={owner.name} url={owner.url} size={20} /> : null}
+                    <Text numberOfLines={1} style={[ui.s.tiny, { maxWidth: 96 }]}>
+                      {issueStatusLabel(child, statuses)}
+                    </Text>
+                  </Pressable>
+                </View>
+              );
+            })}
+          </View>
+        ) : !childOpen ? (
+          <Text style={ui.s.tiny}>暂无子任务</Text>
+        ) : null}
+      </View>
+
+      <View style={{ gap: 10 }}>
+        <Text style={{ fontSize: 14, fontWeight: "500", color: ui.c.fg }}>
+          评论{comments.length > 0 ? ` · ${comments.length}` : ""}
+        </Text>
+        {commentsQuery.loading && comments.length === 0 ? (
+          <View style={ui.s.panel}>
+            <LoadingRow ui={ui} />
+          </View>
+        ) : comments.length === 0 ? (
+          <View style={ui.s.panel}>
+            <Text style={[ui.s.tiny, { padding: 16 }]}>还没有评论，@ 智能体即可触发协作。</Text>
+          </View>
+        ) : (
+          <View style={{ gap: 12 }}>
+            {roots.map((root) => {
+              const replies = threadOf(root.id);
+              const folded = collapsed[root.id] === true;
+              const target = replyTo && (replyTo.id === root.id || replies.some((item) => item.id === replyTo.id)) ? replyTo : null;
+              const open = composerFor === root.id;
+              const inlineFor = open ? (target?.id ?? root.id) : null;
+              const threadComposer = (
+                <>
+                  <Divider ui={ui} color={half} />
+                  <View style={{ padding: 12 }}>
+                    <CommentComposer
+                      ui={ui}
+                      value={drafts[root.id] ?? ""}
+                      onChangeText={(text) => setDrafts((prev) => ({ ...prev, [root.id]: text }))}
+                      placeholder="回复这条评论，@ 智能体可指定执行者…"
+                      chip={target ? replyChip(target) : null}
+                      busy={sendingKey === root.id}
+                      agents={agents}
+                      mentionOpen={mentionFor === root.id}
+                      onMention={() => setMentionFor((prev) => (prev === root.id ? null : root.id))}
+                      onCloseMention={() => setMentionFor(null)}
+                      onPickAgent={insertMention}
+                      onCancel={closeComposer}
+                      onSend={() => void sendComment(root.id, target ? target.id : root.id)}
+                    />
+                  </View>
+                </>
+              );
+              return (
+                <View
+                  key={root.id}
+                  style={[ui.s.panel, (open || mentionFor === root.id) && { overflow: "visible" }]}
+                >
+                  <CommentCard
+                    ui={ui}
+                    item={root}
+                    agents={agents}
+                    members={members}
+                    busy={threadBusy === root.id}
+                    onReply={() => openReply(root.id, root)}
+                    onResolve={() => void toggleResolve(root)}
+                  />
+                  {inlineFor === root.id ? threadComposer : null}
+                  {replies.length > 0 ? (
+                    <>
+                      <Divider ui={ui} color={half} />
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={folded ? `展开 ${replies.length} 条回复` : "收起回复"}
+                        onPress={() => setCollapsed((prev) => ({ ...prev, [root.id]: !folded }))}
+                        style={({ pressed }) => [
+                          ui.s.row,
+                          { gap: 5, paddingHorizontal: 16, paddingVertical: 7 },
+                          pressed && ui.s.pressed,
+                        ]}
+                      >
+                        <Icon name={folded ? "ChevronDown" : "ChevronUp"} size={13} color={ui.c.muted} />
+                        <Text style={{ fontSize: 12, color: ui.c.muted }}>
+                          {folded ? `展开 ${replies.length} 条回复` : "收起讨论"}
+                        </Text>
+                      </Pressable>
+                      {folded
+                        ? null
+                        : replies.map((reply) => (
+                            <View key={reply.id}>
+                              <Divider ui={ui} color={half} />
+                              <CommentCard
+                                ui={ui}
+                                item={reply}
+                                agents={agents}
+                                members={members}
+                                replyToName={commentAuthor(commentById.get(reply.parent_id ?? "") ?? null, agents, members).name}
+                                busy={threadBusy === reply.id}
+                                onReply={() => openReply(root.id, reply)}
+                                onResolve={() => void toggleResolve(reply)}
+                              />
+                              {inlineFor === reply.id ? threadComposer : null}
+                            </View>
+                          ))}
+                    </>
+                  ) : null}
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </View>
+    </>
+  );
+
+  const composer = (
+    <CommentComposer
+      ui={ui}
+      value={drafts.root ?? ""}
+      onChangeText={(text) => setDrafts((prev) => ({ ...prev, root: text }))}
+      placeholder="留下评论，@ 智能体可触发协作…"
+      busy={sendingKey === "root"}
+      agents={agents}
+      mentionOpen={mentionFor === "root"}
+      onMention={() => setMentionFor((prev) => (prev === "root" ? null : "root"))}
+      onCloseMention={() => setMentionFor(null)}
+      onPickAgent={insertMention}
+      onSend={() => void sendComment("root", null)}
+    />
+  );
+
+  const panel = (
+    <>
+      <PanelSection ui={ui} title="属性">
+        <PropRow ui={ui} label="状态" onPress={() => setPick("status")}>
+          <StatusMark ui={ui} issue={issue} statuses={statuses} />
+          <View style={ui.s.grow} />
+          <Icon name="ChevronDown" size={13} color={ui.c.muted} />
+        </PropRow>
+        <PropRow ui={ui} label="优先级" onPress={() => setPick("priority")}>
+          {issue.priority && issue.priority !== "none" ? (
+            <PriorityMark ui={ui} priority={issue.priority} />
+          ) : (
+            <Text style={{ fontSize: 13, color: ui.c.muted }}>无</Text>
+          )}
+          <View style={ui.s.grow} />
+          <Icon name="ChevronDown" size={13} color={ui.c.muted} />
+        </PropRow>
+        <PropRow ui={ui} label="负责人" onPress={() => setAssignOpen(true)}>
+          {assignee ? <Avatar ui={ui} name={assignee.name} url={assignee.url} size={20} /> : null}
+          <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, color: ui.c.fg }}>
+            {assignee?.name ?? "未指派"}
+          </Text>
+          <Icon name="ChevronDown" size={13} color={ui.c.muted} />
+        </PropRow>
+        <PropRow
+          ui={ui}
+          label="项目"
+          onPress={project ? () => navigate("issues", { project: project.id }) : undefined}
+        >
+          <Icon name="FolderKanban" size={13} color={ui.c.muted} />
+          <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, color: ui.c.fg }}>
+            {project?.title ?? "未关联"}
+          </Text>
+        </PropRow>
+        <PropRow ui={ui} label="工作流" onPress={() => navigate("workflows")}>
+          <Icon name="Workflow" size={13} color={ui.c.muted} />
+          <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, color: ui.c.fg }}>
+            {issue.stage || "默认流程"}
+          </Text>
+        </PropRow>
+        <PropRow ui={ui} label="标签">
+          <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
+            {issueLabels.length === 0 ? <Text style={{ fontSize: 13, color: ui.c.muted }}>未添加</Text> : null}
+            {issueLabels.map((label) => {
+              const ink = pickTextColor(label.color);
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`移除标签 ${label.name}`}
+                  key={label.id}
+                  onPress={() => void detachLabel(label)}
+                  style={({ pressed }) => [
+                    ui.s.row,
+                    {
+                      gap: 4,
+                      paddingHorizontal: 7,
+                      paddingVertical: 2,
+                      borderRadius: 6,
+                      backgroundColor: label.color,
+                    },
+                    pressed && ui.s.pressed,
+                  ]}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: "500", color: ink }}>{label.name}</Text>
+                  <Icon name="X" size={10} color={ink} />
+                </Pressable>
+              );
+            })}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="添加标签"
+              onPress={() => setLabelsOpen(true)}
+              style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
+            >
+              <Icon name="Plus" size={14} color={ui.c.muted} />
+            </Pressable>
+          </View>
+        </PropRow>
+      </PanelSection>
+
+      <PanelSection ui={ui} title="详情">
+        <View style={{ paddingHorizontal: 7, gap: 6 }}>
+          <DetailLine ui={ui} label="编号" value={issue.identifier} />
+          <DetailLine ui={ui} label="创建于" value={fmtDateTime(issue.created_at)} />
+          <DetailLine ui={ui} label="更新于" value={fmtDateTime(issue.updated_at)} />
+          {assignee ? <DetailLine ui={ui} label="类型" value={assignee.kind} /> : null}
+        </View>
+      </PanelSection>
+
+      <PanelSection ui={ui} title="操作">
+        <View style={{ gap: 6, paddingHorizontal: 7 }}>
+          <Btn ui={ui} label="标记已读" icon="CheckCheck" onPress={() => void quick("read", "已标记为已读")} />
+          <Btn ui={ui} label="强制重跑" icon="RotateCw" busy={busy} onPress={() => void rerun()} />
+          <Btn ui={ui} label="打开接口视图" icon="Plug" onPress={() => navigate("api", { q: "issues" })} />
+        </View>
+      </PanelSection>
+    </>
   );
 
   return (
@@ -344,390 +706,51 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
         style={[
           ui.s.row,
           {
-            gap: 7,
-            paddingHorizontal: compact ? 10 : 14,
-            paddingVertical: 7,
-            borderBottomWidth: 1,
-            borderBottomColor: ui.c.border,
-            backgroundColor: ui.c.surface1,
+            gap: 6,
+            paddingHorizontal: compact ? 10 : 16,
+            height: 48,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: ui.c.line,
+            backgroundColor: ui.c.canvas,
           },
         ]}
       >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="返回"
-          onPress={() => navigate("issues")}
-          style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
-        >
-          <Icon name="ArrowLeft" size={15} color={ui.c.muted} />
-        </Pressable>
-        <Text numberOfLines={1} style={{ fontSize: 12.5, color: ui.c.muted }}>
+        <IconBtn ui={ui} icon="ArrowLeft" label="返回" onPress={() => navigate("issues")} />
+        <Text numberOfLines={1} style={{ fontSize: 14, color: ui.c.muted, flexShrink: 1 }}>
           {project?.title ?? "任务"}
         </Text>
-        <Icon name="ChevronRight" size={12} color={ui.c.muted} />
-        <Text style={{ fontSize: 12, fontFamily: "Menlo", color: ui.c.fg }}>{issue.identifier}</Text>
+        <Icon name="ChevronRight" size={12} color={ui.c.faint} />
+        <Text style={{ fontSize: 12, color: ui.c.fg }}>{issue.identifier}</Text>
         <View style={ui.s.grow} />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="编辑任务"
-          onPress={openEdit}
-          style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
-        >
-          <Icon name="Pencil" size={15} color={ui.c.muted} />
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="重跑任务"
-          onPress={() => void rerun()}
-          style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
-        >
-          <Icon name="RotateCw" size={15} color={ui.c.muted} />
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="删除任务"
-          onPress={() => setConfirmDelete(true)}
-          style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
-        >
-          <Icon name="Trash2" size={15} color={ui.c.danger} />
-        </Pressable>
+        <IconBtn ui={ui} icon="Pencil" label="编辑任务" onPress={openEdit} />
+        <IconBtn ui={ui} icon="RotateCw" label="重跑任务" onPress={() => void rerun()} />
+        <IconBtn ui={ui} icon="Trash2" label="删除任务" color={ui.c.danger} onPress={() => setConfirmDelete(true)} />
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: compact ? 14 : 20, paddingBottom: 48 }}>
-        <View style={{ flexDirection: compact ? "column" : "row", gap: compact ? 16 : 24, alignItems: "flex-start" }}>
-          <View style={{ flex: 1, minWidth: 0, gap: 14 }}>
-            <Text
-              style={{
-                color: ui.c.fg,
-                fontSize: compact ? 19 : 22,
-                fontWeight: "700",
-                lineHeight: compact ? 26 : 30,
-                letterSpacing: -0.2,
-              }}
-            >
-              {issue.title}
-            </Text>
-            <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
-              <StatusPill ui={ui} issue={issue} statuses={statuses} />
-              <PriorityTag ui={ui} priority={issue.priority} />
-              {issue.due_date ? <Tag ui={ui} label={`截止 ${issue.due_date}`} tone="warning" icon="CalendarClock" /> : null}
-              <Text style={ui.s.tiny}>更新于 {relTime(issue.updated_at)}</Text>
-            </View>
-
-            <View style={{ paddingTop: 2 }}>
-              {issue.description ? (
-                <Markdown>{issue.description}</Markdown>
-              ) : (
-                <Text style={[ui.s.muted, { fontStyle: "italic" }]}>暂无描述</Text>
-              )}
-            </View>
-
-            <Divider ui={ui} />
-
-            <View style={{ gap: 6 }}>
-              <View style={[ui.s.row, { gap: 8 }]}>
-                <Text style={[ui.s.label, { flex: 1 }]}>子任务 · {children.length}</Text>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="添加子任务"
-                  onPress={() => setChildOpen((value) => !value)}
-                  style={({ pressed }) => [ui.s.row, { gap: 4 }, pressed && ui.s.pressed]}
-                >
-                  <Icon name="Plus" size={13} color={ui.c.muted} />
-                  <Text style={ui.s.tiny}>添加子任务</Text>
-                </Pressable>
-              </View>
-
-              {childOpen ? (
-                <View style={[ui.s.row, { gap: 6, paddingVertical: 6 }]}>
-                  <View
-                    style={[
-                      ui.s.row,
-                      {
-                        flex: 1,
-                        gap: 6,
-                        paddingHorizontal: 8,
-                        borderRadius: 8,
-                        borderWidth: 1,
-                        borderColor: ui.c.border,
-                        backgroundColor: ui.c.surface2,
-                        minHeight: 32,
-                      },
-                    ]}
-                  >
-                    <Icon name="CornerDownRight" size={13} color={ui.c.muted} />
-                    <TextInput
-                      value={childTitle}
-                      onChangeText={setChildTitle}
-                      placeholder="子任务标题，回车创建"
-                      placeholderTextColor={ui.c.muted}
-                      onSubmitEditing={() => void addChild()}
-                      autoFocus
-                      style={{ flex: 1, color: ui.c.fg, fontSize: 12.5, paddingVertical: 5 }}
-                    />
-                  </View>
-                  <Btn
-                    ui={ui}
-                    label="添加"
-                    icon="Plus"
-                    tone="primary"
-                    busy={busy}
-                    disabled={!childTitle.trim()}
-                    onPress={() => void addChild()}
-                  />
-                </View>
-              ) : null}
-
-              {parent || children.length > 0 ? (
-                <View style={groupStyle(ui)}>
-                  {parent ? (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`父任务 ${parent.identifier}`}
-                      onPress={() => navigate("issue", { id: parent.id })}
-                      style={({ pressed }) => [
-                        { flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 12, paddingVertical: 10 },
-                        pressed && ui.s.pressed,
-                      ]}
-                    >
-                      <Text style={{ fontSize: 10.5, color: ui.c.muted, fontWeight: "700" }}>父任务</Text>
-                      <Text style={{ fontSize: 11.5, fontFamily: "Menlo", color: ui.c.muted }}>{parent.identifier}</Text>
-                      <Text numberOfLines={1} style={[ui.s.body, { flex: 1 }]}>
-                        {parent.title}
-                      </Text>
-                      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: issueStatusColor(parent, statuses) }} />
-                    </Pressable>
-                  ) : null}
-                  {children.map((child, index) => {
-                    const owner = personOf(child.assignee_type, child.assignee_id);
-                    return (
-                      <View key={child.id}>
-                        {index > 0 || parent ? <Divider ui={ui} color={`${ui.c.fg}1f`} /> : null}
-                        <Pressable
-                          accessibilityRole="button"
-                          onPress={() => navigate("issue", { id: child.id })}
-                          style={({ pressed }) => [ui.s.listRow, pressed && ui.s.pressed]}
-                        >
-                          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: issueStatusColor(child, statuses) }} />
-                          <Text style={[ui.s.tiny, { fontFamily: "Menlo" }]}>{child.identifier}</Text>
-                          <Text numberOfLines={1} style={[ui.s.body, { flex: 1 }]}>
-                            {child.title}
-                          </Text>
-                          {owner ? (
-                            <View style={[ui.s.row, { gap: 4 }]}>
-                              <Avatar ui={ui} name={owner.name} url={owner.url} size={16} />
-                              <Text numberOfLines={1} style={[ui.s.tiny, { maxWidth: 90 }]}>
-                                {owner.name}
-                              </Text>
-                            </View>
-                          ) : null}
-                          <Text style={ui.s.tiny}>{issueStatusLabel(child, statuses)}</Text>
-                        </Pressable>
-                      </View>
-                    );
-                  })}
-                </View>
-              ) : !childOpen ? (
-                <Text style={[ui.s.tiny, { paddingVertical: 4 }]}>暂无子任务</Text>
-              ) : null}
-            </View>
-
-            <Divider ui={ui} />
-
-            <View style={{ gap: 6 }}>
-              <Text style={ui.s.label}>评论 · {comments.length}</Text>
-              {commentsQuery.loading && comments.length === 0 ? (
-                <View style={groupStyle(ui)}>
-                  <View style={{ padding: 12 }}>
-                    <LoadingRow ui={ui} />
-                  </View>
-                </View>
-              ) : (
-                <>
-                  {comments.length === 0 ? (
-                    <View style={groupStyle(ui)}>
-                      <Text style={[ui.s.tiny, { padding: 12 }]}>还没有评论，@ 智能体即可触发协作。</Text>
-                    </View>
-                  ) : null}
-                  <View style={{ gap: 10 }}>
-                    {roots.map((root) => {
-                      const replies = threadOf(root.id);
-                      const target = replyTo && (replyTo.id === root.id || replies.some((item) => item.id === replyTo.id)) ? replyTo : null;
-                      return (
-                        <View key={root.id} style={groupStyle(ui)}>
-                          <CommentCard
-                            ui={ui}
-                            item={root}
-                            agents={agents}
-                            members={members}
-                            busy={threadBusy === root.id}
-                            onReply={() => setReplyTo(root)}
-                            onResolve={() => void toggleResolve(root)}
-                          />
-                          {replies.length > 0 ? (
-                            <View>
-                              <Divider ui={ui} color={`${ui.c.fg}1f`} />
-                              <View
-                                style={{
-                                  marginLeft: 16,
-                                  borderLeftWidth: 1,
-                                  borderLeftColor: `${ui.c.fg}1f`,
-                                }}
-                              >
-                                {replies.map((reply, replyIndex) => (
-                                  <View key={reply.id}>
-                                    {replyIndex > 0 ? <Divider ui={ui} color={`${ui.c.fg}1f`} /> : null}
-                                    <CommentCard
-                                      ui={ui}
-                                      item={reply}
-                                      agents={agents}
-                                      members={members}
-                                      replyToName={commentAuthor(commentById.get(reply.parent_id ?? "") ?? null, agents, members).name}
-                                      busy={threadBusy === reply.id}
-                                      onReply={() => setReplyTo(reply)}
-                                      onResolve={() => void toggleResolve(reply)}
-                                    />
-                                  </View>
-                                ))}
-                              </View>
-                            </View>
-                          ) : null}
-                          <Divider ui={ui} color={`${ui.c.fg}1f`} />
-                          <CommentComposer
-                            ui={ui}
-                            value={drafts[root.id] ?? ""}
-                            onChangeText={(text) => setDrafts((prev) => ({ ...prev, [root.id]: text }))}
-                            placeholder="回复这条评论，@ 智能体可指定执行者…"
-                            chip={target ? replyChip(target) : null}
-                            busy={sendingKey === root.id}
-                            onMention={() => setMentionFor(root.id)}
-                            onSend={() => void sendComment(root.id, target ? target.id : root.id)}
-                          />
-                        </View>
-                      );
-                    })}
-                  </View>
-                  <CommentComposer
-                    ui={ui}
-                    value={drafts.root ?? ""}
-                    onChangeText={(text) => setDrafts((prev) => ({ ...prev, root: text }))}
-                    placeholder="写下评论，支持 Markdown，@ 智能体可触发协作…"
-                    busy={sendingKey === "root"}
-                    onMention={() => setMentionFor("root")}
-                    onSend={() => void sendComment("root", null)}
-                  />
-                </>
-              )}
+      {compact ? (
+        <ScrollView contentContainerStyle={{ padding: pad, paddingBottom: 32, gap: 20 }}>
+          {content}
+          {composer}
+          <View style={{ gap: 16 }}>{panel}</View>
+        </ScrollView>
+      ) : (
+        <View style={{ flex: 1, flexDirection: "row", minHeight: 0 }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: pad, paddingBottom: 24 }}>
+              <View style={{ width: "100%", maxWidth: 896, alignSelf: "center", gap: 24 }}>{content}</View>
+            </ScrollView>
+            <View style={{ paddingHorizontal: pad, paddingBottom: 20 }}>
+              <View style={{ width: "100%", maxWidth: 896, alignSelf: "center" }}>{composer}</View>
             </View>
           </View>
-
-          <View
-            style={{
-              width: compact ? "100%" : 288,
-              gap: 16,
-              borderLeftWidth: compact ? 0 : 1,
-              borderLeftColor: ui.c.border,
-              paddingLeft: compact ? 0 : 20,
-            }}
+          <ScrollView
+            style={{ width: 300, flexGrow: 0, flexShrink: 0 }}
+            contentContainerStyle={{ padding: 20, paddingBottom: 32, gap: 16 }}
           >
-            <View style={{ gap: 2 }}>
-              <Text style={ui.s.label}>属性</Text>
-              <View style={{ borderTopWidth: 1, borderTopColor: ui.c.border }}>
-                <PropRow ui={ui} label="状态" onPress={() => setPick("status")}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: statusColor }} />
-                  <Text numberOfLines={1} style={[ui.s.body, { flex: 1 }]}>
-                    {issueStatusLabel(issue, statuses)}
-                  </Text>
-                  <Icon name="ChevronDown" size={13} color={ui.c.muted} />
-                </PropRow>
-                <PropRow ui={ui} label="优先级" onPress={() => setPick("priority")}>
-                  <Icon name="Flag" size={13} color={ui.c.muted} />
-                  <Text numberOfLines={1} style={[ui.s.body, { flex: 1 }]}>
-                    {priorityMeta(issue.priority).label}
-                  </Text>
-                  <Icon name="ChevronDown" size={13} color={ui.c.muted} />
-                </PropRow>
-                <PropRow ui={ui} label="负责人" onPress={() => setAssignOpen(true)}>
-                  {assignee ? <Avatar ui={ui} name={assignee.name} url={assignee.url} size={18} /> : null}
-                  <Text numberOfLines={1} style={[ui.s.body, { flex: 1 }]}>
-                    {assignee?.name ?? "未指派"}
-                  </Text>
-                  <Icon name="ChevronDown" size={13} color={ui.c.muted} />
-                </PropRow>
-                <PropRow
-                  ui={ui}
-                  label="项目"
-                  onPress={project ? () => navigate("issues", { project: project.id }) : undefined}
-                >
-                  <Icon name="FolderKanban" size={13} color={ui.c.muted} />
-                  <Text numberOfLines={1} style={[ui.s.body, { flex: 1 }]}>
-                    {project?.title ?? "未关联"}
-                  </Text>
-                </PropRow>
-                <PropRow ui={ui} label="工作流" onPress={() => navigate("workflows")}>
-                  <Icon name="Workflow" size={13} color={ui.c.muted} />
-                  <Text numberOfLines={1} style={[ui.s.body, { flex: 1 }]}>
-                    {issue.stage || "默认流程"}
-                  </Text>
-                </PropRow>
-                <PropRow ui={ui} label="标签" last>
-                  <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 5 }}>
-                    {issueLabels.length === 0 ? <Text style={ui.s.muted}>未添加</Text> : null}
-                    {issueLabels.map((label) => (
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={`移除标签 ${label.name}`}
-                        key={label.id}
-                        onPress={() => void detachLabel(label)}
-                        style={({ pressed }) => [
-                          {
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 4,
-                            paddingHorizontal: 7,
-                            paddingVertical: 2,
-                            borderRadius: 999,
-                            borderWidth: 1,
-                            borderColor: `${label.color}55`,
-                            backgroundColor: `${label.color}1f`,
-                          },
-                          pressed && ui.s.pressed,
-                        ]}
-                      >
-                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: label.color }} />
-                        <Text style={[ui.s.tiny, { color: label.color, fontWeight: "600" }]}>{label.name}</Text>
-                        <Icon name="X" size={10} color={label.color} />
-                      </Pressable>
-                    ))}
-                  </View>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="添加标签"
-                    onPress={() => setLabelsOpen(true)}
-                    style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
-                  >
-                    <Icon name="Plus" size={14} color={ui.c.muted} />
-                  </Pressable>
-                </PropRow>
-              </View>
-            </View>
-
-            <View style={{ gap: 3 }}>
-              <Text style={ui.s.label}>详情</Text>
-              <Text style={ui.s.tiny}>编号 {issue.identifier}</Text>
-              <Text style={ui.s.tiny}>创建于 {fmtDateTime(issue.created_at)}</Text>
-              <Text style={ui.s.tiny}>更新于 {fmtDateTime(issue.updated_at)}</Text>
-            </View>
-
-            <View style={{ gap: 6 }}>
-              <Text style={ui.s.label}>操作</Text>
-              <Btn ui={ui} label="标记已读" icon="CheckCheck" onPress={() => void quick("read", "已标记为已读")} />
-              <Btn ui={ui} label="强制重跑" icon="RotateCw" busy={busy} onPress={() => void rerun()} />
-              <Btn ui={ui} label="打开接口视图" icon="Plug" onPress={() => navigate("api", { q: "issues" })} />
-            </View>
-          </View>
+            {panel}
+          </ScrollView>
         </View>
-      </ScrollView>
+      )}
 
       <Modal
         title={pick === "status" ? "选择状态" : "选择优先级"}
@@ -751,10 +774,12 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                         setPick(null);
                         void updateIssue({ status: entry.key }, "状态已更新");
                       }}
-                      style={({ pressed }) => [ui.s.listRow, active && { backgroundColor: ui.c.surface2 }, pressed && ui.s.pressed]}
+                      style={({ pressed }) => [ui.s.menuItem, active && ui.s.hoverSurface, pressed && ui.s.pressed]}
                     >
                       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: entry.color }} />
-                      <Text style={[ui.s.body, { flex: 1 }, active && { fontWeight: "700" }]}>{entry.name}</Text>
+                      <Text style={{ flex: 1, fontSize: 14, color: ui.c.fg, fontWeight: active ? "600" : "400" }}>
+                        {entry.name}
+                      </Text>
                       {active ? <Icon name="Check" size={14} color={entry.color} /> : null}
                     </Pressable>
                   );
@@ -771,10 +796,13 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                         setPick(null);
                         void updateIssue({ priority: value }, "优先级已更新");
                       }}
-                      style={({ pressed }) => [ui.s.listRow, active && { backgroundColor: ui.c.surface2 }, pressed && ui.s.pressed]}
+                      style={({ pressed }) => [ui.s.menuItem, active && ui.s.hoverSurface, pressed && ui.s.pressed]}
                     >
-                      <Text style={[ui.s.body, { flex: 1 }, active && { fontWeight: "700" }]}>{meta.label}</Text>
-                      {active ? <Icon name="Check" size={14} color={ui.c.accent} /> : null}
+                      <Icon name={meta.icon} size={14} color={ui.c.muted} />
+                      <Text style={{ flex: 1, fontSize: 14, color: ui.c.fg, fontWeight: active ? "600" : "400" }}>
+                        {meta.label}
+                      </Text>
+                      {active ? <Icon name="Check" size={14} color={ui.c.brand} /> : null}
                     </Pressable>
                   );
                 })}
@@ -789,19 +817,19 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
         onOpenChange={setAssignOpen}
       >
         <Modal.Content>
-          <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 4 }}>
+          <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 2 }}>
             <Pressable
               accessibilityRole="button"
               onPress={() => {
                 setAssignOpen(false);
                 void updateIssue({ assignee_type: null, assignee_id: null }, "已取消指派");
               }}
-              style={({ pressed }) => [ui.s.listRow, pressed && ui.s.pressed]}
+              style={({ pressed }) => [ui.s.menuItem, pressed && ui.s.pressed]}
             >
               <Icon name="UserMinus" size={16} color={ui.c.muted} />
-              <Text style={[ui.s.body, { flex: 1 }]}>取消指派</Text>
+              <Text style={{ flex: 1, fontSize: 14, color: ui.c.fg }}>取消指派</Text>
             </Pressable>
-            <Text style={[ui.s.label, { paddingHorizontal: 14, paddingTop: 8 }]}>智能体</Text>
+            <Text style={[ui.s.label, { paddingHorizontal: 8, paddingTop: 8 }]}>智能体</Text>
             {agents.map((agent) => (
               <Pressable
                 accessibilityRole="button"
@@ -810,14 +838,14 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                   setAssignOpen(false);
                   void updateIssue({ assignee_type: "agent", assignee_id: agent.id }, `已指派给 ${agent.name}`);
                 }}
-                style={({ pressed }) => [ui.s.listRow, pressed && ui.s.pressed]}
+                style={({ pressed }) => [ui.s.menuItem, pressed && ui.s.pressed]}
               >
-                <Avatar ui={ui} name={agent.name} url={agent.avatar_url} size={26} />
-                <Text style={[ui.s.body, { flex: 1 }]}>{agent.name}</Text>
-                {issue.assignee_id === agent.id ? <Icon name="Check" size={14} color={ui.c.accent} /> : null}
+                <Avatar ui={ui} name={agent.name} url={agent.avatar_url} size={24} />
+                <Text style={{ flex: 1, fontSize: 14, color: ui.c.fg }}>{agent.name}</Text>
+                {issue.assignee_id === agent.id ? <Icon name="Check" size={14} color={ui.c.brand} /> : null}
               </Pressable>
             ))}
-            <Text style={[ui.s.label, { paddingHorizontal: 14, paddingTop: 8 }]}>成员</Text>
+            <Text style={[ui.s.label, { paddingHorizontal: 8, paddingTop: 8 }]}>成员</Text>
             {members.map((member) => (
               <Pressable
                 accessibilityRole="button"
@@ -826,41 +854,14 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                   setAssignOpen(false);
                   void updateIssue({ assignee_type: "member", assignee_id: member.id }, `已指派给 ${member.name}`);
                 }}
-                style={({ pressed }) => [ui.s.listRow, pressed && ui.s.pressed]}
+                style={({ pressed }) => [ui.s.menuItem, pressed && ui.s.pressed]}
               >
-                <Avatar ui={ui} name={member.name} url={member.avatar_url} size={26} />
+                <Avatar ui={ui} name={member.name} url={member.avatar_url} size={24} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[ui.s.body]}>{member.name}</Text>
+                  <Text style={{ fontSize: 14, color: ui.c.fg }}>{member.name}</Text>
                   <Text style={ui.s.tiny}>{member.email}</Text>
                 </View>
-                {issue.assignee_id === member.id ? <Icon name="Check" size={14} color={ui.c.accent} /> : null}
-              </Pressable>
-            ))}
-          </ScrollView>
-        </Modal.Content>
-      </Modal>
-
-      <Modal
-        title="提及智能体"
-        icon={<Icon name="AtSign" size={16} color={ui.c.muted} />}
-        open={mentionFor !== null}
-        onOpenChange={(next) => {
-          if (!next) setMentionFor(null);
-        }}
-      >
-        <Modal.Content>
-          <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 2 }}>
-            {agents.map((agent) => (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`提及 ${agent.name}`}
-                key={`mention-agent-${agent.id}`}
-                onPress={() => insertMention(agent)}
-                style={({ pressed }) => [ui.s.listRow, pressed && ui.s.pressed]}
-              >
-                <Avatar ui={ui} name={agent.name} url={agent.avatar_url} size={24} />
-                <Text style={[ui.s.body, { flex: 1 }]}>{agent.name}</Text>
-                <Icon name="AtSign" size={13} color={ui.c.muted} />
+                {issue.assignee_id === member.id ? <Icon name="Check" size={14} color={ui.c.brand} /> : null}
               </Pressable>
             ))}
           </ScrollView>
@@ -886,11 +887,11 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                 key={label.id}
                 disabled={busy}
                 onPress={() => void attachLabel(label)}
-                style={({ pressed }) => [ui.s.listRow, pressed && ui.s.pressed]}
+                style={({ pressed }) => [ui.s.menuItem, pressed && ui.s.pressed]}
               >
                 <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: label.color }} />
                 <View style={{ flex: 1 }}>
-                  <Text style={ui.s.body}>{label.name}</Text>
+                  <Text style={{ fontSize: 14, color: ui.c.fg }}>{label.name}</Text>
                   {label.description ? <Text style={ui.s.tiny}>{label.description}</Text> : null}
                 </View>
                 <Icon name="Plus" size={14} color={ui.c.muted} />
@@ -945,18 +946,39 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   );
 }
 
+function PanelSection({ ui, title, children }: { ui: Ui; title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <View style={{ gap: 2 }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        accessibilityState={{ expanded: open }}
+        onPress={() => setOpen((value) => !value)}
+        style={({ pressed }) => [
+          ui.s.row,
+          { gap: 4, height: 28, paddingHorizontal: 7, borderRadius: 6 },
+          pressed && ui.s.pressed,
+        ]}
+      >
+        <Icon name={open ? "ChevronDown" : "ChevronRight"} size={13} color={ui.c.muted} />
+        <Text style={ui.s.sectionHead}>{title}</Text>
+      </Pressable>
+      {open ? <View style={{ gap: 2 }}>{children}</View> : null}
+    </View>
+  );
+}
+
 function PropRow({
   ui,
   label,
   children,
   onPress,
-  last,
 }: {
-  ui: ReturnType<typeof useUi>;
+  ui: Ui;
   label: string;
   children: React.ReactNode;
   onPress?: () => void;
-  last?: boolean;
 }) {
   return (
     <Pressable
@@ -965,13 +987,25 @@ function PropRow({
       disabled={!onPress}
       onPress={onPress}
       style={({ pressed }) => [
-        { gap: 5, paddingVertical: 8, borderBottomWidth: last ? 0 : 1, borderBottomColor: ui.c.border },
+        ui.s.row,
+        { gap: 8, minHeight: 32, paddingHorizontal: 7, borderRadius: 6 },
         pressed && ui.s.pressed,
       ]}
     >
-      <Text style={{ fontSize: 11.5, color: ui.c.muted, fontWeight: "600" }}>{label}</Text>
-      <View style={[ui.s.row, { gap: 7, minHeight: 20 }]}>{children}</View>
+      <Text style={{ width: 56, fontSize: 13, color: ui.c.muted }}>{label}</Text>
+      <View style={[ui.s.row, { flex: 1, gap: 6, minWidth: 0 }]}>{children}</View>
     </Pressable>
+  );
+}
+
+function DetailLine({ ui, label, value }: { ui: Ui; label: string; value: string }) {
+  return (
+    <View style={[ui.s.row, { gap: 8 }]}>
+      <Text style={{ width: 56, fontSize: 12, color: ui.c.muted }}>{label}</Text>
+      <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, color: ui.c.fg }}>
+        {value}
+      </Text>
+    </View>
   );
 }
 
@@ -989,37 +1023,6 @@ function commentAuthor(
   };
 }
 
-function CommentAction({
-  ui,
-  icon,
-  label,
-  onPress,
-  disabled,
-}: {
-  ui: ReturnType<typeof useUi>;
-  icon: string;
-  label: string;
-  onPress(): void;
-  disabled?: boolean;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [
-        ui.s.row,
-        { gap: 4, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6, opacity: disabled ? 0.45 : 1 },
-        pressed && ui.s.pressed,
-      ]}
-    >
-      <Icon name={icon} size={12} color={ui.c.muted} />
-      <Text style={{ fontSize: 11.5, color: ui.c.muted }}>{label}</Text>
-    </Pressable>
-  );
-}
-
 function CommentComposer({
   ui,
   value,
@@ -1027,53 +1030,129 @@ function CommentComposer({
   placeholder,
   chip,
   busy,
+  agents,
+  mentionOpen,
   onMention,
+  onCloseMention,
+  onPickAgent,
+  onCancel,
   onSend,
 }: {
-  ui: ReturnType<typeof useUi>;
+  ui: Ui;
   value: string;
   onChangeText(text: string): void;
   placeholder: string;
   chip?: React.ReactNode;
   busy?: boolean;
+  agents: Agent[];
+  mentionOpen: boolean;
   onMention(): void;
+  onCloseMention(): void;
+  onPickAgent(agent: Agent): void;
+  onCancel?: () => void;
   onSend(): void;
 }) {
   return (
-    <View style={{ gap: 6, padding: 8 }}>
+    <View
+      style={{
+        position: "relative",
+        gap: 6,
+        padding: 8,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: ui.c.line,
+        backgroundColor: ui.c.card,
+        boxShadow: ui.c.shadow,
+      }}
+    >
       {chip}
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={ui.c.faint}
+        multiline
+        style={{
+          minHeight: 36,
+          maxHeight: 140,
+          color: ui.c.fg,
+          fontSize: 14,
+          lineHeight: 20,
+          paddingHorizontal: 4,
+          paddingVertical: 4,
+        }}
+      />
       <View style={[ui.s.row, { gap: 2 }]}>
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor={ui.c.muted}
-          multiline
-          style={{
-            flex: 1,
-            minHeight: 32,
-            maxHeight: 96,
-            color: ui.c.fg,
-            fontSize: 12.5,
-            paddingHorizontal: 9,
-            paddingVertical: 7,
-            borderRadius: 8,
-            borderWidth: 1,
-            borderColor: ui.c.border,
-            backgroundColor: ui.c.surface0,
-          }}
-        />
-        <IconBtn ui={ui} icon="AtSign" label="提及智能体" size={15} onPress={onMention} />
+        <IconBtn ui={ui} icon="AtSign" label="提及智能体" onPress={onMention} color={mentionOpen ? ui.c.brand : ui.c.muted} />
+        <View style={ui.s.grow} />
+        {onCancel ? <Btn ui={ui} label="取消" onPress={onCancel} /> : null}
         <IconBtn
           ui={ui}
           icon="Send"
           label="发送"
-          size={15}
-          color={value.trim() ? ui.c.accent : ui.c.muted}
+          color={value.trim() ? ui.c.primary : ui.c.faint}
           busy={busy}
           onPress={onSend}
         />
       </View>
+
+      {mentionOpen ? (
+        <View
+          style={{
+            position: "absolute",
+            bottom: "100%",
+            left: 0,
+            marginBottom: 6,
+            width: 288,
+            maxHeight: 300,
+            zIndex: 30,
+            borderRadius: 6,
+            borderWidth: 1,
+            borderColor: ui.c.border,
+            backgroundColor: ui.c.card,
+            boxShadow: ui.c.shadowLift,
+            paddingVertical: 4,
+            overflow: "hidden",
+          }}
+        >
+          <View style={[ui.s.row, { paddingHorizontal: 12, paddingVertical: 5 }]}>
+            <Text style={{ flex: 1, fontSize: 11, fontWeight: "500", color: ui.c.muted }}>智能体</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="关闭提及选择"
+              onPress={onCloseMention}
+              style={({ pressed }) => [pressed && ui.s.pressed]}
+            >
+              <Icon name="X" size={12} color={ui.c.muted} />
+            </Pressable>
+          </View>
+          <ScrollView style={{ maxHeight: 252 }} keyboardShouldPersistTaps="handled">
+            {agents.length === 0 ? (
+              <Text style={[ui.s.tiny, { paddingHorizontal: 12, paddingVertical: 8 }]}>暂无智能体</Text>
+            ) : (
+              agents.map((agent) => (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`提及 ${agent.name}`}
+                  key={`mention-${agent.id}`}
+                  onPress={() => onPickAgent(agent)}
+                  style={({ pressed }) => [
+                    ui.s.row,
+                    { gap: 10, height: 32, paddingHorizontal: 12, paddingVertical: 6 },
+                    pressed && ui.s.pressed,
+                  ]}
+                >
+                  <Avatar ui={ui} name={agent.name} url={agent.avatar_url} size={20} />
+                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, color: ui.c.fg }}>
+                    {agent.name}
+                  </Text>
+                  <Icon name="AtSign" size={12} color={ui.c.faint} />
+                </Pressable>
+              ))
+            )}
+          </ScrollView>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -1088,7 +1167,7 @@ function CommentCard({
   onReply,
   onResolve,
 }: {
-  ui: ReturnType<typeof useUi>;
+  ui: Ui;
   item: Comment;
   agents: Agent[];
   members: { id: string; name: string; avatar_url?: string | null }[];
@@ -1100,33 +1179,40 @@ function CommentCard({
   const author = commentAuthor(item, agents, members);
   const resolved = Boolean(item.resolved_at);
   return (
-    <View style={{ gap: 6, padding: 12, backgroundColor: resolved ? `${ui.c.success}0f` : "transparent" }}>
-      <View style={[ui.s.row, { gap: 7, flexWrap: "wrap" }]}>
-        <Avatar ui={ui} name={author.name} url={author.url} size={22} />
-        <Text style={[ui.s.body, { fontWeight: "600" }]}>{author.name}</Text>
+    <View style={{ gap: 8, padding: 16, backgroundColor: resolved ? `${ui.c.success}0f` : "transparent" }}>
+      <View style={[ui.s.row, { gap: 12 }]}>
+        <Avatar ui={ui} name={author.name} url={author.url} size={20} />
+        <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "500", color: ui.c.fg, flexShrink: 1 }}>
+          {author.name}
+        </Text>
         {item.author_type === "agent" ? <Tag ui={ui} label="智能体" tone="accent" /> : null}
-        <Text style={ui.s.tiny}>{relTime(item.created_at)}</Text>
-        {replyToName ? <Text style={ui.s.tiny}>回复 {replyToName}</Text> : null}
+        {replyToName ? (
+          <Text numberOfLines={1} style={[ui.s.tiny, { flexShrink: 1 }]}>
+            回复 {replyToName}
+          </Text>
+        ) : null}
+        <Text style={{ fontSize: 13, color: ui.c.muted }}>{relTime(item.created_at)}</Text>
         <View style={ui.s.grow} />
         {resolved ? <Tag ui={ui} label="已解决" tone="success" icon="Check" /> : null}
-        <CommentAction ui={ui} icon="CornerDownRight" label="回复" onPress={onReply} />
-        <CommentAction
+        <IconBtn ui={ui} icon="CornerDownRight" label="回复" onPress={onReply} />
+        <IconBtn
           ui={ui}
           icon={resolved ? "CircleX" : "Check"}
           label={resolved ? "取消解决" : "解决"}
+          color={resolved ? ui.c.success : ui.c.muted}
+          busy={busy}
           onPress={onResolve}
-          disabled={busy}
         />
       </View>
       {item.content ? (
-        <View style={{ paddingLeft: 29 }}>
+        <View style={{ paddingLeft: 32 }}>
           <Markdown>{item.content}</Markdown>
         </View>
       ) : (
-        <Text style={[ui.s.tiny, { paddingLeft: 29, fontStyle: "italic" }]}>（空评论）</Text>
+        <Text style={[ui.s.tiny, { paddingLeft: 32, fontStyle: "italic" }]}>（空评论）</Text>
       )}
       {item.resolved_at ? (
-        <Text style={[ui.s.tiny, { paddingLeft: 29 }]}>解决于 {fmtDateTime(item.resolved_at)}</Text>
+        <Text style={[ui.s.tiny, { paddingLeft: 32 }]}>解决于 {fmtDateTime(item.resolved_at)}</Text>
       ) : null}
     </View>
   );

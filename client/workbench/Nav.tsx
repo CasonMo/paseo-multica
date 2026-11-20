@@ -41,6 +41,8 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
     options?: { selected?: boolean; busy?: boolean; plain?: boolean },
   ) => {
     const selected = options?.selected === true;
+    const plain = options?.plain === true;
+    const box = compact ? 38 : 48;
     return (
       <Pressable
         accessibilityRole="button"
@@ -50,24 +52,32 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
         onPress={onPress}
         style={({ pressed }) => [
           {
-            width: compact ? 46 : 54,
-            paddingVertical: 7,
-            borderRadius: 10,
+            width: plain ? 32 : box,
+            height: plain ? 32 : box,
+            borderRadius: plain ? 8 : 12,
             alignItems: "center",
-            gap: 3,
+            justifyContent: "center",
+            gap: 2,
           },
-          selected && { backgroundColor: ui.c.surface2 },
+          selected && { backgroundColor: ui.c.fillStrong },
           pressed && ui.s.pressed,
         ]}
       >
-        <Icon
-          name={icon}
-          size={compact ? 17 : 19}
-          color={selected ? ui.c.fg : ui.c.muted}
-        />
-        {options?.busy ? <ActivityIndicator size="small" color={ui.c.muted} /> : null}
-        {options?.plain ? null : (
-          <Text style={{ fontSize: 10, color: selected ? ui.c.fg : ui.c.muted, fontWeight: selected ? "600" : "400" }}>
+        {options?.busy ? (
+          <ActivityIndicator size="small" color={ui.c.muted} />
+        ) : (
+          <Icon name={icon} size={compact ? 15 : 16} color={selected ? ui.c.fg : ui.c.muted} />
+        )}
+        {plain ? null : (
+          <Text
+            numberOfLines={1}
+            style={{
+              fontSize: compact ? 10 : 11,
+              lineHeight: compact ? 12 : 14,
+              color: selected ? ui.c.fg : ui.c.muted,
+              fontWeight: selected ? "500" : "400",
+            }}
+          >
             {label}
           </Text>
         )}
@@ -78,11 +88,10 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
   return (
     <View
       style={{
-        width: compact ? 58 : 72,
-        backgroundColor: ui.c.surface1,
-        borderRightWidth: 1,
-        borderRightColor: ui.c.border,
-        paddingVertical: 10,
+        width: compact ? 48 : 56,
+        backgroundColor: ui.c.shell,
+        paddingTop: 15,
+        paddingBottom: 10,
         alignItems: "center",
         gap: 2,
       }}
@@ -93,18 +102,18 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
         onPress={onWorkspacePicker}
         style={({ pressed }) => [
           {
-            width: 34,
-            height: 34,
-            borderRadius: 9,
+            width: 32,
+            height: 32,
+            borderRadius: 10,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: ui.c.surface2,
+            backgroundColor: ui.c.fillStrong,
             marginBottom: 8,
           },
           pressed && ui.s.pressed,
         ]}
       >
-        <Text style={{ color: ui.c.fg, fontSize: 13, fontWeight: "700" }}>
+        <Text style={{ color: ui.c.fg, fontSize: 12, fontWeight: "600" }}>
           {initials(workspace?.name ?? server?.name ?? "M")}
         </Text>
       </Pressable>
@@ -112,13 +121,17 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
       {cell("create", "SquarePen", "新建", () => navigate("issues", { create: "1" }), { plain: true })}
       {cell("search", "Search", "搜索", () => navigate("issues", { focus: "search" }), { plain: true })}
 
-      <View style={{ height: 1, width: 26, backgroundColor: ui.c.border, marginVertical: 6 }} />
+      <View style={{ height: 1, width: 24, backgroundColor: ui.c.line, marginVertical: 6 }} />
 
-      {RAIL.map((entry) =>
-        cell(entry.key, entry.icon, entry.label, () => navigate(entry.key), { selected: active === entry.key }),
-      )}
-
-      <View style={{ flex: 1 }} />
+      <ScrollView
+        style={{ flex: 1, width: "100%" }}
+        contentContainerStyle={{ alignItems: "center", gap: 2 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {RAIL.map((entry) =>
+          cell(entry.key, entry.icon, entry.label, () => navigate(entry.key), { selected: active === entry.key }),
+        )}
+      </ScrollView>
 
       {cell("refresh", "RefreshCw", "刷新", () => void refresh(), { busy, plain: true })}
       {cell("settings", "Settings", "设置", () => navigate("settings"), { selected: page === "settings" })}
@@ -126,7 +139,7 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
         accessibilityRole="button"
         accessibilityLabel="账户"
         onPress={() => navigate("settings", { tab: "account" })}
-        style={({ pressed }) => [{ marginTop: 4, borderRadius: 15 }, pressed && ui.s.pressed]}
+        style={({ pressed }) => [{ marginTop: 6, borderRadius: 14 }, pressed && ui.s.pressed]}
       >
         <View
           style={{
@@ -135,10 +148,10 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
             borderRadius: 14,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: ui.c.accent,
+            backgroundColor: ui.c.primary,
           }}
         >
-          <Text style={{ color: ui.c.accentFg, fontSize: 11, fontWeight: "700" }}>
+          <Text style={{ color: ui.c.primaryFg, fontSize: 11, fontWeight: "600" }}>
             {initials(user?.name ?? "M")}
           </Text>
         </View>
@@ -148,19 +161,11 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
 }
 
 export function SectionSidebar() {
-  const { theme, compact, page } = useWorkbench();
-  const ui = useUi(theme, compact);
+  const { compact, page } = useWorkbench();
   if (compact || page === "chat" || page === "api") return null;
   return (
-    <View
-      style={{
-        width: 252,
-        backgroundColor: ui.c.surface1,
-        borderRightWidth: 1,
-        borderRightColor: ui.c.border,
-      }}
-    >
-      <ScrollView contentContainerStyle={{ padding: 12, paddingBottom: 28 }}>
+    <View style={{ width: 280 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 14, paddingBottom: 28 }}>
         {page === "issues" || page === "issue" ? (
           <WorkNav />
         ) : page === "team" ? (
@@ -177,8 +182,8 @@ export function SectionSidebar() {
 
 function SectionTitle({ ui, title, action }: { ui: ReturnType<typeof useUi>; title: string; action?: React.ReactNode }) {
   return (
-    <View style={[ui.s.row, { paddingHorizontal: 6, paddingTop: 2, paddingBottom: 6 }]}>
-      <Text style={{ flex: 1, color: ui.c.fg, fontSize: 19, fontWeight: "700", letterSpacing: -0.2 }}>{title}</Text>
+    <View style={[ui.s.row, { paddingHorizontal: 8, paddingTop: 2, paddingBottom: 8 }]}>
+      <Text style={{ flex: 1, color: ui.c.fg, fontSize: 16, fontWeight: "600" }}>{title}</Text>
       {action}
     </View>
   );
@@ -186,8 +191,8 @@ function SectionTitle({ ui, title, action }: { ui: ReturnType<typeof useUi>; tit
 
 function GroupLabel({ ui, label, action }: { ui: ReturnType<typeof useUi>; label: string; action?: React.ReactNode }) {
   return (
-    <View style={[ui.s.row, { paddingHorizontal: 8, paddingTop: 12, paddingBottom: 4 }]}>
-      <Text style={{ flex: 1, color: ui.c.muted, fontSize: 11.5, fontWeight: "600" }}>{label}</Text>
+    <View style={[ui.s.row, { paddingHorizontal: 8, paddingTop: 14, paddingBottom: 4 }]}>
+      <Text style={{ flex: 1, color: ui.c.muted, fontSize: 12, fontWeight: "500" }}>{label}</Text>
       {action}
     </View>
   );
@@ -220,25 +225,25 @@ function NavRow({
         {
           flexDirection: "row",
           alignItems: "center",
-          gap: 7,
-          height: 31,
-          paddingHorizontal: 8,
-          paddingLeft: indent ? 18 : 8,
-          borderRadius: 7,
+          gap: 8,
+          height: 32,
+          paddingHorizontal: 12,
+          paddingLeft: indent ? 22 : 12,
+          borderRadius: 8,
         },
-        selected && { backgroundColor: ui.c.surface2 },
+        selected && { backgroundColor: ui.c.fillStrong },
         pressed && ui.s.pressed,
       ]}
     >
       {icon ? (
-        <Icon name={icon} size={14} color={selected ? ui.c.fg : ui.c.muted} />
+        <Icon name={icon} size={15} color={selected ? ui.c.fg : ui.c.muted} />
       ) : (
-        <View style={{ width: 14 }} />
+        <View style={{ width: 15 }} />
       )}
-      <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, color: selected ? ui.c.fg : ui.c.fg, fontWeight: selected ? "600" : "400" }}>
+      <Text numberOfLines={1} style={{ flex: 1, fontSize: 14, color: ui.c.fg, fontWeight: selected ? "500" : "400" }}>
         {label}
       </Text>
-      {count != null ? <Text style={{ fontSize: 11.5, color: ui.c.muted }}>{count}</Text> : null}
+      {count != null ? <Text style={{ fontSize: 12, color: ui.c.muted }}>{count}</Text> : null}
     </Pressable>
   );
 }
@@ -302,7 +307,7 @@ function WorkNav() {
       <GroupLabel ui={ui} label="收件箱" />
       <NavRow ui={ui} icon="Bell" label="收件箱" count={unreadCount} onPress={() => navigate("inbox")} />
       {previewList.length === 0 ? (
-        <Text style={[ui.s.tiny, { paddingHorizontal: 10, paddingVertical: 6 }]}>暂无通知</Text>
+        <Text style={[ui.s.tiny, { paddingHorizontal: 12, paddingVertical: 6 }]}>暂无通知</Text>
       ) : (
         previewList.map((item) => (
           <Pressable
@@ -310,11 +315,11 @@ function WorkNav() {
             key={item.id}
             onPress={() => navigate("inbox")}
             style={({ pressed }) => [
-              { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 7 },
+              { minHeight: 32, justifyContent: "center", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
               pressed && ui.s.pressed,
             ]}
           >
-            <Text numberOfLines={1} style={{ fontSize: 12, color: ui.c.fg }}>
+            <Text numberOfLines={1} style={{ fontSize: 13, color: ui.c.muted }}>
               {item.title || "通知"}
             </Text>
           </Pressable>
@@ -336,7 +341,7 @@ function WorkNav() {
 
       <GroupLabel ui={ui} label="项目" action={<Icon name="Plus" size={13} color={ui.c.muted} />} />
       {list.length === 0 ? (
-        <Text style={[ui.s.tiny, { paddingHorizontal: 10, paddingVertical: 6 }]}>暂无项目</Text>
+        <Text style={[ui.s.tiny, { paddingHorizontal: 12, paddingVertical: 6 }]}>暂无项目</Text>
       ) : (
         list.map((project) => (
           <NavRow
@@ -468,7 +473,7 @@ function GenericNav() {
   return (
     <View>
       <SectionTitle ui={ui} title={meta.title} />
-      {meta.desc ? <Text style={[ui.s.tiny, { paddingHorizontal: 6, paddingBottom: 4 }]}>{meta.desc}</Text> : null}
+      {meta.desc ? <Text style={[ui.s.tiny, { paddingHorizontal: 8, paddingBottom: 4 }]}>{meta.desc}</Text> : null}
       <GroupLabel ui={ui} label="导航" />
       {meta.links.map((entry) => (
         <NavRow

@@ -123,7 +123,7 @@ export function ApiExplorerPage() {
                   pressed && ui.s.pressed,
                 ]}
               >
-                <Text style={{ color: active ? color : ui.c.muted, fontSize: 11.5, fontWeight: "700", fontFamily: "Menlo" }}>
+                <Text style={{ color: active ? color : ui.c.muted, fontSize: 12, fontWeight: "600", fontFamily: "Menlo" }}>
                   {item}
                 </Text>
               </Pressable>
@@ -165,10 +165,10 @@ export function ApiExplorerPage() {
                   ]}
                 >
                   <View style={[ui.s.row, { gap: 7 }]}>
-                    <Text style={{ fontFamily: "Menlo", fontSize: 10.5, fontWeight: "700", color: METHOD_COLOR[route[0]], width: 48 }}>
+                    <Text style={{ fontFamily: "Menlo", fontSize: 11, fontWeight: "600", color: METHOD_COLOR[route[0]], width: 48 }}>
                       {route[0]}
                     </Text>
-                    <Text numberOfLines={1} style={{ fontFamily: "Menlo", fontSize: 11.5, color: ui.c.fg, flex: 1 }}>
+                    <Text numberOfLines={1} style={{ fontFamily: "Menlo", fontSize: 12, color: ui.c.fg, flex: 1 }}>
                       {route[1]}
                     </Text>
                   </View>
@@ -344,7 +344,7 @@ function RouteDetail({ ui, route }: { ui: Ui; route: ApiRouteTuple }) {
           <Text style={{ fontFamily: "Menlo", fontSize: 12, fontWeight: "700", color: METHOD_COLOR[route[0]] }}>
             {route[0]}
           </Text>
-          <Text selectable style={{ fontFamily: "Menlo", fontSize: 12.5, color: ui.c.fg, flex: 1 }}>
+          <Text selectable style={{ fontFamily: "Menlo", fontSize: 12, color: ui.c.fg, flex: 1 }}>
             {route[1]}
           </Text>
         </View>

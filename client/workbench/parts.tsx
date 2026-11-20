@@ -4,8 +4,8 @@ import { Pressable, Text, View } from "react-native";
 import type { Ui } from "./bits";
 import { Avatar, Dot, Tag } from "./bits";
 import {
-  issueCategory,
   issueStatusColor,
+  issueStatusIcon,
   issueStatusLabel,
   priorityMeta,
   relTime,
@@ -15,7 +15,7 @@ import {
   type IssueStatusEntry,
 } from "./model";
 
-export function StatusPill({
+export function StatusMark({
   ui,
   issue,
   statuses,
@@ -24,14 +24,33 @@ export function StatusPill({
   issue: Issue;
   statuses: IssueStatusEntry[];
 }) {
-  const color = issueStatusColor(issue, statuses);
-  return <Tag ui={ui} label={issueStatusLabel(issue, statuses)} color={color} />;
+  return (
+    <View style={[ui.s.row, { gap: 5 }]}>
+      <Icon name={issueStatusIcon(issue, statuses)} size={14} color={issueStatusColor(issue, statuses)} />
+      <Text numberOfLines={1} style={{ fontSize: 13, color: ui.c.fg }}>
+        {issueStatusLabel(issue, statuses)}
+      </Text>
+    </View>
+  );
 }
 
-export function PriorityTag({ ui, priority }: { ui: Ui; priority?: string | null }) {
+export function PriorityMark({ ui, priority }: { ui: Ui; priority?: string | null }) {
   const meta = priorityMeta(priority);
   if (!priority || priority === "none") return null;
-  return <Tag ui={ui} label={meta.label} tone={meta.tone} icon={meta.icon} />;
+  const color =
+    meta.tone === "danger"
+      ? ui.c.danger
+      : meta.tone === "warning"
+        ? ui.c.high
+        : meta.tone === "accent"
+          ? ui.c.brand
+          : ui.c.muted;
+  return (
+    <View style={[ui.s.row, { gap: 4 }]}>
+      <Icon name={meta.icon} size={14} color={color} />
+      <Text style={{ fontSize: 12, color: ui.c.muted }}>{meta.label}</Text>
+    </View>
+  );
 }
 
 export function IssueRow({
@@ -47,33 +66,32 @@ export function IssueRow({
   onPress(): void;
   subtitle?: string;
 }) {
-  const category = issueCategory(issue, statuses);
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${issue.identifier} ${issue.title}`}
       onPress={onPress}
-      style={({ pressed }) => [ui.s.listRow, { alignItems: "flex-start" }, pressed && ui.s.pressed]}
+      style={({ pressed }) => [
+        ui.s.row,
+        { gap: 8, height: 36, paddingHorizontal: 8, borderRadius: 6 },
+        pressed && ui.s.pressed,
+      ]}
     >
-      <View style={{ marginTop: 4 }}>
-        <Dot color={issueStatusColor(issue, statuses)} size={8} />
-      </View>
-      <View style={{ flex: 1, gap: 4 }}>
-        <Text numberOfLines={2} style={[ui.s.body, { fontWeight: "600" }]}>
-          {issue.title}
+      <Icon name={issueStatusIcon(issue, statuses)} size={14} color={issueStatusColor(issue, statuses)} />
+      <Text numberOfLines={1} style={[ui.s.idText, { minWidth: 68 }]}>
+        {issue.identifier}
+      </Text>
+      <Text numberOfLines={1} style={{ flex: 1, fontSize: 14, color: ui.c.fg }}>
+        {issue.title}
+      </Text>
+      {subtitle ? (
+        <Text numberOfLines={1} style={[ui.s.tiny, { maxWidth: 160 }]}>
+          {subtitle}
         </Text>
-        <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
-          <Text style={[ui.s.tiny, { fontFamily: "Menlo" }]}>{issue.identifier}</Text>
-          <Text style={ui.s.tiny}>· {issueStatusLabel(issue, statuses)}</Text>
-          {issue.due_date ? <Text style={ui.s.tiny}>· 截止 {issue.due_date}</Text> : null}
-          {subtitle ? <Text style={ui.s.tiny}>· {subtitle}</Text> : null}
-          <Text style={ui.s.tiny}>· {relTime(issue.updated_at)}</Text>
-        </View>
-      </View>
-      <View style={[ui.s.row, { gap: 6, marginTop: 2 }]}>
-        <PriorityTag ui={ui} priority={issue.priority} />
-        {category === "done" ? <Icon name="CheckCheck" size={14} color={ui.c.success} /> : null}
-      </View>
+      ) : null}
+      <PriorityMark ui={ui} priority={issue.priority} />
+      {issue.due_date ? <Text style={ui.s.tiny}>截止 {issue.due_date}</Text> : null}
+      <Text style={[ui.s.tiny, { minWidth: 56, textAlign: "right" }]}>{relTime(issue.updated_at)}</Text>
     </Pressable>
   );
 }
@@ -161,9 +179,7 @@ export function InboxRow({
           </Text>
         ) : null}
         <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
-          {item.issue_identifier ? (
-            <Text style={[ui.s.tiny, { fontFamily: "Menlo" }]}>{item.issue_identifier}</Text>
-          ) : null}
+          {item.issue_identifier ? <Text style={ui.s.idText}>{item.issue_identifier}</Text> : null}
           <Text style={ui.s.tiny}>{relTime(item.created_at)}</Text>
         </View>
       </View>
@@ -220,7 +236,7 @@ export function AgentRow({
       onPress={onPress}
       style={({ pressed }) => [ui.s.listRow, pressed && ui.s.pressed]}
     >
-      <Avatar ui={ui} name={agent.name} url={agent.avatar_url} size={34} />
+      <Avatar ui={ui} name={agent.name} url={agent.avatar_url} size={32} />
       <View style={{ flex: 1, gap: 2 }}>
         <Text numberOfLines={1} style={[ui.s.body, { fontWeight: "600" }]}>
           {agent.name}

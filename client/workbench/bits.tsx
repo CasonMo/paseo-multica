@@ -13,20 +13,147 @@ import {
   View,
 } from "react-native";
 import type { StyleProp, TextStyle, ViewStyle } from "react-native";
+import { pickTextColor } from "./model";
 
 export type Tone = "default" | "accent" | "success" | "warning" | "danger" | "muted";
 
+const LIGHT = {
+  fg: "#09090b",
+  muted: "#64636e",
+  faint: "#81818b",
+  shell: "#f3f3f4",
+  canvas: "#fbfbfb",
+  card: "#ffffff",
+  fill: "#f4f4f5",
+  fillStrong: "#e9e9eb",
+  border: "#e4e4e7",
+  line: "#ececef",
+  primary: "#18181b",
+  primaryFg: "#fafafa",
+  brand: "#0070e3",
+  success: "#1c882d",
+  warning: "#dba400",
+  danger: "#e40014",
+  info: "#0074c9",
+  high: "#ec6f00",
+  shadow: "0 1px 2px rgba(15,23,42,0.04), 0 1px 1px rgba(15,23,42,0.03)",
+  shadowLift: "0 8px 24px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.05)",
+  scrim: "rgba(15,23,42,0.32)",
+  scrollThumb: "rgba(0,0,0,0.10)",
+  scrollThumbHover: "rgba(0,0,0,0.18)",
+};
+
+const DARK: typeof LIGHT = {
+  fg: "#fafafa",
+  muted: "#a1a1aa",
+  faint: "#71717a",
+  shell: "#131416",
+  canvas: "#191a1d",
+  card: "#1f2124",
+  fill: "#26282c",
+  fillStrong: "#303338",
+  border: "#303338",
+  line: "#26282c",
+  primary: "#fafafa",
+  primaryFg: "#18181b",
+  brand: "#4d9fff",
+  success: "#3fb950",
+  warning: "#e3b341",
+  danger: "#f85149",
+  info: "#58a6ff",
+  high: "#f0883e",
+  shadow: "0 1px 2px rgba(0,0,0,0.40), 0 1px 1px rgba(0,0,0,0.28)",
+  shadowLift: "0 8px 24px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.40)",
+  scrim: "rgba(0,0,0,0.58)",
+  scrollThumb: "rgba(255,255,255,0.14)",
+  scrollThumbHover: "rgba(255,255,255,0.24)",
+};
+
+function isDark(surface: string): boolean {
+  const hex = surface.replace("#", "");
+  if (hex.length < 6) return false;
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.5;
+}
+
+const CHROME_ID = "multica-workbench-chrome";
+const CHROME_CSS = `
+[data-testid="multica-workbench"] * { scrollbar-width: thin; }
+[data-testid="multica-workbench"] ::-webkit-scrollbar { width: 10px; height: 10px; }
+[data-testid="multica-workbench"] ::-webkit-scrollbar-track { background: transparent; }
+[data-testid="multica-workbench"] ::-webkit-scrollbar-corner { background: transparent; }
+[data-testid="multica-workbench"] ::-webkit-scrollbar-thumb {
+  border: 3px solid transparent; background-clip: content-box; border-radius: 999px;
+}
+`;
+
+type ChromeStyle = { textContent: string };
+type ChromeDoc = {
+  createElement(tag: "style"): ChromeStyle & { id: string };
+  getElementById(id: string): ChromeStyle | null;
+  head: { appendChild(node: unknown): void };
+};
+
+/** The host leaves scrollbars and text font at the browser default; both read as "not Multica". */
+export function injectChrome(dark: boolean) {
+  const doc = (globalThis as { document?: ChromeDoc }).document;
+  if (!doc) return;
+  let style = doc.getElementById(CHROME_ID);
+  if (!style) {
+    const created = doc.createElement("style");
+    created.id = CHROME_ID;
+    doc.head.appendChild(created);
+    style = created;
+  }
+  const t = dark ? DARK : LIGHT;
+  style.textContent =
+    CHROME_CSS +
+    `[data-testid="multica-workbench"] * { scrollbar-color: ${t.scrollThumb} transparent; }
+[data-testid="multica-workbench"] ::-webkit-scrollbar-thumb { background-color: ${t.scrollThumb}; }
+[data-testid="multica-workbench"] ::-webkit-scrollbar-thumb:hover { background-color: ${t.scrollThumbHover}; }
+`;
+}
+
 export function useUi(theme: PluginTheme, compact: boolean) {
   return useMemo(() => {
-    const c = theme.colors;
+    const dark = isDark(theme.colors.surface0);
+    const t = dark ? DARK : LIGHT;
     const styles = StyleSheet.create({
       card: {
-        backgroundColor: c.surface1,
-        borderColor: c.border,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderRadius: 14,
+        backgroundColor: t.card,
+        borderColor: t.border,
+        borderWidth: 1,
+        borderRadius: 12,
+        boxShadow: t.shadow,
       },
       cardPad: { padding: compact ? 12 : 16 },
+      panel: {
+        backgroundColor: t.card,
+        borderColor: t.border,
+        borderWidth: 1,
+        borderRadius: 12,
+        overflow: "hidden",
+        boxShadow: t.shadow,
+      },
+      menu: {
+        backgroundColor: t.card,
+        borderColor: t.border,
+        borderWidth: 1,
+        borderRadius: 12,
+        padding: 6,
+        boxShadow: t.shadowLift,
+      },
+      menuItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        minHeight: 32,
+        paddingHorizontal: 8,
+        paddingVertical: 6,
+        borderRadius: 6,
+      },
       row: { flexDirection: "row", alignItems: "center" },
       rowTop: { flexDirection: "row", alignItems: "flex-start" },
       grow: { flex: 1, minWidth: 0 },
@@ -35,33 +162,29 @@ export function useUi(theme: PluginTheme, compact: boolean) {
       gap8: { gap: 8 },
       gap12: { gap: 12 },
       gap16: { gap: 16 },
-      title: { color: c.foreground, fontSize: 20, fontWeight: "700", letterSpacing: -0.3 },
-      h2: { color: c.foreground, fontSize: 15, fontWeight: "600" },
-      h3: { color: c.foreground, fontSize: 14, fontWeight: "600" },
-      body: { color: c.foreground, fontSize: 13.5, lineHeight: 20 },
-      muted: { color: c.foregroundMuted, fontSize: 12.5 },
-      tiny: { color: c.foregroundMuted, fontSize: 11.5 },
-      mono: { color: c.foreground, fontSize: 12, fontFamily: "Menlo" },
-      label: {
-        color: c.foregroundMuted,
-        fontSize: 11,
-        fontWeight: "600",
-        letterSpacing: 0.5,
-        textTransform: "uppercase",
-      },
+      title: { color: t.fg, fontSize: 20, fontWeight: "600", letterSpacing: -0.2 },
+      h2: { color: t.fg, fontSize: 14, fontWeight: "600" },
+      h3: { color: t.fg, fontSize: 13, fontWeight: "600" },
+      sectionHead: { color: t.fg, fontSize: 13, fontWeight: "500" },
+      body: { color: t.fg, fontSize: 14, lineHeight: 20 },
+      muted: { color: t.muted, fontSize: 13 },
+      tiny: { color: t.muted, fontSize: 12 },
+      idText: { color: t.muted, fontSize: 12 },
+      mono: { color: t.fg, fontSize: 12, fontFamily: "Menlo" },
+      label: { color: t.muted, fontSize: 12, fontWeight: "500" },
       press: { borderRadius: 8 },
       pressed: { opacity: 0.65 },
-      divider: { height: StyleSheet.hairlineWidth, backgroundColor: c.border },
+      divider: { height: StyleSheet.hairlineWidth, backgroundColor: t.line },
       input: {
-        backgroundColor: c.surface2,
-        borderColor: c.border,
+        backgroundColor: t.card,
+        borderColor: t.border,
         borderWidth: 1,
-        borderRadius: 9,
+        borderRadius: 8,
         paddingHorizontal: 11,
-        paddingVertical: 9,
-        color: c.foreground,
-        fontSize: 13.5,
-        minHeight: 38,
+        paddingVertical: 8,
+        color: t.fg,
+        fontSize: 14,
+        minHeight: 32,
       },
       inputMulti: { minHeight: 110, textAlignVertical: "top", paddingTop: 10 },
       inputCode: { fontFamily: "Menlo", fontSize: 12 },
@@ -69,108 +192,104 @@ export function useUi(theme: PluginTheme, compact: boolean) {
         flexDirection: "row",
         alignItems: "center",
         gap: 6,
-        paddingHorizontal: 11,
-        paddingVertical: 6,
-        borderRadius: 999,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 8,
         borderWidth: 1,
-        borderColor: c.border,
-        backgroundColor: c.surface1,
+        borderColor: "transparent",
+        backgroundColor: t.fill,
       },
-      chipActive: { backgroundColor: c.accent, borderColor: c.accent },
-      chipText: { color: c.foreground, fontSize: 12, fontWeight: "500" },
-      chipTextActive: { color: c.accentForeground },
+      chipActive: { backgroundColor: t.card, borderColor: t.border, boxShadow: t.shadow },
+      chipText: { color: t.muted, fontSize: 13, fontWeight: "500" },
+      chipTextActive: { color: t.fg, fontWeight: "600" },
       btn: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
         gap: 6,
-        paddingHorizontal: 13,
-        paddingVertical: 8,
-        borderRadius: 9,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 8,
         borderWidth: 1,
-        borderColor: c.border,
-        backgroundColor: c.surface2,
-        minHeight: 36,
+        borderColor: t.border,
+        backgroundColor: t.card,
+        minHeight: 32,
       },
-      btnPrimary: { backgroundColor: c.accent, borderColor: c.accent },
-      btnDanger: { backgroundColor: "transparent", borderColor: c.statusDanger },
-      btnGhost: { backgroundColor: "transparent" },
+      btnPrimary: { backgroundColor: t.primary, borderColor: t.primary },
+      btnDanger: { backgroundColor: "transparent", borderColor: t.danger },
+      btnGhost: { backgroundColor: "transparent", borderColor: "transparent" },
       btnDisabled: { opacity: 0.45 },
-      btnText: { color: c.foreground, fontSize: 13, fontWeight: "600" },
-      btnTextPrimary: { color: c.accentForeground },
-      btnTextDanger: { color: c.statusDanger },
-      iconBtn: { padding: 7, borderRadius: 8 },
+      btnText: { color: t.fg, fontSize: 13, fontWeight: "500" },
+      btnTextPrimary: { color: t.primaryFg },
+      btnTextDanger: { color: t.danger },
+      iconBtn: { padding: 6, borderRadius: 6 },
       badge: {
         flexDirection: "row",
         alignItems: "center",
         gap: 4,
         paddingHorizontal: 7,
-        paddingVertical: 2.5,
+        paddingVertical: 2,
         borderRadius: 6,
-        borderWidth: 1,
       },
-      badgeText: { fontSize: 11, fontWeight: "600" },
+      badgeText: { fontSize: 12, fontWeight: "500" },
       dot: { width: 7, height: 7, borderRadius: 4 },
       avatar: { alignItems: "center", justifyContent: "center", overflow: "hidden" },
-      avatarText: { fontWeight: "700" },
+      avatarText: { fontWeight: "600" },
       empty: { alignItems: "center", justifyContent: "center", paddingVertical: 36, gap: 8 },
-      statValue: { color: c.foreground, fontSize: 26, fontWeight: "700", letterSpacing: -0.6 },
-      statLabel: { color: c.foregroundMuted, fontSize: 11.5, fontWeight: "500" },
+      statValue: { color: t.fg, fontSize: 24, fontWeight: "600", letterSpacing: -0.4 },
+      statLabel: { color: t.muted, fontSize: 12, fontWeight: "500" },
       listRow: {
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
-        paddingVertical: 10,
-        paddingHorizontal: compact ? 12 : 14,
+        minHeight: 32,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 6,
       },
-      hoverSurface: { backgroundColor: c.surface2 },
-      table: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: c.border },
+      hoverSurface: { backgroundColor: t.fill },
+      table: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: t.line },
       navItem: {
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        borderRadius: 9,
-        minHeight: 38,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+        minHeight: 32,
       },
-      navActive: { backgroundColor: c.surface2 },
-      navText: { color: c.foregroundMuted, fontSize: 13, fontWeight: "500" },
-      navTextActive: { color: c.foreground, fontWeight: "600" },
+      navActive: { backgroundColor: t.fillStrong },
+      navText: { color: t.muted, fontSize: 14, fontWeight: "400" },
+      navTextActive: { color: t.fg, fontWeight: "500" },
       kbd: {
         borderWidth: 1,
-        borderColor: c.border,
+        borderColor: t.border,
         borderRadius: 5,
         paddingHorizontal: 5,
         paddingVertical: 1,
       },
       code: {
-        backgroundColor: c.surface0,
-        borderColor: c.border,
+        backgroundColor: t.fill,
+        borderColor: t.line,
         borderWidth: StyleSheet.hairlineWidth,
-        borderRadius: 8,
+        borderRadius: 6,
         padding: 10,
         fontFamily: "Menlo",
-        fontSize: 11.5,
-        color: c.foreground,
+        fontSize: 12,
+        color: t.fg,
       },
-      bar: { borderRadius: 3, backgroundColor: c.accent, opacity: 0.85 },
+      bar: { borderRadius: 3, backgroundColor: t.brand, opacity: 0.9 },
       barTrack: { flex: 1, justifyContent: "flex-end" },
     });
 
     const palette = {
-      c,
-      accent: c.accent,
-      accentFg: c.accentForeground,
-      success: c.statusSuccess,
-      warning: c.statusWarning,
-      danger: c.statusDanger,
-      muted: c.foregroundMuted,
-      border: c.border,
-      surface0: c.surface0,
-      surface1: c.surface1,
-      surface2: c.surface2,
-      fg: c.foreground,
+      ...t,
+      dark,
+      accent: t.brand,
+      accentFg: "#ffffff",
+      surface0: t.canvas,
+      surface1: t.card,
+      surface2: t.fill,
     };
     return { c: palette, s: styles, compact };
   }, [theme, compact]);
@@ -218,6 +337,7 @@ export function Btn({
   const textStyle: TextStyle[] = [ui.s.btnText];
   if (tone === "primary") textStyle.push(ui.s.btnTextPrimary);
   if (tone === "danger") textStyle.push(ui.s.btnTextDanger);
+  const ink = tone === "primary" ? ui.c.primaryFg : tone === "danger" ? ui.c.danger : ui.c.fg;
   return (
     <Pressable
       accessibilityRole="button"
@@ -235,9 +355,9 @@ export function Btn({
       ]}
     >
       {busy ? (
-        <ActivityIndicator size="small" color={tone === "primary" ? ui.c.c.accentForeground : ui.c.fg} />
+        <ActivityIndicator size="small" color={ink} />
       ) : icon ? (
-        <Icon name={icon} size={15} color={tone === "primary" ? ui.c.c.accentForeground : tone === "danger" ? ui.c.danger : ui.c.fg} />
+        <Icon name={icon} size={15} color={ink} />
       ) : null}
       {label ? <Text style={textStyle}>{label}</Text> : null}
     </Pressable>
@@ -250,7 +370,7 @@ export function IconBtn({
   onPress,
   label,
   color,
-  size = 17,
+  size = 16,
   busy,
 }: {
   ui: Ui;
@@ -304,10 +424,11 @@ export function Tag({
             : tone === "muted"
               ? ui.c.muted
               : ui.c.fg);
+  const ink = pickTextColor(toneColor);
   return (
-    <View style={[ui.s.badge, { borderColor: `${toneColor}55`, backgroundColor: `${toneColor}18` }]}>
-      {icon ? <Icon name={icon} size={11} color={toneColor} /> : null}
-      <Text style={[ui.s.badgeText, { color: toneColor }]}>{label}</Text>
+    <View style={[ui.s.badge, { backgroundColor: toneColor }]}>
+      {icon ? <Icon name={icon} size={11} color={ink} /> : null}
+      <Text style={[ui.s.badgeText, { color: ink }]}>{label}</Text>
     </View>
   );
 }
@@ -338,9 +459,7 @@ export function Avatar({
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: color ?? `${ui.c.accent}30`,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: ui.c.border,
+          backgroundColor: color ?? `${ui.c.accent}24`,
         },
       ]}
     >
@@ -383,7 +502,7 @@ export function Field({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={ui.c.muted}
+        placeholderTextColor={ui.c.faint}
         secureTextEntry={secureTextEntry}
         multiline={multiline}
         autoFocus={autoFocus}
@@ -424,7 +543,7 @@ export function Chips<T extends string>({
             onPress={() => onChange(option.value)}
             style={({ pressed }) => [ui.s.chip, active && ui.s.chipActive, pressed && ui.s.pressed]}
           >
-            {option.icon ? <Icon name={option.icon} size={12} color={active ? ui.c.c.accentForeground : ui.c.muted} /> : null}
+            {option.icon ? <Icon name={option.icon} size={12} color={active ? ui.c.fg : ui.c.muted} /> : null}
             <Text style={[ui.s.chipText, active && ui.s.chipTextActive]}>{option.label}</Text>
           </Pressable>
         );
@@ -452,10 +571,10 @@ export function Empty({
         style={{
           width: 44,
           height: 44,
-          borderRadius: 22,
+          borderRadius: 12,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: ui.c.surface2,
+          backgroundColor: ui.c.fill,
         }}
       >
         <Icon name={icon} size={20} color={ui.c.muted} />
@@ -486,7 +605,7 @@ export function ErrorNote({ ui, message, onRetry }: { ui: Ui; message: string; o
         borderColor: `${ui.c.danger}55`,
         borderWidth: 1,
         backgroundColor: `${ui.c.danger}12`,
-        borderRadius: 10,
+        borderRadius: 8,
         padding: 10,
       }}
     >

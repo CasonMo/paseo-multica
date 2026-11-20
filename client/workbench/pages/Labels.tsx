@@ -4,7 +4,7 @@ import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { Btn, Card, Chips, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, Tag, useUi } from "../bits";
 import { asList, useQuery } from "../api";
 import { useWorkbench } from "../context";
-import { relTime, type Label } from "../model";
+import { pickTextColor, relTime, type Label } from "../model";
 
 const COLORS = ["#3b82f6", "#8b5cf6", "#22c55e", "#f59e0b", "#ef4444", "#ec4899", "#14b8a6", "#64748b", "#a855f7", "#f97316"];
 
@@ -342,7 +342,7 @@ function LabelFormModal({
                       pressed && ui.s.pressed,
                     ]}
                   >
-                    {active ? <Icon name="Check" size={14} color="#ffffff" /> : null}
+                    {active ? <Icon name="Check" size={14} color={pickTextColor(entry)} /> : null}
                   </Pressable>
                 );
               })}

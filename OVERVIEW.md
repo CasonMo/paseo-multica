@@ -28,7 +28,7 @@ paseo plugin install /path/to/multica-workbench --id multica-workbench
 | 页面 | 能力 |
 | --- | --- |
 | 概览 | 需求统计、最近更新、收件箱、在线运行时、智能体状态、用量与稳定性 |
-| 工作 | 三栏看板（待规划/待办/进行中/审核中/已完成/已取消）与列表视图、搜索、按项目筛选；任务详情为「面包屑 + 正文 + 右侧属性面板」，支持状态/优先级/负责人/项目/标签变更、父任务跳转与子任务创建、评论线程（按 `parent_id` 折叠回复，可回复与标记解决）、重跑与删除 |
+| 工作 | 六列看板（待规划/待办/进行中/审核中/已完成/已取消）与 36px 单行列表视图、搜索、按项目筛选；任务详情为「面包屑 + 居中正文 + 右侧可折叠属性面板」，支持状态/优先级/负责人/项目/标签变更、父任务与子任务同块展示、子任务创建、评论线程（每条根评论一张卡片，回复全宽排列并可收起讨论，点回复在该条评论下方就地展开输入框，`@` 弹出智能体选择浮层并序列化为 `mention://agent/<id>`，可标记解决）、重跑与删除 |
 | 项目 | 项目列表、进度与负责人、新建/编辑/归档 |
 | 收件箱 | 通知分类与已读/未读筛选、全部标为已读 |
 | 工作流 | 状态与流转规则编排、新建/编辑/删除 |
@@ -54,6 +54,8 @@ paseo plugin install /path/to/multica-workbench --id multica-workbench
 index.client.tsx      注册页面、设置页、侧边栏入口与命令面板项
 index.server.ts       注册 RPC 处理器
 client/workbench/     界面：Shell、通用组件、数据 hooks、各页面
+                      bits.tsx 的 useUi 是唯一设计入口：Multica 官方色板/圆角/字阶（按宿主明暗自动切换），
+                      不直接沿用 Paseo 主题色；injectChrome 注入官方风格滚动条
 server/               store（连接持久化）、multica（HTTP 客户端）、handlers（RPC）
 shared/contracts.ts   RPC 契约（zod）
 shared/routes.ts      接口清单（方法、路径、所属域、处理函数）

@@ -1,7 +1,7 @@
 import { Icon, Loading, Modal } from "@getpaseo/plugin/client/ui";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { Btn, Card, Empty, ErrorNote, useUi } from "./bits";
+import { Btn, Card, Empty, ErrorNote, injectChrome, useUi } from "./bits";
 import { useWorkbench } from "./context";
 import { initials } from "./model";
 import { RailNav, SectionSidebar } from "./Nav";
@@ -25,6 +25,10 @@ export function Shell() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    injectChrome(ui.c.dark);
+  }, [ui.c.dark]);
+
   const switchWorkspace = async (id: string) => {
     setPickerOpen(false);
     if (id === workspaceId) return;
@@ -34,11 +38,11 @@ export function Shell() {
   };
 
   return (
-    <View style={{ flex: 1, flexDirection: "row", backgroundColor: ui.c.surface0 }}>
+    <View testID="multica-workbench" style={{ flex: 1, flexDirection: "row", backgroundColor: ui.c.shell }}>
       <RailNav onWorkspacePicker={() => setPickerOpen(true)} />
       <SectionSidebar />
 
-      <View style={{ flex: 1, minWidth: 0 }}>
+      <View style={{ flex: 1, minWidth: 0, backgroundColor: ui.c.canvas }}>
         {!server ? (
           <NoConnection loading={ctx.loading} error={ctx.bootstrapError} onSetup={() => navigate("settings")} />
         ) : page === "overview" ? (

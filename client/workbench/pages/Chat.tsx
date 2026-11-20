@@ -439,7 +439,7 @@ function Bubble({ ui, message, agentName }: { ui: Ui; message: ChatMessage; agen
           </View>
         ) : null}
         {mine ? (
-          <Text style={{ color: ui.c.accentFg, fontSize: 13.5, lineHeight: 20 }}>{message.content}</Text>
+          <Text style={{ color: ui.c.accentFg, fontSize: 14, lineHeight: 21 }}>{message.content}</Text>
         ) : message.content ? (
           <Markdown>{message.content}</Markdown>
         ) : (

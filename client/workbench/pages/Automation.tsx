@@ -227,7 +227,7 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
                 onPress={() => setDetailFor(item)}
                 style={({ pressed }) => [{ flex: 1, gap: 4 }, pressed && ui.s.pressed]}
               >
-                <Text style={[ui.s.body, { fontWeight: "700", fontSize: 14.5 }]}>{item.title}</Text>
+                <Text style={[ui.s.body, { fontWeight: "600" }]}>{item.title}</Text>
                 <Text numberOfLines={2} style={ui.s.muted}>
                   {item.description || "没有描述"}
                 </Text>
