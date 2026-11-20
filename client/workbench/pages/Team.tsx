@@ -15,6 +15,7 @@ import {
   type Squad,
 } from "../model";
 import { AgentRow } from "../parts";
+import { AgentDetailModal } from "../AgentDetail";
 
 type Tab = "agents" | "squads" | "runtimes" | "skills";
 
@@ -34,8 +35,17 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
   const [search, setSearch] = useState("");
   const [agentId, setAgentId] = useState<string | null>(params.agent ?? null);
   const [squadId, setSquadId] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
-  const agentsQuery = useQuery(api, "/api/agents", { query: { limit: 100 }, select: (data) => asList<Agent>(data, "agents") }, key);
+  const agentsQuery = useQuery(
+    api,
+    "/api/agents",
+    {
+      query: { limit: 100, include_archived: showArchived ? "true" : "" },
+      select: (data) => asList<Agent>(data, "agents"),
+    },
+    `${key}:${showArchived}`,
+  );
   const runtimesQuery = useQuery(api, "/api/runtimes", { select: (data) => asList<AgentRuntime>(data, "runtimes") }, key);
   const squadsQuery = useQuery(api, "/api/squads", { select: (data) => asList<Squad>(data, "squads") }, key);
   const skillsQuery = useQuery(api, "/api/skills", { select: (data) => asList<Skill>(data, "skills") }, key);
@@ -46,9 +56,14 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
   const skills = skillsQuery.data ?? [];
   const needle = search.trim().toLowerCase();
 
+  const visibleAgents = useMemo(
+    () => (showArchived ? agents : agents.filter((agent) => !agent.archived_at)),
+    [agents, showArchived],
+  );
+  const archivedCount = useMemo(() => agents.filter((agent) => agent.archived_at).length, [agents]);
   const filteredAgents = useMemo(
-    () => agents.filter((agent) => !needle || `${agent.name} ${agent.description ?? ""}`.toLowerCase().includes(needle)),
-    [agents, needle],
+    () => visibleAgents.filter((agent) => !needle || `${agent.name} ${agent.description ?? ""}`.toLowerCase().includes(needle)),
+    [visibleAgents, needle],
   );
   const filteredSquads = useMemo(
     () => squads.filter((squad) => !needle || `${squad.name} ${squad.description ?? ""}`.toLowerCase().includes(needle)),
@@ -128,6 +143,20 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
             autoCorrect={false}
           />
         </View>
+
+        {tab === "agents" ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={showArchived ? "隐藏已归档智能体" : "显示已归档智能体"}
+            onPress={() => setShowArchived((value) => !value)}
+            style={({ pressed }) => [ui.s.row, { gap: 6, alignSelf: "flex-start" }, pressed && ui.s.pressed]}
+          >
+            <Icon name={showArchived ? "EyeOff" : "Archive"} size={13} color={ui.c.muted} />
+            <Text style={ui.s.tiny}>
+              {showArchived ? "隐藏已归档" : archivedCount > 0 ? `显示已归档（${archivedCount}）` : "显示已归档"}
+            </Text>
+          </Pressable>
+        ) : null}
 
         {tab === "agents" ? (
           <Card ui={ui} padded={false}>
@@ -291,128 +320,6 @@ function runtimeLabel(agent: Agent, runtimes: AgentRuntime[]): string {
   const runtime = runtimes.find((item) => item.id === agent.runtime_id);
   if (!runtime) return agent.runtime_availability === "offline" ? "运行时离线" : "运行时";
   return `${runtimeName(runtime)}${runtime.status === "online" ? "" : "（离线）"}`;
-}
-
-function AgentDetailModal({
-  agentId,
-  onClose,
-  onChat,
-  runtimeList,
-}: {
-  agentId: string | null;
-  onClose(): void;
-  onChat(agent: Agent): void;
-  runtimeList: AgentRuntime[];
-  runtimesLoading: boolean;
-}) {
-  const ctx = useWorkbench();
-  const { theme, compact, api, toast, invalidate } = ctx;
-  const ui = useUi(theme, compact);
-  const detail = useQuery<Agent | null>(
-    api,
-    agentId ? `/api/agents/${agentId}` : null,
-    { select: (data) => (data && typeof data === "object" ? (data as Agent) : null) },
-    agentId ?? "",
-  );
-  const agent = detail.data;
-  const [busy, setBusy] = useState(false);
-
-  const archive = async () => {
-    if (!agent) return;
-    setBusy(true);
-    const result = await api({ method: "POST", path: `/api/agents/${agent.id}/archive` });
-    setBusy(false);
-    if (result.ok) {
-      toast.show("智能体已归档", { variant: "success" });
-      invalidate();
-      onClose();
-    } else toast.error(result.error ?? "归档失败");
-  };
-
-  const restore = async () => {
-    if (!agent) return;
-    setBusy(true);
-    const result = await api({ method: "POST", path: `/api/agents/${agent.id}/restore` });
-    setBusy(false);
-    if (result.ok) {
-      toast.show("智能体已恢复", { variant: "success" });
-      invalidate();
-      detail.refresh();
-    } else toast.error(result.error ?? "恢复失败");
-  };
-
-  return (
-    <Modal
-      title={agent?.name ?? "智能体"}
-      icon={<Icon name="Bot" size={16} color={ui.c.muted} />}
-      open={Boolean(agentId)}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-    >
-      <Modal.Content>
-        {detail.loading && !agent ? (
-          <LoadingRow ui={ui} />
-        ) : detail.error ? (
-          <ErrorNote ui={ui} message={detail.error} onRetry={detail.refresh} />
-        ) : agent ? (
-          <View style={{ gap: 12 }}>
-            <View style={[ui.s.row, { gap: 10 }]}>
-              <Avatar ui={ui} name={agent.name} url={agent.avatar_url} size={42} />
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={{ color: ui.c.fg, fontSize: 17, fontWeight: "700" }}>{agent.name}</Text>
-                <Text style={ui.s.tiny}>
-                  {agent.model || "未设置模型"} · 最大并发 {agent.max_concurrent_tasks ?? "—"}
-                </Text>
-              </View>
-              <Tag ui={ui} label={agentStatusMeta(agent.status).label} tone={agentStatusMeta(agent.status).tone} />
-            </View>
-
-            {agent.description ? <Text style={ui.s.body}>{agent.description}</Text> : null}
-
-            <View style={[ui.s.row, { gap: 6, flexWrap: "wrap" }]}>
-              <Tag ui={ui} label={runtimeLabel(agent, runtimeList)} tone="muted" icon="Server" />
-              <Tag ui={ui} label={agent.permission_mode === "private" ? "私有调用" : "公开调用"} tone="muted" icon="Shield" />
-              {agent.archived_at ? <Tag ui={ui} label="已归档" tone="danger" /> : null}
-            </View>
-
-            {agent.skills && agent.skills.length > 0 ? (
-              <View style={{ gap: 6 }}>
-                <Text style={ui.s.label}>技能</Text>
-                <View style={[ui.s.row, { gap: 6, flexWrap: "wrap" }]}>
-                  {agent.skills.map((skill, index) => (
-                    <Tag key={`${skill.id ?? skill.name ?? index}`} ui={ui} label={skill.name ?? skill.slug ?? "技能"} tone="accent" />
-                  ))}
-                </View>
-              </View>
-            ) : null}
-
-            {agent.instructions ? (
-              <View style={{ gap: 6 }}>
-                <Text style={ui.s.label}>指令</Text>
-                <View style={{ maxHeight: 260 }}>
-                  <ScrollView nestedScrollEnabled>
-                    <Markdown>{agent.instructions}</Markdown>
-                  </ScrollView>
-                </View>
-              </View>
-            ) : null}
-
-            <Text style={ui.s.tiny}>更新于 {fmtDateTime(agent.updated_at)}</Text>
-
-            <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }]}>
-              {agent.archived_at ? (
-                <Btn ui={ui} label="恢复" icon="ArchiveRestore" busy={busy} onPress={() => void restore()} />
-              ) : (
-                <Btn ui={ui} label="归档" icon="Archive" tone="danger" busy={busy} onPress={() => void archive()} />
-              )}
-              <Btn ui={ui} label="开始聊天" icon="MessagesSquare" tone="primary" onPress={() => onChat(agent)} />
-            </View>
-          </View>
-        ) : null}
-      </Modal.Content>
-    </Modal>
-  );
 }
 
 function SquadDetailModal({ squadId, onClose }: { squadId: string | null; onClose(): void }) {

@@ -210,20 +210,24 @@ export function AgentRow({
           {runtimeLabel ? ` · ${runtimeLabel}` : ""}
         </Text>
       </View>
-      <View style={[ui.s.row, { gap: 5 }]}>
-        <Dot color={tone} />
-        <Text style={[ui.s.tiny, { color: tone }]}>
-          {agent.status === "working"
-            ? "工作中"
-            : agent.status === "blocked"
-              ? "阻塞"
-              : agent.status === "error"
-                ? "异常"
-                : agent.status === "idle"
-                  ? "空闲"
-                  : "离线"}
-        </Text>
-      </View>
+      {agent.archived_at ? (
+        <Tag ui={ui} label="已归档" tone="muted" />
+      ) : (
+        <View style={[ui.s.row, { gap: 5 }]}>
+          <Dot color={tone} />
+          <Text style={[ui.s.tiny, { color: tone }]}>
+            {agent.status === "working"
+              ? "工作中"
+              : agent.status === "blocked"
+                ? "阻塞"
+                : agent.status === "error"
+                  ? "异常"
+                  : agent.status === "idle"
+                    ? "空闲"
+                    : "离线"}
+          </Text>
+        </View>
+      )}
       <Icon name="ChevronRight" size={15} color={ui.c.muted} />
     </Pressable>
   );
