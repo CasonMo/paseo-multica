@@ -1,11 +1,13 @@
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Avatar, Btn, Chips, Empty, ErrorNote, Field, LoadingRow, useUi } from "../bits";
 import { asList, asRecord, num, str, useQuery } from "../api";
 import { useWorkbench } from "../context";
 import { priorityMeta, relTime, type Agent, type Issue, type IssueStatusEntry, type Project } from "../model";
 import { IssueRow } from "../parts";
+import { WORK_VIEWS } from "../Nav";
+import { useWorkingAgents } from "../Execution";
 
 const VIEW_LABEL: Record<string, string> = {
   all: "全部任务",
@@ -50,8 +52,9 @@ function bucketOf(issue: Issue, statuses: IssueStatusEntry[]): string {
 
 export function IssuesPage() {
   const ctx = useWorkbench();
-  const { theme, compact, narrow, api, statuses, bump, workspaceId, navigate, params, toast, invalidate, user } = ctx;
+  const { theme, compact, narrow, stacked, navCollapsed, api, statuses, bump, workspaceId, navigate, params, toast, invalidate, user } = ctx;
   const ui = useUi(theme, compact);
+  const sidebarHidden = compact || stacked || navCollapsed;
 
   const view = params.view ?? "all";
   const projectId = params.project ?? null;
@@ -61,6 +64,7 @@ export function IssuesPage() {
   const [limit, setLimit] = useState(25);
   const [createOpen, setCreateOpen] = useState(params.create === "1");
   const [createStatus, setCreateStatus] = useState<string | undefined>();
+  const [filterOpen, setFilterOpen] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setSearch(query.trim()), 300);
@@ -72,6 +76,7 @@ export function IssuesPage() {
   }, [search, view, projectId]);
 
   const listKey = `${workspaceId}:${bump}`;
+  const workingAgents = useWorkingAgents(api, listKey);
   const request = useMemo(() => {
     const when: Record<string, string | number> = {
       limit: mode === "board" ? 200 : limit,
@@ -183,6 +188,30 @@ export function IssuesPage() {
           </View>
         ) : null}
         <Text style={ui.s.tiny}>共 {total} 条</Text>
+        {sidebarHidden ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="视图与项目筛选"
+            onPress={() => setFilterOpen(true)}
+            style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+              ui.s.row,
+              {
+                gap: 5,
+                paddingHorizontal: 8,
+                height: 30,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: ui.c.border,
+                backgroundColor: hovered ? ui.c.fillHover : ui.c.card,
+              },
+              pressed && ui.s.pressed,
+            ]}
+          >
+            <Icon name="SlidersHorizontal" size={13} color={ui.c.muted} />
+            <Text style={{ fontSize: 12, color: ui.c.fg }}>{title}</Text>
+            <Icon name="ChevronDown" size={12} color={ui.c.muted} />
+          </Pressable>
+        ) : null}
         <View style={ui.s.grow} />
 
         <View
@@ -304,6 +333,7 @@ export function IssuesPage() {
                       issue={issue}
                       project={issue.project_id ? projectMap.get(issue.project_id) : undefined}
                       assignee={issue.assignee_id ? assigneeMap.get(issue.assignee_id) : undefined}
+                      running={workingAgents.get(issue.id)}
                       onPress={() => navigate("issue", { id: issue.id })}
                     />
                   ))
@@ -321,6 +351,7 @@ export function IssuesPage() {
                 ui={ui}
                 issue={issue}
                 statuses={statuses}
+                running={workingAgents.get(issue.id)}
                 onPress={() => navigate("issue", { id: issue.id })}
               />
             ))}
@@ -338,6 +369,64 @@ export function IssuesPage() {
           ) : null}
         </ScrollView>
       )}
+
+      <Modal
+        title="视图与项目"
+        icon={<Icon name="SlidersHorizontal" size={16} color={ui.c.muted} />}
+        open={filterOpen}
+        onOpenChange={setFilterOpen}
+      >
+        <Modal.Content>
+          <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 2 }}>
+            <Text style={[ui.s.label, { paddingHorizontal: 8, paddingTop: 4 }]}>视图</Text>
+            {WORK_VIEWS.map((entry) => {
+              const active = view === entry.key && !projectId;
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={entry.label}
+                  key={entry.key}
+                  onPress={() => { setFilterOpen(false); navigate("issues", { view: entry.key }); }}
+                  style={({ pressed }) => [ui.s.menuItem, active && ui.s.hoverSurface, pressed && ui.s.pressed]}
+                >
+                  <Icon name={entry.icon} size={14} color={active ? ui.c.fg : ui.c.muted} />
+                  <Text style={{ flex: 1, fontSize: 14, color: ui.c.fg, fontWeight: active ? "600" : "400" }}>{entry.label}</Text>
+                  {active ? <Icon name="Check" size={14} color={ui.c.brand} /> : null}
+                </Pressable>
+              );
+            })}
+            <Text style={[ui.s.label, { paddingHorizontal: 8, paddingTop: 10 }]}>项目</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="全部项目"
+              onPress={() => { setFilterOpen(false); navigate("issues", { view }); }}
+              style={({ pressed }) => [ui.s.menuItem, !projectId && ui.s.hoverSurface, pressed && ui.s.pressed]}
+            >
+              <Icon name="Layers" size={14} color={ui.c.muted} />
+              <Text style={{ flex: 1, fontSize: 14, color: ui.c.fg }}>全部项目</Text>
+              {!projectId ? <Icon name="Check" size={14} color={ui.c.brand} /> : null}
+            </Pressable>
+            {(projects.data ?? []).map((project) => {
+              const active = projectId === project.id;
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={project.title}
+                  key={project.id}
+                  onPress={() => { setFilterOpen(false); navigate("issues", { view, project: project.id }); }}
+                  style={({ pressed }) => [ui.s.menuItem, active && ui.s.hoverSurface, pressed && ui.s.pressed]}
+                >
+                  <Icon name="FolderKanban" size={14} color={active ? ui.c.fg : ui.c.muted} />
+                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 14, color: ui.c.fg, fontWeight: active ? "600" : "400" }}>
+                    {project.title}
+                  </Text>
+                  {active ? <Icon name="Check" size={14} color={ui.c.brand} /> : null}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </Modal.Content>
+      </Modal>
 
       <CreateIssueModal
         open={createOpen}
@@ -360,12 +449,14 @@ function IssueCard({
   issue,
   project,
   assignee,
+  running,
   onPress,
 }: {
   ui: ReturnType<typeof useUi>;
   issue: Issue;
   project?: Project;
   assignee?: { name: string; url?: string | null };
+  running?: { name: string; avatar_url?: string | null };
   onPress(): void;
 }) {
   const priority = priorityMeta(issue.priority);
@@ -388,7 +479,7 @@ function IssueCard({
           paddingHorizontal: 10,
           borderRadius: 8,
           borderWidth: 1,
-          borderColor: ui.c.border,
+          borderColor: running ? `${ui.c.success}66` : ui.c.border,
           backgroundColor: ui.c.card,
           boxShadow: ui.c.shadow,
         },
@@ -400,6 +491,12 @@ function IssueCard({
           <Icon name={priority.icon} size={14} color={priorityColor} />
         ) : null}
         <Text style={ui.s.idText}>{issue.identifier}</Text>
+        {running ? (
+          <View style={[ui.s.row, { gap: 4, marginLeft: "auto" }]}>
+            <ActivityIndicator size="small" color={ui.c.success} />
+            <Text style={{ fontSize: 11, fontWeight: "500", color: ui.c.success }}>运行中</Text>
+          </View>
+        ) : null}
       </View>
       <Text numberOfLines={2} style={{ fontSize: 14, lineHeight: 21, fontWeight: "500", color: ui.c.fg, marginTop: 4 }}>
         {issue.title}

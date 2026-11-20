@@ -1,6 +1,6 @@
 import { Icon } from "@getpaseo/plugin/client/ui";
 import type { ReactNode } from "react";
-import { Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import type { Ui } from "./bits";
 import { Avatar, Dot, Tag } from "./bits";
 import {
@@ -59,12 +59,14 @@ export function IssueRow({
   statuses,
   onPress,
   subtitle,
+  running,
 }: {
   ui: Ui;
   issue: Issue;
   statuses: IssueStatusEntry[];
   onPress(): void;
   subtitle?: string;
+  running?: { name: string; avatar_url?: string | null };
 }) {
   return (
     <Pressable
@@ -84,6 +86,14 @@ export function IssueRow({
       <Text numberOfLines={1} style={{ flex: 1, fontSize: 14, color: ui.c.fg }}>
         {issue.title}
       </Text>
+      {running ? (
+        <View style={[ui.s.row, { gap: 4 }]}>
+          <ActivityIndicator size="small" color={ui.c.success} />
+          <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: "500", color: ui.c.success, maxWidth: 90 }}>
+            {running.name}
+          </Text>
+        </View>
+      ) : null}
       {subtitle ? (
         <Text numberOfLines={1} style={[ui.s.tiny, { maxWidth: 160 }]}>
           {subtitle}

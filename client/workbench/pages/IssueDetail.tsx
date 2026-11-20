@@ -29,6 +29,7 @@ import {
   type Project,
 } from "../model";
 import { PriorityMark, StatusMark } from "../parts";
+import { ExecutionSteps, RunningChip, type ActiveTask } from "../Execution";
 
 const PRIORITIES = ["urgent", "high", "medium", "low", "none"] as const;
 
@@ -116,6 +117,15 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     [membersQuery.data],
   );
   const agents = agentsQuery.data ?? [];
+
+  const activeTaskQuery = useQuery(
+    api,
+    issueId ? `/api/issues/${issueId}/active-task` : null,
+    { pollMs: 5000, select: (data) => asList<ActiveTask>(data, "tasks") },
+    key,
+  );
+  const activeTask = (activeTaskQuery.data ?? []).find((task) => task.status === "running") ?? null;
+  const activeAgent = activeTask ? agents.find((agent) => agent.id === activeTask.agent_id) ?? null : null;
 
   const assignee = useMemo(() => {
     if (!issue?.assignee_id) return null;
@@ -647,6 +657,16 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
           </View>
         )}
       </View>
+
+      <ExecutionSteps
+        ui={ui}
+        api={api}
+        issueId={issue.id}
+        assigneeType={issue.assignee_type}
+        assigneeId={issue.assignee_id}
+        agents={agents}
+        cacheKey={key}
+      />
     </>
   );
 
@@ -786,6 +806,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
         </Text>
         <Icon name="ChevronRight" size={12} color={ui.c.faint} />
         <Text style={{ fontSize: 12, color: ui.c.fg }}>{issue.identifier}</Text>
+        {activeAgent ? <RunningChip ui={ui} agent={activeAgent} compact={compact || narrow} /> : null}
         <View style={ui.s.grow} />
         <IconBtn ui={ui} icon="Pencil" label="编辑任务" onPress={openEdit} />
         <IconBtn ui={ui} icon="RotateCw" label="重跑任务" onPress={() => void rerun()} />

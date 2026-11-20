@@ -43,6 +43,13 @@ paseo plugin install /path/to/paseo-multica
 
 Paseo 左侧「Multica」菜单项带未读通知徽章：由 daemon 侧 `workbench.inbox_badge` 读取当前连接的 `/api/inbox/unread-count`，客户端每 20 秒轮询，工作台里标记已读/归档后立即重取；徽章配色跟随宿主主题，与相邻插件的徽章同规格。有未读时点击该菜单项直接落到收件箱，已打开工作台时保留当前页面不打断。
 
+## 运行状态与执行步骤
+
+- 看板卡片与列表行通过 `/api/working-agents`（10s 轮询）标出正在跑任务的智能体：卡片描边转绿并显示「运行中」+ 旋转指示，列表行显示智能体名。
+- 任务详情顶栏通过 `/api/issues/{id}/active-task`（5s 轮询）显示「<智能体> 在工作」胶囊（头像 + 旋转指示）。
+- 详情底部「执行步骤」面板读取 `/api/tasks/{taskId}/messages`，把 `tool_use` / `tool_result` 按 `call_id` 配对成步骤列表：工具图标 + 描述/命令 + 工具标签，点击展开看完整命令与输出（等宽块、限高内滚动）；运行中每 4s 刷新并显示「运行中 · N 步」。默认只展示最近 8 步，「显示前面的 N 个步骤」可展开全部、再收起。
+- 任务已结束（无 active task）时回退到 `/api/agents/{id}/tasks` 里该需求最近一次任务，仍可查看历史执行步骤。
+
 ## 企业微信智能机器人
 
 设置 → 企业微信 可把企业微信智能机器人接入 Multica（`@wecom/aibot-node-sdk` websocket 长连接，无需公网回调地址）：

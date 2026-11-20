@@ -10,20 +10,16 @@ import { initials, type Project } from "./model";
 type NavPressState = { pressed: boolean; hovered?: boolean };
 
 const RAIL: { key: PageKey; label: string; icon: string }[] = [
-  { key: "overview", label: "概览", icon: "LayoutDashboard" },
   { key: "issues", label: "工作", icon: "ListTodo" },
-  { key: "projects", label: "项目", icon: "FolderKanban" },
   { key: "team", label: "团队", icon: "Users" },
   { key: "chat", label: "聊天", icon: "MessagesSquare" },
   { key: "autopilot", label: "自动化", icon: "Bot" },
-  { key: "workflows", label: "工作流", icon: "Workflow" },
-  { key: "labels", label: "标签", icon: "Tags" },
   { key: "api", label: "接口", icon: "Plug" },
 ];
 
 export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
   const ctx = useWorkbench();
-  const { theme, compact, page, navigate, server, user, workspaces, workspaceId } = ctx;
+  const { theme, compact, navCollapsed, toggleNav, page, navigate, server, user, workspaces, workspaceId } = ctx;
   const ui = useUi(theme, compact);
   const [busy, setBusy] = useState(false);
   const active = page === "issue" ? "issues" : page;
@@ -44,8 +40,8 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
     options?: { selected?: boolean; busy?: boolean; plain?: boolean },
   ) => {
     const selected = options?.selected === true;
-    const plain = options?.plain === true;
-    const box = compact ? 36 : 40;
+    const plain = options?.plain === true || navCollapsed;
+    const box = navCollapsed ? 32 : compact ? 36 : 40;
     return (
       <Pressable
         accessibilityRole="button"
@@ -92,7 +88,7 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
   return (
     <View
       style={{
-        width: compact ? 44 : 48,
+        width: navCollapsed ? 40 : compact ? 44 : 48,
         backgroundColor: ui.c.shell,
         paddingTop: 12,
         paddingBottom: 8,
@@ -137,6 +133,13 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
         )}
       </ScrollView>
 
+      {cell(
+        "nav-toggle",
+        navCollapsed ? "PanelLeftOpen" : "PanelLeftClose",
+        navCollapsed ? "展开导航" : "收起导航",
+        toggleNav,
+        { plain: true },
+      )}
       {cell("refresh", "RefreshCw", "刷新", () => void refresh(), { busy, plain: true })}
       {cell("settings", "Settings", "设置", () => navigate("settings"), { selected: page === "settings" })}
       <Pressable
@@ -165,8 +168,8 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
 }
 
 export function SectionSidebar() {
-  const { compact, stacked, narrow, page } = useWorkbench();
-  if (compact || stacked || page === "chat" || page === "api") return null;
+  const { compact, stacked, narrow, navCollapsed, page } = useWorkbench();
+  if (compact || stacked || navCollapsed || page === "chat" || page === "api") return null;
   return (
     <View style={{ width: narrow ? 196 : 224 }}>
       <ScrollView contentContainerStyle={{ paddingHorizontal: 8, paddingTop: 12, paddingBottom: 24 }}>
@@ -253,7 +256,7 @@ function NavRow({
   );
 }
 
-const VIEWS: { key: string; label: string; icon: string; query: Record<string, string | number> }[] = [
+export const WORK_VIEWS: { key: string; label: string; icon: string; query: Record<string, string | number> }[] = [
   { key: "all", label: "全部任务", icon: "ListChecks", query: {} },
   { key: "mine", label: "我的工作", icon: "CircleUser", query: { mine: 1 } },
   { key: "active", label: "执行中", icon: "Play", query: { status_category: "started" } },
@@ -333,7 +336,7 @@ function WorkNav() {
       )}
 
       <GroupLabel ui={ui} label="视图" action={<Icon name="Plus" size={13} color={ui.c.muted} />} />
-      {VIEWS.map((entry) => (
+      {WORK_VIEWS.map((entry) => (
         <NavRow
           key={entry.key}
           ui={ui}

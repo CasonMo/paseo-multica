@@ -37,6 +37,9 @@ export interface WorkbenchValue {
   width: number;
   narrow: boolean;
   stacked: boolean;
+  /** 左侧导航（图标栏文字 + 二级侧栏）是否收起，持久化到本机。 */
+  navCollapsed: boolean;
+  toggleNav: () => void;
   api: ApiFn;
   toast: ReturnType<typeof useToast>;
   page: PageKey;
@@ -60,6 +63,26 @@ export interface WorkbenchValue {
 }
 
 const WorkbenchContext = createContext<WorkbenchValue | null>(null);
+
+const NAV_KEY = "multica.navCollapsed";
+type LocalStore = { getItem(key: string): string | null; setItem(key: string, value: string): void };
+function localStore(): LocalStore | null {
+  return (globalThis as { localStorage?: LocalStore }).localStorage ?? null;
+}
+function readNavCollapsed(): boolean {
+  try {
+    return localStore()?.getItem(NAV_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+function writeNavCollapsed(value: boolean) {
+  try {
+    localStore()?.setItem(NAV_KEY, value ? "1" : "0");
+  } catch {
+    //  _native/隐私模式下写不进去就只保留本次会话状态
+  }
+}
 
 export function useWorkbench(): WorkbenchValue {
   const value = useContext(WorkbenchContext);
@@ -98,7 +121,16 @@ export function WorkbenchProvider({
   const [loading, setLoading] = useState(true);
   const [bump, setBump] = useState(0);
   const [width, setWidth] = useState(0);
+  const [navCollapsed, setNavCollapsed] = useState(() => readNavCollapsed());
   const alive = useRef(true);
+
+  const toggleNav = useCallback(() => {
+    setNavCollapsed((prev) => {
+      const next = !prev;
+      writeNavCollapsed(next);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     alive.current = true;
@@ -186,6 +218,8 @@ export function WorkbenchProvider({
     width,
     narrow: width > 0 && width < 1000,
     stacked: width > 0 && width < 820,
+    navCollapsed,
+    toggleNav,
     api,
     toast,
     page,
