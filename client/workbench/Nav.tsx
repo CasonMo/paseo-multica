@@ -10,10 +10,14 @@ import { initials, type Project } from "./model";
 type NavPressState = { pressed: boolean; hovered?: boolean };
 
 const RAIL: { key: PageKey; label: string; icon: string }[] = [
+  { key: "overview", label: "概览", icon: "LayoutDashboard" },
   { key: "issues", label: "工作", icon: "ListTodo" },
+  { key: "projects", label: "项目", icon: "FolderKanban" },
   { key: "team", label: "团队", icon: "Users" },
   { key: "chat", label: "聊天", icon: "MessagesSquare" },
   { key: "autopilot", label: "自动化", icon: "Bot" },
+  { key: "workflows", label: "工作流", icon: "Workflow" },
+  { key: "labels", label: "标签", icon: "Tags" },
   { key: "api", label: "接口", icon: "Plug" },
 ];
 
@@ -167,12 +171,15 @@ export function RailNav({ onWorkspacePicker }: { onWorkspacePicker(): void }) {
   );
 }
 
+/** 二级侧栏只保留该分区独有、且主区域没有的内容；其余分区直接让位给主内容。 */
+const SIDEBAR_PAGES: PageKey[] = ["issues", "issue", "team", "autopilot", "settings"];
+
 export function SectionSidebar() {
   const { compact, stacked, narrow, navCollapsed, page } = useWorkbench();
-  if (compact || stacked || navCollapsed || page === "chat" || page === "api") return null;
+  if (compact || stacked || navCollapsed || !SIDEBAR_PAGES.includes(page)) return null;
   return (
     <View style={{ width: narrow ? 196 : 224 }}>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 8, paddingTop: 12, paddingBottom: 24 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 8, paddingTop: 10, paddingBottom: 24 }}>
         {page === "issues" || page === "issue" ? (
           <WorkNav />
         ) : page === "team" ? (
@@ -180,27 +187,87 @@ export function SectionSidebar() {
         ) : page === "autopilot" ? (
           <AutomationNav />
         ) : (
-          <GenericNav />
+          <SettingsNav />
         )}
       </ScrollView>
     </View>
   );
 }
 
-function SectionTitle({ ui, title, action }: { ui: ReturnType<typeof useUi>; title: string; action?: React.ReactNode }) {
+const GROUP_KEY = "multica.navGroups";
+type LocalStore = { getItem(key: string): string | null; setItem(key: string, value: string): void };
+function groupStore(): LocalStore | null {
+  return (globalThis as { localStorage?: LocalStore }).localStorage ?? null;
+}
+function readGroupOpen(id: string, fallback: boolean): boolean {
+  try {
+    const raw = groupStore()?.getItem(GROUP_KEY);
+    if (!raw) return fallback;
+    const map = JSON.parse(raw) as Record<string, boolean>;
+    return typeof map[id] === "boolean" ? map[id] : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function writeGroupOpen(id: string, open: boolean) {
+  try {
+    const store = groupStore();
+    if (!store) return;
+    const map = JSON.parse(store.getItem(GROUP_KEY) ?? "{}") as Record<string, boolean>;
+    map[id] = open;
+    store.setItem(GROUP_KEY, JSON.stringify(map));
+  } catch {
+    //  写不进去就只保留本次会话状态
+  }
+}
+
+function SectionTitle({ ui, title }: { ui: ReturnType<typeof useUi>; title: string }) {
   return (
     <View style={[ui.s.row, { paddingHorizontal: 8, paddingTop: 2, paddingBottom: 6 }]}>
       <Text style={{ flex: 1, color: ui.c.fg, fontSize: 15, fontWeight: "600" }}>{title}</Text>
-      {action}
     </View>
   );
 }
 
-function GroupLabel({ ui, label, action }: { ui: ReturnType<typeof useUi>; label: string; action?: React.ReactNode }) {
+function Group({
+  ui,
+  id,
+  label,
+  defaultOpen = true,
+  children,
+}: {
+  ui: ReturnType<typeof useUi>;
+  id: string;
+  label: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(() => readGroupOpen(id, defaultOpen));
+  const toggle = () => {
+    setOpen((prev) => {
+      writeGroupOpen(id, !prev);
+      return !prev;
+    });
+  };
   return (
-    <View style={[ui.s.row, { paddingHorizontal: 8, paddingTop: 14, paddingBottom: 4 }]}>
-      <Text style={{ flex: 1, color: ui.c.muted, fontSize: 12, fontWeight: "500" }}>{label}</Text>
-      {action}
+    <View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${label}，${open ? "收起" : "展开"}`}
+        accessibilityState={{ expanded: open }}
+        aria-expanded={open}
+        onPress={toggle}
+        style={({ pressed, hovered }: NavPressState) => [
+          ui.s.row,
+          { gap: 5, paddingHorizontal: 8, paddingTop: 12, paddingBottom: 4, borderRadius: 6 },
+          hovered && { backgroundColor: ui.c.fillHover },
+          pressed && ui.s.pressed,
+        ]}
+      >
+        <Icon name={open ? "ChevronDown" : "ChevronRight"} size={12} color={ui.c.faint} />
+        <Text style={{ flex: 1, color: ui.c.muted, fontSize: 12, fontWeight: "500" }}>{label}</Text>
+      </Pressable>
+      {open ? <View style={{ paddingTop: 2 }}>{children}</View> : null}
     </View>
   );
 }
@@ -312,59 +379,62 @@ function WorkNav() {
   return (
     <View>
       <SectionTitle ui={ui} title={params.id ? "任务" : "工作"} />
-      <GroupLabel ui={ui} label="收件箱" />
       <NavRow ui={ui} icon="Bell" label="收件箱" count={unreadCount} onPress={() => navigate("inbox")} />
-      {previewList.length === 0 ? (
-        <Text style={[ui.s.tiny, { paddingHorizontal: 8, paddingVertical: 6 }]}>暂无通知</Text>
-      ) : (
-        previewList.map((item) => (
-          <Pressable
-            accessibilityRole="button"
-            key={item.id}
-            onPress={() => navigate("inbox")}
-            style={({ pressed, hovered }: NavPressState) => [
-              { minHeight: 28, justifyContent: "center", paddingHorizontal: 8, paddingVertical: 5, borderRadius: 7 },
-              hovered && { backgroundColor: ui.c.fillHover },
-              pressed && ui.s.pressed,
-            ]}
-          >
-            <Text numberOfLines={1} style={{ fontSize: 12, color: ui.c.muted }}>
-              {item.title || "通知"}
-            </Text>
-          </Pressable>
-        ))
-      )}
+      <Group ui={ui} id="work.preview" label="最近通知" defaultOpen={false}>
+        {previewList.length === 0 ? (
+          <Text style={[ui.s.tiny, { paddingHorizontal: 8, paddingVertical: 6 }]}>暂无通知</Text>
+        ) : (
+          previewList.map((item) => (
+            <Pressable
+              accessibilityRole="button"
+              key={item.id}
+              onPress={() => navigate("inbox")}
+              style={({ pressed, hovered }: NavPressState) => [
+                { minHeight: 28, justifyContent: "center", paddingHorizontal: 8, paddingVertical: 5, borderRadius: 7 },
+                hovered && { backgroundColor: ui.c.fillHover },
+                pressed && ui.s.pressed,
+              ]}
+            >
+              <Text numberOfLines={1} style={{ fontSize: 12, color: ui.c.muted }}>
+                {item.title || "通知"}
+              </Text>
+            </Pressable>
+          ))
+        )}
+      </Group>
 
-      <GroupLabel ui={ui} label="视图" action={<Icon name="Plus" size={13} color={ui.c.muted} />} />
-      {WORK_VIEWS.map((entry) => (
-        <NavRow
-          key={entry.key}
-          ui={ui}
-          icon={entry.icon}
-          label={entry.label}
-          count={counts[entry.key]}
-          selected={view === entry.key && !projectId}
-          onPress={() => navigate("issues", { view: entry.key })}
-        />
-      ))}
-
-      <GroupLabel ui={ui} label="项目" action={<Icon name="Plus" size={13} color={ui.c.muted} />} />
-      {list.length === 0 ? (
-        <Text style={[ui.s.tiny, { paddingHorizontal: 8, paddingVertical: 6 }]}>暂无项目</Text>
-      ) : (
-        list.map((project) => (
+      <Group ui={ui} id="work.views" label="视图">
+        {WORK_VIEWS.map((entry) => (
           <NavRow
-            key={project.id}
+            key={entry.key}
             ui={ui}
-            icon="FolderKanban"
-            label={project.title}
-            count={project.issue_count}
-            selected={projectId === project.id}
-            onPress={() => navigate("issues", { project: project.id })}
+            icon={entry.icon}
+            label={entry.label}
+            count={counts[entry.key]}
+            selected={view === entry.key && !projectId}
+            onPress={() => navigate("issues", { view: entry.key })}
           />
-        ))
-      )}
-      <NavRow ui={ui} icon="Plus" label="新建项目" onPress={() => navigate("projects")} />
+        ))}
+      </Group>
+
+      <Group ui={ui} id="work.projects" label="项目">
+        {list.length === 0 ? (
+          <Text style={[ui.s.tiny, { paddingHorizontal: 8, paddingVertical: 6 }]}>暂无项目</Text>
+        ) : (
+          list.map((project) => (
+            <NavRow
+              key={project.id}
+              ui={ui}
+              icon="FolderKanban"
+              label={project.title}
+              count={project.issue_count}
+              selected={projectId === project.id}
+              onPress={() => navigate("issues", { project: project.id })}
+            />
+          ))
+        )}
+        <NavRow ui={ui} icon="Plus" label="新建项目" onPress={() => navigate("projects")} />
+      </Group>
     </View>
   );
 }
@@ -382,17 +452,18 @@ function TeamNav() {
   return (
     <View>
       <SectionTitle ui={ui} title="团队" />
-      <GroupLabel ui={ui} label="组织" />
-      {items.map((entry) => (
-        <NavRow
-          key={entry.key}
-          ui={ui}
-          icon={entry.icon}
-          label={entry.label}
-          selected={tab === entry.key}
-          onPress={() => navigate("team", { tab: entry.key })}
-        />
-      ))}
+      <Group ui={ui} id="team.org" label="组织">
+        {items.map((entry) => (
+          <NavRow
+            key={entry.key}
+            ui={ui}
+            icon={entry.icon}
+            label={entry.label}
+            selected={tab === entry.key}
+            onPress={() => navigate("team", { tab: entry.key })}
+          />
+        ))}
+      </Group>
     </View>
   );
 }
@@ -409,92 +480,47 @@ function AutomationNav() {
   return (
     <View>
       <SectionTitle ui={ui} title="自动化" />
-      <GroupLabel ui={ui} label="任务" action={<Icon name="Plus" size={13} color={ui.c.muted} />} />
-      {items.map((entry) => (
-        <NavRow
-          key={entry.key}
-          ui={ui}
-          icon={entry.icon}
-          label={entry.label}
-          selected={filter === entry.key}
-          onPress={() => navigate("autopilot", { filter: entry.key })}
-        />
-      ))}
+      <Group ui={ui} id="autopilot.tasks" label="任务">
+        {items.map((entry) => (
+          <NavRow
+            key={entry.key}
+            ui={ui}
+            icon={entry.icon}
+            label={entry.label}
+            selected={filter === entry.key}
+            onPress={() => navigate("autopilot", { filter: entry.key })}
+          />
+        ))}
+      </Group>
     </View>
   );
 }
 
-const GENERIC: Record<string, { title: string; desc: string; links: { label: string; icon: string; page: PageKey; params?: Record<string, string> }[] }> = {
-  overview: {
-    title: "概览",
-    desc: "工作区概况与用量",
-    links: [
-      { label: "需求看板", icon: "ListTodo", page: "issues" },
-      { label: "团队", icon: "Users", page: "team" },
-      { label: "自动化", icon: "Bot", page: "autopilot" },
-    ],
-  },
-  inbox: {
-    title: "收件箱",
-    desc: "需求流转、智能体结果与 @ 提醒",
-    links: [
-      { label: "全部任务", icon: "ListChecks", page: "issues" },
-      { label: "团队", icon: "Users", page: "team" },
-    ],
-  },
-  projects: {
-    title: "项目",
-    desc: "按项目组织需求与进度",
-    links: [
-      { label: "全部任务", icon: "ListChecks", page: "issues" },
-      { label: "标签", icon: "Tags", page: "labels" },
-    ],
-  },
-  workflows: {
-    title: "工作流",
-    desc: "状态定义与流转规则",
-    links: [
-      { label: "全部任务", icon: "ListChecks", page: "issues" },
-      { label: "团队", icon: "Users", page: "team" },
-    ],
-  },
-  labels: {
-    title: "标签",
-    desc: "需求的分类标记",
-    links: [{ label: "全部任务", icon: "ListChecks", page: "issues" }],
-  },
-  settings: {
-    title: "设置",
-    desc: "服务器、工作区与账户",
-    links: [
-      { label: "服务器连接", icon: "Plug", page: "settings", params: { tab: "connection" } },
-      { label: "工作区", icon: "Layers", page: "settings", params: { tab: "workspace" } },
-      { label: "企业微信", icon: "MessagesSquare", page: "settings", params: { tab: "wecom" } },
-      { label: "账户", icon: "CircleUser", page: "settings", params: { tab: "account" } },
-      { label: "接口调试", icon: "Plug", page: "api" },
-    ],
-  },
-};
-
-function GenericNav() {
+function SettingsNav() {
   const { theme, compact, page, params, navigate } = useWorkbench();
   const ui = useUi(theme, compact);
-  const meta = GENERIC[page] ?? { title: "Multica", desc: "", links: [] };
+  const links = [
+    { label: "服务器连接", icon: "Plug", tab: "connection" },
+    { label: "工作区", icon: "Layers", tab: "workspace" },
+    { label: "企业微信", icon: "MessagesSquare", tab: "wecom" },
+    { label: "账户", icon: "CircleUser", tab: "account" },
+  ];
   return (
     <View>
-      <SectionTitle ui={ui} title={meta.title} />
-      {meta.desc ? <Text style={[ui.s.tiny, { paddingHorizontal: 8, paddingBottom: 4 }]}>{meta.desc}</Text> : null}
-      <GroupLabel ui={ui} label="导航" />
-      {meta.links.map((entry) => (
-        <NavRow
-          key={`${entry.page}:${entry.label}`}
-          ui={ui}
-          icon={entry.icon}
-          label={entry.label}
-          selected={page === entry.page && (entry.params?.tab ? params.tab === entry.params.tab : !params.tab)}
-          onPress={() => navigate(entry.page, entry.params)}
-        />
-      ))}
+      <SectionTitle ui={ui} title="设置" />
+      <Group ui={ui} id="settings.tabs" label="设置项">
+        {links.map((entry) => (
+          <NavRow
+            key={entry.tab}
+            ui={ui}
+            icon={entry.icon}
+            label={entry.label}
+            selected={page === "settings" && (params.tab ?? "connection") === entry.tab}
+            onPress={() => navigate("settings", { tab: entry.tab })}
+          />
+        ))}
+        <NavRow ui={ui} icon="Terminal" label="接口调试" onPress={() => navigate("api")} />
+      </Group>
     </View>
   );
 }

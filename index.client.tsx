@@ -38,7 +38,7 @@ function asPage(value: string | undefined): PageKey | null {
 }
 
 function WorkbenchScreen({ theme, layout, params }: PluginScreenProps) {
-  const [page, setPage] = useState<PageKey>(asPage(params.page) ?? "issues");
+  const [page, setPage] = useState<PageKey>(asPage(params.page) ?? "overview");
   const [pageParams, setPageParams] = useState<Record<string, string>>(params);
   const lastParams = useRef(params);
 

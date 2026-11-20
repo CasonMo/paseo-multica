@@ -154,7 +154,9 @@ export function IssuesPage() {
           {
             gap: 8,
             paddingHorizontal: compact ? 12 : 16,
-            height: 48,
+            minHeight: 48,
+            paddingVertical: 8,
+            flexWrap: "wrap",
             borderBottomWidth: StyleSheet.hairlineWidth,
             borderBottomColor: ui.c.line,
             backgroundColor: ui.c.canvas,
@@ -212,14 +214,13 @@ export function IssuesPage() {
             <Icon name="ChevronDown" size={12} color={ui.c.muted} />
           </Pressable>
         ) : null}
-        <View style={ui.s.grow} />
-
         <View
           style={[
             ui.s.row,
             {
               gap: 7,
-              width: compact ? 140 : 220,
+              flex: 1,
+              minWidth: compact ? 120 : 180,
               paddingHorizontal: 8,
               borderRadius: 8,
               borderWidth: 1,
