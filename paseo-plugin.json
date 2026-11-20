@@ -1,9 +1,15 @@
 {
   "id": "multica",
   "name": "Multica",
-  "description": "在 Paseo 中原生复刻 Multica 管理后台：任务、项目、团队、运行时、技能、聊天、自动化与工作区设置，支持官方云与自建 Multica 服务器",
+  "description": "Native Multica admin console in Paseo: issues, kanban, projects, team, chat, automation, inbox, execution logs and workspace settings, for the official cloud and self-hosted servers.",
+  "translations": {
+    "zh-CN": {
+      "name": "Multica",
+      "description": "在 Paseo 中原生复刻 Multica 管理后台：任务、看板、项目、团队、聊天、自动化、收件箱、执行日志与工作区设置，支持官方云与自建 Multica 服务器"
+    }
+  },
   "media": [],
   "requirements": {
-    "paseo": ">=0.11.2"
+    "paseo": ">=0.17.0-beta.1"
   }
 }

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRpc } from "@getpaseo/plugin/client";
 import { API_ROUTES, isInternalRoute } from "../../../shared/routes";
+import { PLUGIN_VERSION } from "../../../shared/version";
 import {
   OFFICIAL_BASE_URL,
   OFFICIAL_WEB_URL,
@@ -88,7 +89,7 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
       <View style={{ paddingHorizontal: compact ? 12 : 20, paddingTop: compact ? 12 : 20, gap: 14 }}>
         <View>
           <Text style={ui.s.title}>设置</Text>
-          <Text style={ui.s.muted}>服务器连接、工作区、安全选项与接口调试</Text>
+          <Text style={ui.s.muted}>服务器连接、工作区、安全选项与接口调试 · v{PLUGIN_VERSION}</Text>
         </View>
 
         {ctx.bootstrapError && server ? <ErrorNote ui={ui} message={ctx.bootstrapError} onRetry={() => void ctx.reloadBootstrap()} /> : null}
@@ -391,7 +392,7 @@ function ConnectionModal({
     setResult(null);
     setWorkspaceId(existing?.workspaceId ?? null);
     // Re-hydrate only when the modal opens for a different server.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [targetKey]);
 
   return (

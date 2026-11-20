@@ -1,8 +1,10 @@
 {
   "name": "paseo-multica",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "files": [
+    "LICENSE",
+    "README.md",
     "paseo-plugin.json",
     "OVERVIEW.md",
     "index.client.tsx",
@@ -12,15 +14,21 @@
     "shared/"
   ],
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint client index.client.tsx"
   },
   "devDependencies": {
     "@getpaseo/plugin": "0.17.0-beta.1",
     "@types/node": "^24.0.0",
     "@types/react": "~19.2.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^6.1.1",
     "react": "19.1.0",
     "react-native": "0.81.5",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.73.0",
     "zod": "^4.4.3"
-  }
+  },
+  "description": "Paseo plugin: native Multica admin console (issues, kanban, team, chat, automation, inbox, execution logs, API debugging)",
+  "license": "MIT"
 }

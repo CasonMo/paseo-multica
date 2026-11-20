@@ -62,6 +62,7 @@ Paseo 左侧「Multica」菜单项带未读通知徽章：由 daemon 侧 `workbe
 
 ## 安全
 
+- 网络目的地仅有两个：用户配置的 Multica base URL（默认 `https://api.multica.ai`，或任意自建服务器）；无遥测、无隐藏网络调用、无动态代码执行。
 - API Key 只保存在本机 Paseo 后台：`~/.paseo/multica/connections.json`（权限 `0600`）。
 - Key 不会下发到客户端界面，设置页只显示 `mul_…abcd` 形式的掩码。
 - 所有请求由 daemon 侧发起，客户端通过 RPC 间接调用，浏览器标签页里拿不到明文 Key。

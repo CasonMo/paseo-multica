@@ -124,7 +124,7 @@ export function useQuery<T = unknown>(
     }
     void run(manualRefresh.current);
     manualRefresh.current = false;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [run, key]);
 
   useEffect(() => {
@@ -234,7 +234,7 @@ export function usePagedQuery<T = Record<string, unknown>>(
     setItems([]);
     setTotal(0);
     void run(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [run, key, keysKey]);
 
   const hasMore = items.length < total;

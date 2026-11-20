@@ -83,7 +83,7 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [agentId]);
 
   const active = sessions.find((session) => session.id === activeId) ?? null;

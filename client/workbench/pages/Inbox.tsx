@@ -131,7 +131,7 @@ export function InboxPage() {
     void markAllRead(true).finally(() => {
       autoReading.current = false;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [tab, unreadCount]);
 
   const archiveAll = async () => {
