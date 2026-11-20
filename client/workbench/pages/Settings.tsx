@@ -14,9 +14,10 @@ import {
   type ConnectionTestOutput,
   type ServerView,
 } from "../../../shared/contracts";
-import { Avatar, Btn, Card, Divider, Empty, ErrorNote, Field, Tag, useUi } from "../bits";
+import { Avatar, Btn, Card, Chips, Divider, Empty, ErrorNote, Field, Tag, useUi } from "../bits";
 import { useWorkbench } from "../context";
 import { relTime } from "../model";
+import { AccountSettings, WorkspaceMembersSettings } from "../SettingsSections";
 import { openExternalUrl } from "@getpaseo/plugin/client";
 
 export function SettingsPage() {
@@ -29,6 +30,7 @@ export function SettingsPage() {
   const testRpc = useRpc(connectionsTestRpc);
   const prefRpc = useRpc(preferencesSaveRpc);
 
+  const [tab, setTab] = useState<"connection" | "workspace" | "account">("connection");
   const [editing, setEditing] = useState<ServerView | "new" | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<ServerView | null>(null);
@@ -89,6 +91,18 @@ export function SettingsPage() {
 
       {ctx.bootstrapError && server ? <ErrorNote ui={ui} message={ctx.bootstrapError} onRetry={() => void ctx.reloadBootstrap()} /> : null}
 
+      <Chips
+        ui={ui}
+        options={[
+          { value: "connection", label: "连接", icon: "Plug" },
+          { value: "workspace", label: "工作区", icon: "Users" },
+          { value: "account", label: "账户", icon: "User" },
+        ] as const}
+        value={tab}
+        onChange={(next) => setTab(next as typeof tab)}
+      />
+
+      {tab === "connection" ? (
       <Card ui={ui} style={{ gap: 10 }}>
         <View style={[ui.s.row, { justifyContent: "space-between" }]}>
           <View style={{ gap: 2 }}>
@@ -166,7 +180,10 @@ export function SettingsPage() {
           })
         )}
       </Card>
+      ) : null}
 
+      {tab === "workspace" ? (
+      <>
       {server ? (
         <Card ui={ui} style={{ gap: 10 }}>
           <View style={{ gap: 2 }}>
@@ -213,7 +230,14 @@ export function SettingsPage() {
           )}
         </Card>
       ) : null}
+      <WorkspaceMembersSettings />
+      </>
+      ) : null}
 
+      {tab === "account" ? <AccountSettings /> : null}
+
+      {tab === "connection" ? (
+      <>
       <Card ui={ui} style={{ gap: 10 }}>
         <Text style={ui.s.h2}>高级</Text>
         <Pressable
@@ -281,6 +305,8 @@ export function SettingsPage() {
           已内置 {API_ROUTES.filter((route) => !isInternalRoute(route[1]) || connections?.allowInternal).length} 个接口入口 · 支持官方云与自建服务器
         </Text>
       </Card>
+      </>
+      ) : null}
 
       <ConnectionModal
         ui={ui}
