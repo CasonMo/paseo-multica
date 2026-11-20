@@ -5,10 +5,22 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { Avatar, Btn, Chips, Empty, ErrorNote, Field, LoadingRow, LoadMore, nearBottom, useUi, type Ui } from "../bits";
 import { asList, asRecord, num, str, usePagedQuery, useQuery } from "../api";
 import { useWorkbench } from "../context";
-import { priorityMeta, relTime, type Agent, type Issue, type IssueStatusEntry, type Project } from "../model";
+import { issueCategory, issueStatusEntry, priorityMeta, relTime, type Agent, type Issue, type IssueStatusEntry, type Project } from "../model";
 import { IssueRow } from "../parts";
 import { WORK_VIEWS } from "../Nav";
 import { useWorkingAgents, type WorkingAgent } from "../Execution";
+
+// 服务端 status_category 只有 unstarted/started/done/closed 四个粗桶（backlog/todo 等同 unstarted），
+// 列按细 category 客户端切分，避免跨列重复与列内主/次查询重叠。
+const COLUMN_BUCKET: Record<string, string> = {
+  backlog: "unstarted",
+  todo: "unstarted",
+  started: "started",
+  review: "started",
+  done: "done",
+  closed: "closed",
+};
+const FINE_FALLBACK: Record<string, string> = { unstarted: "backlog", started: "in_progress", done: "done", closed: "cancelled" };
 
 const VIEW_LABEL: Record<string, string> = {
   all: "Nav.20",
@@ -89,6 +101,12 @@ export function IssuesPage() {
     { query: request, pageSize: 25 },
     listKey,
     "issues",
+  );
+  const boardTotal = useQuery(
+    api,
+    mode === "board" ? "/api/issues" : null,
+    { query: { ...request, limit: 1 }, select: (data) => num(asRecord(data).total, 0) },
+    `${listKey}:boardtotal`,
   );
   const projects = useQuery(
     api,
@@ -183,7 +201,7 @@ export function IssuesPage() {
             </Pressable>
           </View>
         ) : null}
-        <Text style={ui.s.tiny}>{t("Inbox.40")} {total} {t("Issues.16")}</Text>
+        <Text style={ui.s.tiny}>{t("Inbox.40")} {mode === "board" ? (boardTotal.data ?? 0) : total} {t("Issues.16")}</Text>
         {sidebarHidden ? (
           <Pressable
             accessibilityRole="button"
@@ -643,34 +661,30 @@ function BoardColumn({
   onCreate(status?: string): void;
 }) {
   const { api } = useWorkbench();
-  const cats = useMemo(() => {
-    const present = new Set(statuses.map((status) => String(status.category ?? "")));
-    const list = column.categories.filter((category) => present.has(category));
-    return list.length > 0 ? list : [column.categories[0]];
-  }, [statuses, column]);
   const primary = usePagedQuery<Issue>(
     api,
     "/api/issues",
-    { query: { ...query, status_category: cats[0] }, pageSize: 20 },
+    { query: { ...query, status_category: COLUMN_BUCKET[column.key] ?? column.categories[0] }, pageSize: 100 },
     `${listKey}:col:${column.key}`,
     "issues",
   );
-  const secondary = usePagedQuery<Issue>(
-    api,
-    cats[1] ? "/api/issues" : null,
-    { query: { ...query, status_category: cats[1] }, pageSize: 20 },
-    `${listKey}:col:${column.key}:2`,
-    "issues",
-  );
   const items = useMemo(
-    () => [...primary.items, ...secondary.items].sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at)),
-    [primary.items, secondary.items],
+    () =>
+      primary.items
+        .filter((issue) => {
+          const category =
+            issueStatusEntry(issue, statuses)?.category ??
+            FINE_FALLBACK[issueCategory(issue, statuses)] ??
+            issueCategory(issue, statuses);
+          return column.categories.includes(category);
+        })
+        .sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at)),
+    [primary.items, statuses, column],
   );
-  const total = primary.total + secondary.total;
-  const hasMore = primary.hasMore || secondary.hasMore;
+  const total = items.length;
+  const hasMore = primary.hasMore;
   const loadMore = () => {
     primary.loadMore();
-    secondary.loadMore();
   };
   const loading = primary.loading && items.length === 0;
   return (
@@ -728,12 +742,12 @@ function BoardColumn({
               pressed && ui.s.pressed,
             ]}
           >
-            {primary.loadingMore || secondary.loadingMore ? (
+            {primary.loadingMore ? (
               <ActivityIndicator size="small" color={ui.c.muted} />
             ) : (
               <Icon name="ChevronDown" size={13} color={ui.c.muted} />
             )}
-            <Text style={ui.s.tiny}>{t("Issues.56")}{items.length}/{total}{t("Issues.152")}</Text>
+            <Text style={ui.s.tiny}>{t("Issues.56")}{items.length}{t("Issues.152")}</Text>
           </Pressable>
         ) : null}
       </ScrollView>
