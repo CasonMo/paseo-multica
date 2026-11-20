@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Avatar, Btn, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, Tag, useUi, type Ui } from "../bits";
 import { asList, asRecord, useQuery } from "../api";
+import { refreshInboxBadge } from "../badge";
 import { useWorkbench } from "../context";
 import {
   fmtDateTime,
@@ -244,8 +245,10 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const quick = async (action: "read", message: string) => {
     if (!issue) return;
     const result = await api({ method: "POST", path: `/api/issues/${issue.id}/${action}` });
-    if (result.ok) toast.show(message, { variant: "success" });
-    else toast.error(result.error ?? "操作失败");
+    if (result.ok) {
+      toast.show(message, { variant: "success" });
+      refreshInboxBadge();
+    } else toast.error(result.error ?? "操作失败");
   };
 
   const removeIssue = async () => {

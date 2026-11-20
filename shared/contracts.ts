@@ -148,3 +148,15 @@ export const apiRequestRpc = defineRpc({
   input: apiRequestInput,
   output: apiRequestOutput,
 });
+
+export const inboxBadgeRpc = defineRpc({
+  name: "workbench.inbox_badge",
+  input: z.object({}),
+  output: z.object({
+    count: z.number(),
+    serverId: z.string().nullable(),
+    workspaceId: z.string().nullable(),
+    error: z.string().nullable(),
+    fetchedAt: z.string(),
+  }),
+});

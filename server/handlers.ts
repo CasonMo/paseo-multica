@@ -8,6 +8,7 @@ import {
   connectionsRemoveRpc,
   connectionsSaveRpc,
   connectionsTestRpc,
+  inboxBadgeRpc,
   preferencesSaveRpc,
   workspaceSelectRpc,
 } from "../shared/contracts";
@@ -21,6 +22,7 @@ import {
   savePreferences,
   selectWorkspace,
   updateWorkspaceMeta,
+  type ResolvedServer,
 } from "./store";
 
 export function createHandlers() {
@@ -129,6 +131,30 @@ export function createHandlers() {
     input: RpcInput<typeof workspaceSelectRpc>,
   ): Promise<RpcOutput<typeof workspaceSelectRpc>> => selectWorkspace(input.serverId, input.workspaceId);
 
+  const inboxBadge = async (): Promise<RpcOutput<typeof inboxBadgeRpc>> => {
+    const fetchedAt = new Date().toISOString();
+    let server: ResolvedServer;
+    try {
+      server = await resolveServer();
+    } catch {
+      return { count: 0, serverId: null, workspaceId: null, error: null, fetchedAt };
+    }
+    const base = { serverId: server.id, workspaceId: server.workspaceId, fetchedAt };
+    if (!server.token) return { ...base, count: 0, error: null };
+    const result = await requestMultica({
+      server,
+      method: "GET",
+      path: "/api/inbox/unread-count",
+      workspaceId: server.workspaceId,
+      allowInternal: server.allowInternal,
+    });
+    if (!result.ok) return { ...base, count: 0, error: result.error ?? "读取收件箱失败" };
+    const payload = result.data && typeof result.data === "object" ? (result.data as Record<string, unknown>) : {};
+    const raw = typeof result.data === "number" ? result.data : Number(payload.count ?? payload.unread ?? 0);
+    const count = Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0;
+    return { ...base, count, error: null };
+  };
+
   const preferences = async (
     input: RpcInput<typeof preferencesSaveRpc>,
   ): Promise<RpcOutput<typeof preferencesSaveRpc>> => savePreferences(input);
@@ -145,5 +171,5 @@ export function createHandlers() {
     _input: RpcInput<typeof connectionsListRpc>,
   ): Promise<RpcOutput<typeof connectionsListRpc>> => list();
 
-  return { list: listHandler, save, remove, activate, test, bootstrap, request, selectWorkspace: selectWorkspaceHandler, preferences };
+  return { list: listHandler, save, remove, activate, test, bootstrap, request, selectWorkspace: selectWorkspaceHandler, preferences, inboxBadge };
 }

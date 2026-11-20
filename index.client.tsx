@@ -4,12 +4,16 @@ import type {
   PluginSidebarItemProps,
   PluginSurfaceProps,
 } from "@getpaseo/plugin/client";
+import { useRpc } from "@getpaseo/plugin/client";
 import { SidebarRow } from "@getpaseo/plugin/client/ui";
 import { MULTICA_LOGO_SVG } from "./client/workbench/Logo";
 import { useEffect, useRef, useState } from "react";
+import { Text, View } from "react-native";
 import { WorkbenchProvider, type PageKey } from "./client/workbench/context";
+import { useInboxBadgeVersion } from "./client/workbench/badge";
 import { Shell } from "./client/workbench/Shell";
 import { SettingsPage } from "./client/workbench/pages/Settings";
+import { inboxBadgeRpc } from "./shared/contracts";
 
 const SCREEN_ID = "multica-workbench";
 const SETTINGS_ID = "multica-connections";
@@ -74,15 +78,62 @@ function ConnectionsScreen({ theme, layout }: PluginSurfaceProps) {
   );
 }
 
-function WorkbenchSidebarRow({ currentScreen, openScreen }: PluginSidebarItemProps) {
+function WorkbenchSidebarRow({ currentScreen, openScreen, theme }: PluginSidebarItemProps) {
+  const fetchBadge = useRpc(inboxBadgeRpc);
+  const fetchRef = useRef(fetchBadge);
+  fetchRef.current = fetchBadge;
+  const version = useInboxBadgeVersion();
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      try {
+        const result = await fetchRef.current({});
+        if (alive) setUnread(result.count);
+      } catch {
+        // 取数失败时保留上一次的计数，避免徽章闪烁；下一轮轮询会自愈。
+      }
+    };
+    void load();
+    const timer = setInterval(() => void load(), 20000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, [version]);
+
+  const open = currentScreen?.screenId === SCREEN_ID;
+  const trailing =
+    unread > 0 ? (
+      <View
+        style={{
+          minWidth: 18,
+          height: 18,
+          borderRadius: 9,
+          paddingHorizontal: 5,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: theme.colors.accent,
+        }}
+      >
+        <Text style={{ color: theme.colors.accentForeground, fontSize: 10, fontWeight: "600" }}>
+          {unread > 99 ? "99+" : unread}
+        </Text>
+      </View>
+    ) : undefined;
+
   return (
     <SidebarRow
       icon={{ svg: MULTICA_LOGO_SVG }}
-      label="Multica"
-      active={currentScreen?.screenId === SCREEN_ID}
+      label={unread > 0 ? `Multica，${unread} 条未读通知` : "Multica"}
+      active={open}
+      trailing={trailing}
       onPress={() => {
-        const params = currentScreen?.screenId === SCREEN_ID ? currentScreen.params : undefined;
-        openScreen({ screenId: SCREEN_ID, params });
+        openScreen({
+          screenId: SCREEN_ID,
+          params: open ? currentScreen.params : unread > 0 ? { page: "inbox" } : undefined,
+        });
       }}
     />
   );

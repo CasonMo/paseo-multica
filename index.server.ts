@@ -7,6 +7,7 @@ import {
   connectionsRemoveRpc,
   connectionsSaveRpc,
   connectionsTestRpc,
+  inboxBadgeRpc,
   preferencesSaveRpc,
   workspaceSelectRpc,
 } from "./shared/contracts";
@@ -24,6 +25,7 @@ export default function contribute(server: PluginServerContext) {
   server.handle(preferencesSaveRpc, handlers.preferences);
   server.handle(bootstrapRpc, handlers.bootstrap);
   server.handle(apiRequestRpc, handlers.request);
+  server.handle(inboxBadgeRpc, handlers.inboxBadge);
 
   console.log(`[multica-workbench] server ready, connections: ${connectionsStorePath()}`);
   return () => {};

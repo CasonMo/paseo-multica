@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { Btn, Card, Chips, Divider, Empty, ErrorNote, LoadingRow, Tag, useUi } from "../bits";
 import { asList, asRecord, num, useQuery } from "../api";
+import { refreshInboxBadge } from "../badge";
 import { useWorkbench } from "../context";
 import { relTime, type InboxItem, type Issue } from "../model";
 import { InboxRow } from "../parts";
@@ -95,6 +96,7 @@ export function InboxPage() {
     itemsQuery.refresh();
     unreadQuery.refresh();
     invalidate();
+    refreshInboxBadge();
   };
 
   const action = async (path: string, method: "POST" | "DELETE", message: string) => {
