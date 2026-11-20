@@ -273,7 +273,8 @@ export function useIssueInsights(issueId: string, bump: number, ready = true): I
         }));
         setLoading(false);
       } catch {
-        //  保留上一次数据，下一轮轮询自愈
+        // 保留上一次数据，下一轮轮询自愈；退出 loading 避免永久转圈
+        setLoading(false);
       }
     };
     void load();

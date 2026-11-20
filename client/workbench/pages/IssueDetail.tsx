@@ -336,7 +336,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
 
   const quick = async (action: "read", message: string) => {
     if (!issue) return;
-    const result = await api({ method: "POST", path: `/api/issues/${issue.id}/${action}` });
+    const result = await api({ method: "POST", path: `/api/inbox/issues/${issue.id}/${action}` });
     if (result.ok) {
       toast.show(message, { variant: "success" });
       refreshInboxBadge();
