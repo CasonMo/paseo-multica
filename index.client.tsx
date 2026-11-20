@@ -1,4 +1,5 @@
 import { t, messages } from "./client/workbench/i18n";
+import { resources } from "./client/workbench/i18n-resources";
 import type {
   PluginClientContext,
   PluginScreenProps,
@@ -200,7 +201,7 @@ export default function contribute(client: PluginClientContext) {
       id: "multica-issues",
       title: messages.message("index.client.8"),
       icon: "ListTodo",
-      keywords: ["multica", t("Labels.17"), t("AgentDetail.3"), "issue"],
+      keywords: ["multica", "issue", resources.en.Labels["17"], resources["zh-CN"].Labels["17"], resources.en.AgentDetail["3"], resources["zh-CN"].AgentDetail["3"]],
       context: "global",
       onSelect({ openScreen }) {
         openScreen({ screenId: SCREEN_ID, params: { page: "issues" } });
@@ -210,7 +211,7 @@ export default function contribute(client: PluginClientContext) {
       id: "multica-chat",
       title: messages.message("index.client.11"),
       icon: "MessagesSquare",
-      keywords: ["multica", t("Nav.5"), t("Chat.5"), "chat", t("AgentDetail.23")],
+      keywords: ["multica", "chat", resources.en.Nav["5"], resources["zh-CN"].Nav["5"], resources.en.Chat["5"], resources["zh-CN"].Chat["5"], resources.en.AgentDetail["23"], resources["zh-CN"].AgentDetail["23"]],
       context: "global",
       onSelect({ openScreen }) {
         openScreen({ screenId: SCREEN_ID, params: { page: "chat" } });
@@ -220,7 +221,7 @@ export default function contribute(client: PluginClientContext) {
       id: "multica-automation",
       title: messages.message("index.client.15"),
       icon: "Bot",
-      keywords: ["multica", t("Nav.6"), "autopilot", t("Automation.6")],
+      keywords: ["multica", "autopilot", resources.en.Nav["6"], resources["zh-CN"].Nav["6"], resources.en.Automation["6"], resources["zh-CN"].Automation["6"]],
       context: "global",
       onSelect({ openScreen }) {
         openScreen({ screenId: SCREEN_ID, params: { page: "autopilot" } });
