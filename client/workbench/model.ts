@@ -32,6 +32,7 @@ export interface Issue {
   parent_issue_id?: string | null;
   due_date?: string | null;
   start_date?: string | null;
+  stage?: string | null;
   labels?: { id: string; name: string; color: string }[];
   created_at: string;
   updated_at: string;

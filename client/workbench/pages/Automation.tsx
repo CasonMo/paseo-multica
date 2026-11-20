@@ -39,7 +39,7 @@ const TIMEZONES = [
   "America/Los_Angeles",
 ];
 
-type Filter = "all" | "active" | "paused";
+export type Filter = "all" | "active" | "paused";
 
 interface AutopilotTrigger {
   id: string;
@@ -55,12 +55,12 @@ interface AutopilotTrigger {
   last_fired_at?: string | null;
 }
 
-export function AutomationPage() {
+export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
   const ctx = useWorkbench();
   const { theme, compact, api, workspaceId, toast, invalidate, bump, navigate } = ctx;
   const ui = useUi(theme, compact);
   const key = `${workspaceId}:${bump}`;
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<Filter>(initialFilter ?? "all");
   const [createOpen, setCreateOpen] = useState(false);
   const [runsFor, setRunsFor] = useState<Autopilot | null>(null);
   const [detailFor, setDetailFor] = useState<Autopilot | null>(null);

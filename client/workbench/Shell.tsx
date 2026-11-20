@@ -1,12 +1,12 @@
 import { Icon, Loading, Modal } from "@getpaseo/plugin/client/ui";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { Btn, Card, Dot, Empty, ErrorNote, IconBtn, useUi } from "./bits";
-import { useWorkbench, type PageKey } from "./context";
-import { MulticaLogo } from "./Logo";
+import { Btn, Card, Empty, ErrorNote, useUi } from "./bits";
+import { useWorkbench } from "./context";
 import { initials } from "./model";
+import { RailNav, SectionSidebar } from "./Nav";
 import { ApiExplorerPage } from "./pages/ApiExplorer";
-import { AutomationPage } from "./pages/Automation";
+import { AutomationPage, type Filter } from "./pages/Automation";
 import { ChatPage } from "./pages/Chat";
 import { InboxPage } from "./pages/Inbox";
 import { IssueDetailPage } from "./pages/IssueDetail";
@@ -15,32 +15,15 @@ import { LabelsPage } from "./pages/Labels";
 import { OverviewPage } from "./pages/Overview";
 import { ProjectsPage } from "./pages/Projects";
 import { SettingsPage } from "./pages/Settings";
-import { TeamPage } from "./pages/Team";
+import { TeamPage, type Tab } from "./pages/Team";
 import { WorkflowsPage } from "./pages/Workflows";
-
-const NAV: { key: PageKey; label: string; icon: string }[] = [
-  { key: "overview", label: "概览", icon: "LayoutDashboard" },
-  { key: "issues", label: "需求", icon: "ListTodo" },
-  { key: "projects", label: "项目", icon: "FolderKanban" },
-  { key: "inbox", label: "收件箱", icon: "Bell" },
-  { key: "team", label: "团队", icon: "Users" },
-  { key: "chat", label: "聊天", icon: "MessagesSquare" },
-  { key: "autopilot", label: "自动化", icon: "Bot" },
-  { key: "workflows", label: "工作流", icon: "Workflow" },
-  { key: "labels", label: "标签", icon: "Tags" },
-  { key: "api", label: "接口", icon: "Plug" },
-  { key: "settings", label: "设置", icon: "Settings2" },
-];
 
 export function Shell() {
   const ctx = useWorkbench();
-  const { theme, compact, page, params, navigate, server, user, workspaces, workspaceId } = ctx;
+  const { theme, compact, page, params, navigate, server, workspaces, workspaceId } = ctx;
   const ui = useUi(theme, compact);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-
-  const activeNav = page === "issue" ? "issues" : page;
-  const workspaceName = workspaces.find((item) => item.id === workspaceId)?.name ?? server?.workspaceSlug ?? "未选择工作区";
 
   const switchWorkspace = async (id: string) => {
     setPickerOpen(false);
@@ -50,118 +33,12 @@ export function Shell() {
     setBusy(false);
   };
 
-  const refreshAll = async () => {
-    setBusy(true);
-    await ctx.reloadBootstrap();
-    ctx.invalidate();
-    setBusy(false);
-  };
-
   return (
-    <View style={{ flex: 1, backgroundColor: ui.c.surface0 }}>
-      <View
-        style={{
-          paddingHorizontal: compact ? 12 : 18,
-          paddingTop: compact ? 12 : 16,
-          paddingBottom: 10,
-          borderBottomWidth: 1,
-          borderBottomColor: ui.c.border,
-          backgroundColor: ui.c.surface1,
-        }}
-      >
-        <View style={[ui.s.row, { gap: 10 }]}>
-          <MulticaLogo size={32} color={ui.c.accent} />
-          <View style={ui.s.grow}>
-            <Text numberOfLines={1} style={{ color: ui.c.fg, fontSize: compact ? 15 : 16, fontWeight: "700" }}>
-              Multica 工作台
-            </Text>
-            <View style={[ui.s.row, { gap: 5 }]}>
-              {server ? <Dot color={ui.c.success} size={6} /> : <Dot color={ui.c.danger} size={6} />}
-              <Text numberOfLines={1} style={ui.s.tiny}>
-                {server ? server.name : "未连接"} · {workspaceName}
-              </Text>
-            </View>
-          </View>
+    <View style={{ flex: 1, flexDirection: "row", backgroundColor: ui.c.surface0 }}>
+      <RailNav onWorkspacePicker={() => setPickerOpen(true)} />
+      <SectionSidebar />
 
-          {server ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`切换工作区，当前 ${workspaceName}`}
-              onPress={() => setPickerOpen(true)}
-              style={({ pressed }) => [ui.s.chip, pressed && ui.s.pressed, { maxWidth: compact ? 128 : 240 }]}
-            >
-              <Icon name="Layers" size={13} color={ui.c.muted} />
-              <Text numberOfLines={1} style={[ui.s.chipText, { flexShrink: 1 }]}>
-                {workspaceName}
-              </Text>
-              <Icon name="ChevronDown" size={13} color={ui.c.muted} />
-            </Pressable>
-          ) : null}
-          {server ? <IconBtn ui={ui} icon="RefreshCw" label="刷新" busy={busy} onPress={refreshAll} /> : null}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="打开设置"
-            onPress={() => navigate("settings")}
-            style={({ pressed }) => [
-              {
-                width: 30,
-                height: 30,
-                borderRadius: 15,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: ui.c.surface2,
-              },
-              pressed && ui.s.pressed,
-            ]}
-          >
-            <Text style={{ color: ui.c.fg, fontSize: 11.5, fontWeight: "700" }}>{initials(user?.name ?? "M")}</Text>
-          </Pressable>
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 6, paddingTop: 12 }}
-        >
-          {NAV.map((item) => {
-            const active = activeNav === item.key;
-            return (
-              <Pressable
-                accessibilityRole="button"
-                key={item.key}
-                accessibilityLabel={item.label}
-                accessibilityState={{ selected: active }}
-                onPress={() => navigate(item.key)}
-                style={({ pressed }) => [
-                  {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 6,
-                    paddingHorizontal: 11,
-                    paddingVertical: 7,
-                    borderRadius: 999,
-                    backgroundColor: active ? ui.c.accent : ui.c.surface2,
-                  },
-                  pressed && ui.s.pressed,
-                ]}
-              >
-                <Icon name={item.icon} size={14} color={active ? ui.c.accentFg : ui.c.muted} />
-                <Text
-                  style={{
-                    color: active ? ui.c.accentFg : ui.c.fg,
-                    fontSize: 12.5,
-                    fontWeight: active ? "700" : "500",
-                  }}
-                >
-                  {item.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, minWidth: 0 }}>
         {!server ? (
           <NoConnection loading={ctx.loading} error={ctx.bootstrapError} onSetup={() => navigate("settings")} />
         ) : page === "overview" ? (
@@ -179,15 +56,15 @@ export function Shell() {
         ) : page === "workflows" ? (
           <WorkflowsPage />
         ) : page === "team" ? (
-          <TeamPage />
+          <TeamPage key={params.tab ?? "agents"} initialTab={params.tab as Tab} />
         ) : page === "chat" ? (
           <ChatPage sessionId={params.sessionId} agentId={params.agentId} />
         ) : page === "autopilot" ? (
-          <AutomationPage />
+          <AutomationPage key={params.filter ?? "all"} initialFilter={params.filter as Filter} />
         ) : page === "api" ? (
           <ApiExplorerPage />
         ) : (
-          <SettingsPage />
+          <SettingsPage key={params.tab ?? "connection"} initialTab={params.tab as "connection" | "workspace" | "account"} />
         )}
       </View>
 
@@ -251,6 +128,17 @@ export function Shell() {
                 );
               })
             )}
+            <View style={{ marginTop: 4 }}>
+              <Btn
+                ui={ui}
+                label={busy ? "切换中…" : "管理服务器连接"}
+                icon="Plug"
+                onPress={() => {
+                  setPickerOpen(false);
+                  navigate("settings");
+                }}
+              />
+            </View>
           </View>
         </Modal.Content>
       </Modal>

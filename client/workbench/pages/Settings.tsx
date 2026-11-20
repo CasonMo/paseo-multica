@@ -20,7 +20,7 @@ import { relTime } from "../model";
 import { AccountSettings, WorkspaceMembersSettings } from "../SettingsSections";
 import { openExternalUrl } from "@getpaseo/plugin/client";
 
-export function SettingsPage() {
+export function SettingsPage({ initialTab }: { initialTab?: "connection" | "workspace" | "account" }) {
   const ctx = useWorkbench();
   const { theme, compact, connections, server, servers, user, workspaces, workspaceId, toast } = ctx;
   const ui = useUi(theme, compact);
@@ -30,7 +30,7 @@ export function SettingsPage() {
   const testRpc = useRpc(connectionsTestRpc);
   const prefRpc = useRpc(preferencesSaveRpc);
 
-  const [tab, setTab] = useState<"connection" | "workspace" | "account">("connection");
+  const [tab, setTab] = useState<"connection" | "workspace" | "account">(initialTab ?? "connection");
   const [editing, setEditing] = useState<ServerView | "new" | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<ServerView | null>(null);

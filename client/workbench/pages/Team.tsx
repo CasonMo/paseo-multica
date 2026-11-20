@@ -18,7 +18,7 @@ import { RuntimeDetailModal } from "../RuntimeDetail";
 import { SquadDetailModal } from "../SquadDetail";
 import { CreateAgentModal, CreateSquadModal } from "../TeamCreate";
 
-type Tab = "agents" | "squads" | "runtimes" | "skills";
+export type Tab = "agents" | "squads" | "runtimes" | "skills";
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: "agents", label: "智能体", icon: "Bot" },

@@ -1,44 +1,69 @@
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { Btn, Card, Chips, Divider, Empty, ErrorNote, Field, LoadingRow, SectionHeader, useUi } from "../bits";
-import { asList, asRecord, num, useQuery } from "../api";
+import { Avatar, Btn, Card, Chips, Divider, Empty, ErrorNote, Field, LoadingRow, useUi } from "../bits";
+import { asList, asRecord, num, str, useQuery } from "../api";
 import { useWorkbench } from "../context";
-import type { Issue, Project } from "../model";
+import { issueStatusColor, relTime, type Agent, type Issue, type IssueStatusEntry, type Project } from "../model";
 import { IssueRow } from "../parts";
 
-type CategoryFilter = "all" | "unstarted" | "started" | "done" | "closed";
-type PriorityFilter = "all" | "urgent" | "high" | "medium" | "low" | "none";
+const VIEW_LABEL: Record<string, string> = {
+  all: "全部任务",
+  mine: "我的工作",
+  active: "执行中",
+  done: "已完成",
+  closed: "已取消",
+};
 
-const CATEGORY_OPTIONS: { value: CategoryFilter; label: string }[] = [
-  { value: "all", label: "全部状态" },
-  { value: "unstarted", label: "未开始" },
-  { value: "started", label: "进行中" },
-  { value: "done", label: "已完成" },
-  { value: "closed", label: "已关闭" },
+const BOARD: { key: string; label: string; icon: string; color: string; categories: string[]; status: string }[] = [
+  { key: "backlog", label: "待规划", icon: "CircleDashed", color: "#9CA3AF", categories: ["backlog"], status: "backlog" },
+  { key: "todo", label: "待办", icon: "Circle", color: "#9CA3AF", categories: ["todo", "unstarted"], status: "todo" },
+  {
+    key: "started",
+    label: "进行中",
+    icon: "CircleDot",
+    color: "#F59E0B",
+    categories: ["in_progress", "started", "blocked"],
+    status: "in_progress",
+  },
+  {
+    key: "review",
+    label: "审核中",
+    icon: "CircleCheck",
+    color: "#22C55E",
+    categories: ["in_review", "review"],
+    status: "in_review",
+  },
+  { key: "done", label: "已完成", icon: "CheckCheck", color: "#16A34A", categories: ["done", "completed"], status: "done" },
+  {
+    key: "closed",
+    label: "已取消",
+    icon: "CircleSlash",
+    color: "#9CA3AF",
+    categories: ["cancelled", "closed"],
+    status: "cancelled",
+  },
 ];
 
-const PRIORITY_OPTIONS: { value: PriorityFilter; label: string }[] = [
-  { value: "all", label: "全部优先级" },
-  { value: "urgent", label: "紧急" },
-  { value: "high", label: "高" },
-  { value: "medium", label: "中" },
-  { value: "low", label: "低" },
-  { value: "none", label: "无" },
-];
+function bucketOf(issue: Issue, statuses: IssueStatusEntry[]): string {
+  const entry = statuses.find((status) => status.key === issue.status);
+  const raw = String(issue.status_category ?? entry?.category ?? "unstarted");
+  return BOARD.find((column) => column.categories.includes(raw))?.key ?? "todo";
+}
 
 export function IssuesPage() {
   const ctx = useWorkbench();
-  const { theme, compact, api, statuses, bump, workspaceId, navigate, params, toast, invalidate } = ctx;
+  const { theme, compact, api, statuses, bump, workspaceId, navigate, params, toast, invalidate, user } = ctx;
   const ui = useUi(theme, compact);
 
+  const view = params.view ?? "all";
+  const projectId = params.project ?? null;
+  const [mode, setMode] = useState<"board" | "list">(compact ? "list" : "board");
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState<CategoryFilter>("all");
-  const [priority, setPriority] = useState<PriorityFilter>("all");
   const [limit, setLimit] = useState(25);
   const [createOpen, setCreateOpen] = useState(params.create === "1");
-  const [projectId, setProjectId] = useState<string | null>(params.project ?? null);
+  const [createStatus, setCreateStatus] = useState<string | undefined>();
 
   useEffect(() => {
     const timer = setTimeout(() => setSearch(query.trim()), 300);
@@ -47,133 +72,247 @@ export function IssuesPage() {
 
   useEffect(() => {
     setLimit(25);
-  }, [search, category, priority, projectId]);
+  }, [search, view, projectId]);
 
   const listKey = `${workspaceId}:${bump}`;
   const request = useMemo(() => {
-    const when: Record<string, string | number> = { limit, offset: 0, sort: "updated_at", direction: "desc" };
+    const when: Record<string, string | number> = {
+      limit: mode === "board" ? 200 : limit,
+      offset: 0,
+      sort: "updated_at",
+      direction: "desc",
+    };
     if (search) when.q = search;
-    if (category !== "all") when.status_category = category;
-    if (priority !== "all") when.priority = priority;
     if (projectId) when.project_id = projectId;
+    if (view === "mine" && user?.id) when.assignee_id = user.id;
+    if (view === "active") when.status_category = "started";
+    if (view === "done") when.status_category = "done";
+    if (view === "closed") when.status_category = "closed";
     return when;
-  }, [limit, search, category, priority, projectId]);
+  }, [limit, mode, search, projectId, view, user?.id]);
 
   const issues = useQuery(api, "/api/issues", { query: request }, listKey);
   const projects = useQuery(
     api,
-    projectId ? "/api/projects" : null,
-    { select: (data) => asList<Project>(data, "projects") },
+    "/api/projects",
+    { query: { limit: 100 }, select: (data) => asList<Project>(data, "projects") },
     listKey,
   );
-  const activeProject = (projects.data ?? []).find((project) => project.id === projectId) ?? null;
+  const agents = useQuery(
+    api,
+    "/api/agents",
+    { query: { limit: 100 }, select: (data) => asList<Agent>(data, "agents") },
+    listKey,
+  );
+  const members = useQuery(
+    api,
+    workspaceId ? `/api/workspaces/${workspaceId}/members` : null,
+    { select: (data) => asList<Record<string, unknown>>(data, "members") },
+    listKey,
+  );
+
   const list = asList<Issue>(issues.data, "issues");
   const total = num(asRecord(issues.data).total, list.length);
+  const projectMap = useMemo(
+    () => new Map((projects.data ?? []).map((project) => [project.id, project])),
+    [projects.data],
+  );
+  const assigneeMap = useMemo(() => {
+    const map = new Map<string, { name: string; url?: string | null }>();
+    for (const agent of agents.data ?? []) map.set(agent.id, { name: agent.name, url: agent.avatar_url });
+    for (const raw of members.data ?? []) {
+      const person = asRecord(raw.user);
+      const id = str(person.id ?? raw.user_id ?? raw.id);
+      if (id) map.set(id, { name: str(person.name ?? raw.name) || "成员", url: str(person.avatar_url) || null });
+    }
+    return map;
+  }, [agents.data, members.data]);
+  const activeProject = projectId ? projectMap.get(projectId) : null;
+  const title = VIEW_LABEL[view] ?? "全部任务";
+
+  const columns = useMemo(() => {
+    const grouped: Record<string, Issue[]> = {};
+    for (const issue of list) {
+      const key = bucketOf(issue, statuses);
+      (grouped[key] ??= []).push(issue);
+    }
+    return BOARD.map((column) => ({ ...column, items: grouped[column.key] ?? [] }));
+  }, [list, statuses]);
+
+  const openCreate = (status?: string) => {
+    setCreateStatus(status);
+    setCreateOpen(true);
+  };
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ padding: compact ? 12 : 18, gap: 12, paddingBottom: 48 }}>
-        <View style={[ui.s.row, { gap: 10 }]}>
-          <View style={ui.s.grow}>
-            <Text style={[ui.s.title, { fontSize: compact ? 18 : 21 }]}>需求</Text>
-            <Text style={ui.s.muted}>
-              共 {total} 条 · 与 Multica 实时同步
-            </Text>
-          </View>
-          <Btn ui={ui} label="新建" icon="Plus" tone="primary" onPress={() => setCreateOpen(true)} />
-        </View>
-
-        <View style={[ui.s.row, { gap: 8 }]}>
+      <View
+        style={[
+          ui.s.row,
+          {
+            gap: 8,
+            paddingHorizontal: compact ? 12 : 16,
+            paddingVertical: 9,
+            borderBottomWidth: 1,
+            borderBottomColor: ui.c.border,
+            backgroundColor: ui.c.surface1,
+          },
+        ]}
+      >
+        <Icon name="ListChecks" size={16} color={ui.c.muted} />
+        <Text style={{ color: ui.c.fg, fontSize: 14, fontWeight: "600" }}>{title}</Text>
+        {activeProject ? (
           <View
             style={[
               ui.s.row,
               {
-                flex: 1,
-                gap: 7,
-                paddingHorizontal: 11,
-                borderRadius: 9,
-                borderWidth: 1,
-                borderColor: ui.c.border,
-                backgroundColor: ui.c.surface1,
-                minHeight: 38,
+                gap: 4,
+                paddingHorizontal: 7,
+                paddingVertical: 2,
+                borderRadius: 6,
+                backgroundColor: ui.c.surface2,
               },
             ]}
           >
-            <Icon name="Search" size={15} color={ui.c.muted} />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="搜索标题、编号或描述…"
-              placeholderTextColor={ui.c.muted}
-              style={{ flex: 1, color: ui.c.fg, fontSize: 13, paddingVertical: 8 }}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {query ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="清空搜索"
-                onPress={() => setQuery("")}
-                style={({ pressed }) => pressed && ui.s.pressed}
-              >
-                <Icon name="X" size={14} color={ui.c.muted} />
-              </Pressable>
-            ) : null}
-          </View>
-        </View>
-
-        {projectId ? (
-          <View
-            style={[
-              ui.s.row,
-              {
-                gap: 7,
-                paddingHorizontal: 11,
-                paddingVertical: 8,
-                borderRadius: 9,
-                borderWidth: 1,
-                borderColor: `${ui.c.accent}55`,
-                backgroundColor: `${ui.c.accent}14`,
-              },
-            ]}
-          >
-            <Icon name="FolderKanban" size={14} color={ui.c.accent} />
-            <Text numberOfLines={1} style={[ui.s.body, { flex: 1, color: ui.c.accent, fontWeight: "600" }]}>
-              {activeProject ? activeProject.title : "已按项目筛选"}
-            </Text>
+            <Icon name="FolderKanban" size={11} color={ui.c.muted} />
+            <Text style={{ fontSize: 11.5, color: ui.c.fg }}>{activeProject.title}</Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="清除项目筛选"
-              onPress={() => setProjectId(null)}
-              style={({ pressed }) => [ui.s.row, { gap: 3 }, pressed && ui.s.pressed]}
+              onPress={() => navigate("issues", { view })}
             >
-              <Text style={[ui.s.tiny, { color: ui.c.accent }]}>清除</Text>
-              <Icon name="X" size={13} color={ui.c.accent} />
+              <Icon name="X" size={11} color={ui.c.muted} />
             </Pressable>
           </View>
         ) : null}
+        <Text style={ui.s.tiny}>共 {total} 条</Text>
+        <View style={ui.s.grow} />
 
-        <View style={{ gap: 6 }}>
-          <Chips<CategoryFilter> ui={ui} options={CATEGORY_OPTIONS} value={category} onChange={setCategory} />
-          <Chips<PriorityFilter> ui={ui} options={PRIORITY_OPTIONS} value={priority} onChange={setPriority} />
+        <View
+          style={[
+            ui.s.row,
+            {
+              gap: 7,
+              width: compact ? 140 : 220,
+              paddingHorizontal: 8,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: ui.c.border,
+              backgroundColor: ui.c.surface0,
+              minHeight: 30,
+            },
+          ]}
+        >
+          <Icon name="Search" size={13} color={ui.c.muted} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="搜索任务…"
+            placeholderTextColor={ui.c.muted}
+            autoFocus={params.focus === "search"}
+            style={{ flex: 1, color: ui.c.fg, fontSize: 12.5, paddingVertical: 5 }}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
         </View>
 
-        <Card ui={ui} padded={false}>
-          {issues.loading && list.length === 0 ? (
-            <LoadingRow ui={ui} />
-          ) : issues.error ? (
-            <View style={{ padding: 14 }}>
-              <ErrorNote ui={ui} message={issues.error} onRetry={issues.refresh} />
+        <View style={[ui.s.row, { gap: 2, padding: 2, borderRadius: 8, backgroundColor: ui.c.surface2 }]}>
+          {(["board", "list"] as const).map((entry) => {
+            const active = mode === entry;
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={entry === "board" ? "看板视图" : "列表视图"}
+                accessibilityState={{ selected: active }}
+                key={entry}
+                onPress={() => setMode(entry)}
+                style={({ pressed }) => [
+                  ui.s.row,
+                  {
+                    gap: 5,
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 6,
+                    backgroundColor: active ? ui.c.surface1 : "transparent",
+                  },
+                  pressed && ui.s.pressed,
+                ]}
+              >
+                <Icon name={entry === "board" ? "Columns3" : "List"} size={13} color={active ? ui.c.fg : ui.c.muted} />
+                <Text style={{ fontSize: 12, color: active ? ui.c.fg : ui.c.muted, fontWeight: active ? "600" : "400" }}>
+                  {entry === "board" ? "看板" : "列表"}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <Btn ui={ui} label="新建" icon="Plus" tone="primary" onPress={() => openCreate()} />
+      </View>
+
+      {issues.loading && list.length === 0 ? (
+        <LoadingRow ui={ui} />
+      ) : issues.error ? (
+        <View style={{ padding: 16 }}>
+          <ErrorNote ui={ui} message={issues.error} onRetry={issues.refresh} />
+        </View>
+      ) : list.length === 0 ? (
+        <Empty
+          ui={ui}
+          icon="Inbox"
+          title={search || view !== "all" || projectId ? "没有匹配的任务" : "还没有任务"}
+          description="调整筛选条件，或创建一条新任务。"
+          action={<Btn ui={ui} label="新建任务" icon="Plus" tone="primary" onPress={() => openCreate()} />}
+        />
+      ) : mode === "board" ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+          {columns.map((column, index) => (
+            <View
+              key={column.key}
+              style={{
+                width: compact ? 230 : 268,
+                flexGrow: 1,
+                borderRightWidth: index === columns.length - 1 ? 0 : 1,
+                borderRightColor: ui.c.border,
+              }}
+            >
+              <View style={[ui.s.row, { gap: 6, paddingHorizontal: 12, paddingVertical: 9 }]}>
+                <Icon name={column.icon} size={14} color={column.color} />
+                <Text style={{ fontSize: 13, fontWeight: "600", color: ui.c.fg }}>{column.label}</Text>
+                <Text style={{ fontSize: 12, color: ui.c.muted }}>{column.items.length}</Text>
+                <View style={ui.s.grow} />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`新建${column.label}任务`}
+                  onPress={() => openCreate(column.status)}
+                  style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
+                >
+                  <Icon name="Plus" size={14} color={ui.c.muted} />
+                </Pressable>
+              </View>
+              <ScrollView contentContainerStyle={{ paddingHorizontal: 10, paddingBottom: 24, gap: 8 }}>
+                {column.items.length === 0 ? (
+                  <Text style={[ui.s.tiny, { textAlign: "center", paddingVertical: 26 }]}>无任务</Text>
+                ) : (
+                  column.items.map((issue) => (
+                    <IssueCard
+                      key={issue.id}
+                      ui={ui}
+                      issue={issue}
+                      statuses={statuses}
+                      project={issue.project_id ? projectMap.get(issue.project_id) : undefined}
+                      assignee={issue.assignee_id ? assigneeMap.get(issue.assignee_id) : undefined}
+                      onPress={() => navigate("issue", { id: issue.id })}
+                    />
+                  ))
+                )}
+              </ScrollView>
             </View>
-          ) : list.length === 0 ? (
-            <Empty
-              ui={ui}
-              icon="Inbox"
-              title={search || category !== "all" || priority !== "all" || projectId ? "没有匹配的需求" : "还没有需求"}
-              description="调整筛选条件，或创建一条新需求。"
-              action={<Btn ui={ui} label="新建需求" icon="Plus" tone="primary" onPress={() => setCreateOpen(true)} />}
-            />
-          ) : (
+          ))}
+        </ScrollView>
+      ) : (
+        <ScrollView contentContainerStyle={{ padding: compact ? 12 : 16, paddingBottom: 40 }}>
+          <Card ui={ui} padded={false}>
             <View style={{ paddingBottom: 6 }}>
               {list.map((issue, index) => (
                 <View key={issue.id}>
@@ -187,27 +326,25 @@ export function IssuesPage() {
                 </View>
               ))}
             </View>
-          )}
-        </Card>
-
-        {list.length > 0 && list.length < total ? (
-          <View style={{ alignItems: "center" }}>
-            <Btn
-              ui={ui}
-              label={issues.loading ? "加载中…" : `加载更多（已显示 ${list.length}/${total}）`}
-              icon="ChevronDown"
-              busy={issues.loading}
-              onPress={() => setLimit((value) => value + 25)}
-            />
-          </View>
-        ) : list.length > 0 ? (
-          <Text style={[ui.s.tiny, { textAlign: "center" }]}>已显示全部 {total} 条需求</Text>
-        ) : null}
-      </ScrollView>
+          </Card>
+          {list.length < total ? (
+            <View style={{ alignItems: "center", marginTop: 12 }}>
+              <Btn
+                ui={ui}
+                label={issues.loading ? "加载中…" : `加载更多（已显示 ${list.length}/${total}）`}
+                icon="ChevronDown"
+                busy={issues.loading}
+                onPress={() => setLimit((value) => value + 25)}
+              />
+            </View>
+          ) : null}
+        </ScrollView>
+      )}
 
       <CreateIssueModal
         open={createOpen}
         projectId={projectId}
+        initialStatus={createStatus}
         onClose={() => setCreateOpen(false)}
         onCreated={(issue) => {
           setCreateOpen(false);
@@ -220,15 +357,80 @@ export function IssuesPage() {
   );
 }
 
+function IssueCard({
+  ui,
+  issue,
+  statuses,
+  project,
+  assignee,
+  onPress,
+}: {
+  ui: ReturnType<typeof useUi>;
+  issue: Issue;
+  statuses: IssueStatusEntry[];
+  project?: Project;
+  assignee?: { name: string; url?: string | null };
+  onPress(): void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${issue.identifier} ${issue.title}`}
+      onPress={onPress}
+      style={({ pressed }) => [
+        {
+          gap: 6,
+          padding: 10,
+          borderRadius: 10,
+          borderWidth: 1,
+          borderColor: ui.c.border,
+          backgroundColor: ui.c.surface1,
+        },
+        pressed && ui.s.pressed,
+      ]}
+    >
+      <View style={[ui.s.row, { gap: 6 }]}>
+        <Text style={{ fontSize: 11, color: ui.c.muted, fontFamily: "Menlo" }}>{issue.identifier}</Text>
+        <View style={ui.s.grow} />
+        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: issueStatusColor(issue, statuses) }} />
+      </View>
+      <Text numberOfLines={2} style={{ fontSize: 13.5, lineHeight: 19, fontWeight: "600", color: ui.c.fg }}>
+        {issue.title}
+      </Text>
+      {project ? (
+        <View style={[ui.s.row, { gap: 4, alignSelf: "flex-start" }]}>
+          <Icon name="FolderKanban" size={11} color={ui.c.muted} />
+          <Text numberOfLines={1} style={{ fontSize: 11.5, color: ui.c.muted }}>
+            {project.title}
+          </Text>
+        </View>
+      ) : null}
+      <View style={[ui.s.row, { gap: 6, marginTop: 1 }]}>
+        {assignee ? (
+          <Avatar ui={ui} name={assignee.name} url={assignee.url} size={16} />
+        ) : (
+          <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 1, borderColor: ui.c.border }} />
+        )}
+        <Text numberOfLines={1} style={[ui.s.tiny, { flex: 1 }]}>
+          {assignee?.name ?? "未指派"}
+        </Text>
+        <Text style={ui.s.tiny}>{relTime(issue.updated_at)}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
 function CreateIssueModal({
   open,
   projectId,
+  initialStatus,
   onClose,
   onCreated,
   toast,
 }: {
   open: boolean;
   projectId?: string | null;
+  initialStatus?: string;
   onClose(): void;
   onCreated(issue: Issue | null): void;
   toast: ReturnType<typeof useWorkbench>["toast"];
@@ -246,12 +448,12 @@ function CreateIssueModal({
     setTitle("");
     setDescription("");
     setPriority("none");
-    setStatus(statuses[0]?.key ?? "todo");
-  }, [open, statuses]);
+    setStatus(initialStatus ?? statuses[0]?.key ?? "todo");
+  }, [open, statuses, initialStatus]);
 
   const submit = async () => {
     if (!title.trim()) {
-      toast.error("请填写需求标题");
+      toast.error("请填写任务标题");
       return;
     }
     setBusy(true);
@@ -262,7 +464,7 @@ function CreateIssueModal({
     const result = await api({ method: "POST", path: "/api/issues", body });
     setBusy(false);
     if (result.ok) {
-      toast.show("需求已创建", { variant: "success" });
+      toast.show("任务已创建", { variant: "success" });
       const created = result.data && typeof result.data === "object" ? (result.data as Issue) : null;
       onCreated(created);
     } else {
@@ -272,7 +474,7 @@ function CreateIssueModal({
 
   return (
     <Modal
-      title="新建需求"
+      title="新建任务"
       icon={<Icon name="Plus" size={16} color={ui.c.muted} />}
       open={open}
       onOpenChange={(next) => {
@@ -332,7 +534,7 @@ function CreateIssueModal({
           </View>
           <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8, paddingTop: 4 }]}>
             <Btn ui={ui} label="取消" onPress={onClose} />
-            <Btn ui={ui} label="创建需求" icon="Check" tone="primary" busy={busy} onPress={() => void submit()} />
+            <Btn ui={ui} label="创建任务" icon="Check" tone="primary" busy={busy} onPress={() => void submit()} />
           </View>
         </View>
       </Modal.Content>

@@ -1,12 +1,11 @@
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
-import { Avatar, Btn, Card, Divider, Empty, ErrorNote, Field, LoadingRow, SectionHeader, Tag, useUi } from "../bits";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Avatar, Btn, Divider, Empty, ErrorNote, Field, LoadingRow, Tag, useUi } from "../bits";
 import { asList, asRecord, useQuery } from "../api";
 import { useWorkbench } from "../context";
 import {
   fmtDateTime,
-  issueCategory,
   issueStatusColor,
   issueStatusLabel,
   priorityMeta,
@@ -15,15 +14,11 @@ import {
   type Comment,
   type Issue,
   type Label,
+  type Project,
 } from "../model";
 import { PriorityTag, StatusPill } from "../parts";
 
-interface MemberUser {
-  id: string;
-  name?: string;
-  email?: string;
-  avatar_url?: string | null;
-}
+const PRIORITIES = ["urgent", "high", "medium", "low", "none"] as const;
 
 export function IssueDetailPage({ issueId }: { issueId: string }) {
   const ctx = useWorkbench();
@@ -39,6 +34,9 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const [editDescription, setEditDescription] = useState("");
   const [labelsOpen, setLabelsOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [pick, setPick] = useState<null | "status" | "priority">(null);
+  const [childOpen, setChildOpen] = useState(false);
+  const [childTitle, setChildTitle] = useState("");
 
   const issueQuery = useQuery(api, issueId ? `/api/issues/${issueId}` : null, {}, key);
   const issue = issueQuery.data && typeof issueQuery.data === "object" ? (issueQuery.data as Issue) : null;
@@ -65,6 +63,12 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     labelsOpen ? "/api/labels" : null,
     { select: (data) => asList<Label>(data, "labels") },
     `${key}:labels`,
+  );
+  const projectsQuery = useQuery(
+    api,
+    "/api/projects",
+    { query: { limit: 100 }, select: (data) => asList<Project>(data, "projects") },
+    key,
   );
   const agentsQuery = useQuery(api, "/api/agents", { query: { limit: 100 }, select: (data) => asList<Agent>(data, "agents") }, key);
   const membersQuery = useQuery(
@@ -101,12 +105,6 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     return { name: member?.name || "成员", url: member?.avatar_url ?? null, kind: "成员" };
   }, [issue, agents, members]);
 
-  const refreshAll = () => {
-    issueQuery.refresh();
-    commentsQuery.refresh();
-    childrenQuery.refresh();
-  };
-
   const updateIssue = async (body: Record<string, unknown>, success: string) => {
     if (!issue) return;
     setBusy(true);
@@ -132,7 +130,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
       return;
     }
     setEditOpen(false);
-    await updateIssue({ title: editTitle.trim(), description: editDescription }, "需求已更新");
+    await updateIssue({ title: editTitle.trim(), description: editDescription }, "任务已更新");
   };
 
   const sendComment = async () => {
@@ -145,6 +143,22 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
       commentsQuery.refresh();
       toast.show("评论已发送", { variant: "success" });
     } else toast.error(result.error ?? "发送失败");
+  };
+
+  const addChild = async () => {
+    if (!issue || !childTitle.trim()) return;
+    setBusy(true);
+    const body: Record<string, unknown> = { title: childTitle.trim(), parent_issue_id: issue.id };
+    if (issue.project_id) body.project_id = issue.project_id;
+    const result = await api({ method: "POST", path: "/api/issues", body });
+    setBusy(false);
+    if (result.ok) {
+      setChildTitle("");
+      setChildOpen(false);
+      childrenQuery.refresh();
+      invalidate();
+      toast.show("子任务已创建", { variant: "success" });
+    } else toast.error(result.error ?? "创建子任务失败");
   };
 
   const attachLabel = async (label: Label) => {
@@ -179,6 +193,13 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     else toast.error(result.error ?? "重跑失败");
   };
 
+  const quick = async (action: "read", message: string) => {
+    if (!issue) return;
+    const result = await api({ method: "POST", path: `/api/issues/${issue.id}/${action}` });
+    if (result.ok) toast.show(message, { variant: "success" });
+    else toast.error(result.error ?? "操作失败");
+  };
+
   const removeIssue = async () => {
     if (!issue) return;
     setBusy(true);
@@ -186,23 +207,23 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     setBusy(false);
     setConfirmDelete(false);
     if (result.ok) {
-      toast.show("需求已删除", { variant: "success" });
+      toast.show("任务已删除", { variant: "success" });
       invalidate();
       navigate("issues");
     } else toast.error(result.error ?? "删除失败");
   };
 
   if (!issueId) {
-    return <Empty ui={ui} icon="AlertCircle" title="缺少需求 ID" action={<Btn ui={ui} label="返回列表" onPress={() => navigate("issues")} />} />;
+    return <Empty ui={ui} icon="AlertCircle" title="缺少任务 ID" action={<Btn ui={ui} label="返回列表" onPress={() => navigate("issues")} />} />;
   }
 
-  if (issueQuery.loading && !issue) return <LoadingRow ui={ui} label="读取需求…" />;
+  if (issueQuery.loading && !issue) return <LoadingRow ui={ui} label="读取任务…" />;
   if (issueQuery.error && !issue) {
     return (
       <View style={{ padding: 16 }}>
         <ErrorNote ui={ui} message={issueQuery.error} onRetry={issueQuery.refresh} />
         <View style={{ marginTop: 10 }}>
-          <Btn ui={ui} label="返回需求列表" icon="ArrowLeft" onPress={() => navigate("issues")} />
+          <Btn ui={ui} label="返回任务列表" icon="ArrowLeft" onPress={() => navigate("issues")} />
         </View>
       </View>
     );
@@ -217,158 +238,346 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     (label) => (label.resource_type ?? "issue") === "issue" && !attachedIds.has(label.id),
   );
   const statusColor = issueStatusColor(issue, statuses);
+  const project = (projectsQuery.data ?? []).find((item) => item.id === issue.project_id) ?? null;
 
   return (
-    <ScrollView contentContainerStyle={{ padding: compact ? 12 : 18, gap: 14, paddingBottom: 48 }}>
-      <View style={[ui.s.row, { gap: 8 }]}>
-        <Btn ui={ui} label="返回" icon="ArrowLeft" onPress={() => navigate("issues")} />
-        <View style={ui.s.grow} />
-        <Btn ui={ui} label="编辑" icon="Pencil" onPress={openEdit} />
-        <Btn ui={ui} label="重跑" icon="RotateCw" busy={busy} onPress={() => void rerun()} />
+    <View style={{ flex: 1 }}>
+      <View
+        style={[
+          ui.s.row,
+          {
+            gap: 7,
+            paddingHorizontal: compact ? 10 : 14,
+            paddingVertical: 7,
+            borderBottomWidth: 1,
+            borderBottomColor: ui.c.border,
+            backgroundColor: ui.c.surface1,
+          },
+        ]}
+      >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="删除需求"
-          onPress={() => setConfirmDelete(true)}
-          style={({ pressed }) => [ui.s.chip, pressed && ui.s.pressed, { borderColor: `${ui.c.danger}55` }]}
+          accessibilityLabel="返回"
+          onPress={() => navigate("issues")}
+          style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
         >
-          <Icon name="Trash2" size={13} color={ui.c.danger} />
+          <Icon name="ArrowLeft" size={15} color={ui.c.muted} />
+        </Pressable>
+        <Text numberOfLines={1} style={{ fontSize: 12.5, color: ui.c.muted }}>
+          {project?.title ?? "任务"}
+        </Text>
+        <Icon name="ChevronRight" size={12} color={ui.c.muted} />
+        <Text style={{ fontSize: 12, fontFamily: "Menlo", color: ui.c.fg }}>{issue.identifier}</Text>
+        <View style={ui.s.grow} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="编辑任务"
+          onPress={openEdit}
+          style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
+        >
+          <Icon name="Pencil" size={15} color={ui.c.muted} />
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="重跑任务"
+          onPress={() => void rerun()}
+          style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
+        >
+          <Icon name="RotateCw" size={15} color={ui.c.muted} />
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="删除任务"
+          onPress={() => setConfirmDelete(true)}
+          style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
+        >
+          <Icon name="Trash2" size={15} color={ui.c.danger} />
         </Pressable>
       </View>
 
-      <Card ui={ui} style={{ gap: 10 }}>
-        <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
-          <Text style={[ui.s.tiny, { fontFamily: "Menlo", color: ui.c.muted }]}>{issue.identifier}</Text>
-          <StatusPill ui={ui} issue={issue} statuses={statuses} />
-          <PriorityTag ui={ui} priority={issue.priority} />
-          {issue.due_date ? <Tag ui={ui} label={`截止 ${issue.due_date}`} tone="warning" icon="CalendarClock" /> : null}
-        </View>
-        <Text style={{ color: ui.c.fg, fontSize: compact ? 18 : 22, fontWeight: "700", lineHeight: compact ? 25 : 30 }}>
-          {issue.title}
-        </Text>
-        <View style={[ui.s.row, { gap: 12, flexWrap: "wrap" }]}>
-          <Text style={ui.s.tiny}>创建于 {fmtDateTime(issue.created_at)}</Text>
-          <Text style={ui.s.tiny}>更新于 {relTime(issue.updated_at)}</Text>
-          {issue.project_id ? <Text style={ui.s.tiny}>项目 {issue.project_id.slice(0, 8)}</Text> : null}
-        </View>
-      </Card>
+      <ScrollView contentContainerStyle={{ padding: compact ? 14 : 20, paddingBottom: 48 }}>
+        <View style={{ flexDirection: compact ? "column" : "row", gap: compact ? 16 : 24, alignItems: "flex-start" }}>
+          <View style={{ flex: 1, minWidth: 0, gap: 14 }}>
+            <Text
+              style={{
+                color: ui.c.fg,
+                fontSize: compact ? 19 : 22,
+                fontWeight: "700",
+                lineHeight: compact ? 26 : 30,
+                letterSpacing: -0.2,
+              }}
+            >
+              {issue.title}
+            </Text>
+            <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
+              <StatusPill ui={ui} issue={issue} statuses={statuses} />
+              <PriorityTag ui={ui} priority={issue.priority} />
+              {issue.due_date ? <Tag ui={ui} label={`截止 ${issue.due_date}`} tone="warning" icon="CalendarClock" /> : null}
+              <Text style={ui.s.tiny}>更新于 {relTime(issue.updated_at)}</Text>
+            </View>
 
-      <View style={{ flexDirection: compact ? "column" : "row", gap: 14, alignItems: "flex-start" }}>
-        <View style={{ flex: compact ? undefined : 1.6, gap: 14, width: compact ? "100%" : undefined }}>
-          <Card ui={ui} style={{ gap: 12 }}>
-            <SectionHeader ui={ui} title="描述" />
-            {issue.description ? (
-              <Markdown>{issue.description}</Markdown>
-            ) : (
-              <Text style={[ui.s.muted, { fontStyle: "italic" }]}>暂无描述</Text>
-            )}
-          </Card>
+            <View style={{ paddingTop: 2 }}>
+              {issue.description ? (
+                <Markdown>{issue.description}</Markdown>
+              ) : (
+                <Text style={[ui.s.muted, { fontStyle: "italic" }]}>暂无描述</Text>
+              )}
+            </View>
 
-          {children.length > 0 ? (
-            <Card ui={ui} padded={false}>
-              <View style={{ paddingHorizontal: 14, paddingTop: 14 }}>
-                <SectionHeader ui={ui} title={`子需求 · ${children.length}`} />
+            <Divider ui={ui} />
+
+            <View style={{ gap: 2 }}>
+              <View style={[ui.s.row, { gap: 8 }]}>
+                <Text style={[ui.s.label, { flex: 1 }]}>子任务 · {children.length}</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="添加子任务"
+                  onPress={() => setChildOpen((value) => !value)}
+                  style={({ pressed }) => [ui.s.row, { gap: 4 }, pressed && ui.s.pressed]}
+                >
+                  <Icon name="Plus" size={13} color={ui.c.muted} />
+                  <Text style={ui.s.tiny}>添加子任务</Text>
+                </Pressable>
               </View>
-              <View style={{ paddingBottom: 6 }}>
-                {children.map((child, index) => (
-                  <View key={child.id}>
-                    {index > 0 ? <Divider ui={ui} style={{ marginHorizontal: 14 }} /> : null}
-                    <Pressable
-                      accessibilityRole="button"
-                      onPress={() => navigate("issue", { id: child.id })}
-                      style={({ pressed }) => [ui.s.listRow, pressed && ui.s.pressed]}
-                    >
-                      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: issueStatusColor(child, statuses) }} />
-                      <Text style={[ui.s.tiny, { fontFamily: "Menlo" }]}>{child.identifier}</Text>
-                      <Text numberOfLines={1} style={[ui.s.body, { flex: 1 }]}>
-                        {child.title}
-                      </Text>
-                      <Text style={ui.s.tiny}>{issueStatusLabel(child, statuses)}</Text>
-                    </Pressable>
+
+              {childOpen ? (
+                <View style={[ui.s.row, { gap: 6, paddingVertical: 6 }]}>
+                  <View
+                    style={[
+                      ui.s.row,
+                      {
+                        flex: 1,
+                        gap: 6,
+                        paddingHorizontal: 8,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: ui.c.border,
+                        backgroundColor: ui.c.surface0,
+                        minHeight: 32,
+                      },
+                    ]}
+                  >
+                    <Icon name="CornerDownRight" size={13} color={ui.c.muted} />
+                    <TextInput
+                      value={childTitle}
+                      onChangeText={setChildTitle}
+                      placeholder="子任务标题，回车创建"
+                      placeholderTextColor={ui.c.muted}
+                      onSubmitEditing={() => void addChild()}
+                      autoFocus
+                      style={{ flex: 1, color: ui.c.fg, fontSize: 12.5, paddingVertical: 5 }}
+                    />
                   </View>
-                ))}
-              </View>
-            </Card>
-          ) : null}
+                  <Btn
+                    ui={ui}
+                    label="添加"
+                    icon="Plus"
+                    tone="primary"
+                    busy={busy}
+                    disabled={!childTitle.trim()}
+                    onPress={() => void addChild()}
+                  />
+                </View>
+              ) : null}
 
-          <Card ui={ui} padded={false}>
-            <View style={{ paddingHorizontal: 14, paddingTop: 14 }}>
-              <SectionHeader ui={ui} title={`评论 · ${comments.length}`} />
+              {children.length === 0 && !childOpen ? (
+                <Text style={[ui.s.tiny, { paddingVertical: 8 }]}>暂无子任务</Text>
+              ) : (
+                children.map((child) => (
+                  <Pressable
+                    accessibilityRole="button"
+                    key={child.id}
+                    onPress={() => navigate("issue", { id: child.id })}
+                    style={({ pressed }) => [ui.s.listRow, pressed && ui.s.pressed]}
+                  >
+                    <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: issueStatusColor(child, statuses) }} />
+                    <Text style={[ui.s.tiny, { fontFamily: "Menlo" }]}>{child.identifier}</Text>
+                    <Text numberOfLines={1} style={[ui.s.body, { flex: 1 }]}>
+                      {child.title}
+                    </Text>
+                    <Text style={ui.s.tiny}>{issueStatusLabel(child, statuses)}</Text>
+                  </Pressable>
+                ))
+              )}
             </View>
-            {commentsQuery.loading && comments.length === 0 ? (
-              <LoadingRow ui={ui} />
-            ) : comments.length === 0 ? (
-              <Empty ui={ui} icon="MessageSquare" title="还没有评论" description="留下第一条评论，@ 智能体即可触发协作。" />
-            ) : (
-              <View style={{ gap: 2 }}>
-                {comments.map((item) => (
-                  <CommentRow key={item.id} ui={ui} item={item} agents={agents} members={members} />
-                ))}
-              </View>
-            )}
-            <View style={{ padding: 14, gap: 8, borderTopWidth: 1, borderTopColor: ui.c.border }}>
-              <Field
-                ui={ui}
-                value={comment}
-                onChangeText={setComment}
-                placeholder="写下评论，支持 Markdown 与 @智能体…"
-                multiline
-              />
-              <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8 }]}>
-                <Btn
+
+            <Divider ui={ui} />
+
+            <View style={{ gap: 2 }}>
+              <Text style={[ui.s.label, { paddingBottom: 4 }]}>评论 · {comments.length}</Text>
+              {commentsQuery.loading && comments.length === 0 ? (
+                <LoadingRow ui={ui} />
+              ) : comments.length === 0 ? (
+                <Text style={[ui.s.tiny, { paddingVertical: 8 }]}>还没有评论，@ 智能体即可触发协作。</Text>
+              ) : (
+                <View style={{ gap: 2 }}>
+                  {comments.map((item) => (
+                    <CommentRow key={item.id} ui={ui} item={item} agents={agents} members={members} />
+                  ))}
+                </View>
+              )}
+              <View style={{ gap: 8, paddingTop: 8 }}>
+                <Field
                   ui={ui}
-                  label="发送评论"
-                  icon="Send"
-                  tone="primary"
-                  busy={sending}
-                  disabled={!comment.trim()}
-                  onPress={() => void sendComment()}
+                  value={comment}
+                  onChangeText={setComment}
+                  placeholder="写下评论，支持 Markdown 与 @智能体…"
+                  multiline
                 />
+                <View style={[ui.s.row, { justifyContent: "flex-end" }]}>
+                  <Btn
+                    ui={ui}
+                    label="发送评论"
+                    icon="Send"
+                    tone="primary"
+                    busy={sending}
+                    disabled={!comment.trim()}
+                    onPress={() => void sendComment()}
+                  />
+                </View>
               </View>
             </View>
-          </Card>
-        </View>
+          </View>
 
-        <View style={{ flex: compact ? undefined : 1, gap: 14, width: compact ? "100%" : undefined }}>
-          <Card ui={ui} style={{ gap: 12 }}>
-            <SectionHeader ui={ui} title="属性" />
+          <View
+            style={{
+              width: compact ? "100%" : 288,
+              gap: 16,
+              borderLeftWidth: compact ? 0 : 1,
+              borderLeftColor: ui.c.border,
+              paddingLeft: compact ? 0 : 20,
+            }}
+          >
+            <View style={{ gap: 2 }}>
+              <Text style={ui.s.label}>属性</Text>
+              <View style={{ borderTopWidth: 1, borderTopColor: ui.c.border }}>
+                <PropRow ui={ui} label="状态" onPress={() => setPick("status")}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: statusColor }} />
+                  <Text numberOfLines={1} style={[ui.s.body, { flex: 1 }]}>
+                    {issueStatusLabel(issue, statuses)}
+                  </Text>
+                  <Icon name="ChevronDown" size={13} color={ui.c.muted} />
+                </PropRow>
+                <PropRow ui={ui} label="优先级" onPress={() => setPick("priority")}>
+                  <Icon name="Flag" size={13} color={ui.c.muted} />
+                  <Text numberOfLines={1} style={[ui.s.body, { flex: 1 }]}>
+                    {priorityMeta(issue.priority).label}
+                  </Text>
+                  <Icon name="ChevronDown" size={13} color={ui.c.muted} />
+                </PropRow>
+                <PropRow ui={ui} label="负责人" onPress={() => setAssignOpen(true)}>
+                  {assignee ? <Avatar ui={ui} name={assignee.name} url={assignee.url} size={18} /> : null}
+                  <Text numberOfLines={1} style={[ui.s.body, { flex: 1 }]}>
+                    {assignee?.name ?? "未指派"}
+                  </Text>
+                  <Icon name="ChevronDown" size={13} color={ui.c.muted} />
+                </PropRow>
+                <PropRow
+                  ui={ui}
+                  label="项目"
+                  onPress={project ? () => navigate("issues", { project: project.id }) : undefined}
+                >
+                  <Icon name="FolderKanban" size={13} color={ui.c.muted} />
+                  <Text numberOfLines={1} style={[ui.s.body, { flex: 1 }]}>
+                    {project?.title ?? "未关联"}
+                  </Text>
+                </PropRow>
+                <PropRow ui={ui} label="工作流" onPress={() => navigate("workflows")}>
+                  <Icon name="Workflow" size={13} color={ui.c.muted} />
+                  <Text numberOfLines={1} style={[ui.s.body, { flex: 1 }]}>
+                    {issue.stage || "默认流程"}
+                  </Text>
+                </PropRow>
+                <PropRow ui={ui} label="标签" last>
+                  <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 5 }}>
+                    {issueLabels.length === 0 ? <Text style={ui.s.muted}>未添加</Text> : null}
+                    {issueLabels.map((label) => (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`移除标签 ${label.name}`}
+                        key={label.id}
+                        onPress={() => void detachLabel(label)}
+                        style={({ pressed }) => [
+                          {
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 4,
+                            paddingHorizontal: 7,
+                            paddingVertical: 2,
+                            borderRadius: 999,
+                            borderWidth: 1,
+                            borderColor: `${label.color}55`,
+                            backgroundColor: `${label.color}1f`,
+                          },
+                          pressed && ui.s.pressed,
+                        ]}
+                      >
+                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: label.color }} />
+                        <Text style={[ui.s.tiny, { color: label.color, fontWeight: "600" }]}>{label.name}</Text>
+                        <Icon name="X" size={10} color={label.color} />
+                      </Pressable>
+                    ))}
+                  </View>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="添加标签"
+                    onPress={() => setLabelsOpen(true)}
+                    style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
+                  >
+                    <Icon name="Plus" size={14} color={ui.c.muted} />
+                  </Pressable>
+                </PropRow>
+              </View>
+            </View>
+
+            <View style={{ gap: 3 }}>
+              <Text style={ui.s.label}>详情</Text>
+              <Text style={ui.s.tiny}>编号 {issue.identifier}</Text>
+              <Text style={ui.s.tiny}>创建于 {fmtDateTime(issue.created_at)}</Text>
+              <Text style={ui.s.tiny}>更新于 {fmtDateTime(issue.updated_at)}</Text>
+            </View>
+
             <View style={{ gap: 6 }}>
-              <Text style={ui.s.label}>状态</Text>
-              <View style={{ gap: 6 }}>
-                {(statuses.length > 0 ? statuses : []).map((entry) => {
+              <Text style={ui.s.label}>操作</Text>
+              <Btn ui={ui} label="标记已读" icon="CheckCheck" onPress={() => void quick("read", "已标记为已读")} />
+              <Btn ui={ui} label="强制重跑" icon="RotateCw" busy={busy} onPress={() => void rerun()} />
+              <Btn ui={ui} label="打开接口视图" icon="Plug" onPress={() => navigate("api", { q: "issues" })} />
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+
+      <Modal
+        title={pick === "status" ? "选择状态" : "选择优先级"}
+        icon={<Icon name={pick === "status" ? "CircleDot" : "Flag"} size={16} color={ui.c.muted} />}
+        open={pick !== null}
+        onOpenChange={(next) => {
+          if (!next) setPick(null);
+        }}
+      >
+        <Modal.Content>
+          <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 2 }}>
+            {pick === "status"
+              ? statuses.map((entry) => {
                   const active = entry.key === issue.status;
                   return (
                     <Pressable
                       accessibilityRole="button"
                       key={entry.id}
                       disabled={busy}
-                      onPress={() => void updateIssue({ status: entry.key }, "状态已更新")}
-                      style={({ pressed }) => [
-                        {
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 8,
-                          paddingVertical: 7,
-                          paddingHorizontal: 9,
-                          borderRadius: 8,
-                          backgroundColor: active ? `${entry.color}1f` : "transparent",
-                        },
-                        pressed && ui.s.pressed,
-                      ]}
+                      onPress={() => {
+                        setPick(null);
+                        void updateIssue({ status: entry.key }, "状态已更新");
+                      }}
+                      style={({ pressed }) => [ui.s.listRow, active && { backgroundColor: ui.c.surface2 }, pressed && ui.s.pressed]}
                     >
                       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: entry.color }} />
                       <Text style={[ui.s.body, { flex: 1 }, active && { fontWeight: "700" }]}>{entry.name}</Text>
                       {active ? <Icon name="Check" size={14} color={entry.color} /> : null}
                     </Pressable>
                   );
-                })}
-                {statuses.length === 0 ? <Text style={ui.s.muted}>无法读取状态列表</Text> : null}
-              </View>
-            </View>
-            <Divider ui={ui} />
-            <View style={{ gap: 6 }}>
-              <Text style={ui.s.label}>优先级</Text>
-              <View style={[ui.s.row, { gap: 6, flexWrap: "wrap" }]}>
-                {(["urgent", "high", "medium", "low", "none"] as const).map((value) => {
+                })
+              : PRIORITIES.map((value) => {
                   const meta = priorityMeta(value);
                   const active = issue.priority === value;
                   return (
@@ -376,94 +585,20 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                       accessibilityRole="button"
                       key={value}
                       disabled={busy}
-                      onPress={() => void updateIssue({ priority: value }, "优先级已更新")}
-                      style={({ pressed }) => [
-                        ui.s.chip,
-                        active && { borderColor: ui.c.accent, backgroundColor: `${ui.c.accent}1f` },
-                        pressed && ui.s.pressed,
-                      ]}
+                      onPress={() => {
+                        setPick(null);
+                        void updateIssue({ priority: value }, "优先级已更新");
+                      }}
+                      style={({ pressed }) => [ui.s.listRow, active && { backgroundColor: ui.c.surface2 }, pressed && ui.s.pressed]}
                     >
-                      <Text style={[ui.s.chipText, active && { fontWeight: "700" }]}>{meta.label}</Text>
+                      <Text style={[ui.s.body, { flex: 1 }, active && { fontWeight: "700" }]}>{meta.label}</Text>
+                      {active ? <Icon name="Check" size={14} color={ui.c.accent} /> : null}
                     </Pressable>
                   );
                 })}
-              </View>
-            </View>
-            <Divider ui={ui} />
-            <View style={{ gap: 6 }}>
-              <Text style={ui.s.label}>负责人</Text>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setAssignOpen(true)}
-                style={({ pressed }) => [ui.s.row, { gap: 8 }, pressed && ui.s.pressed]}
-              >
-                {assignee ? (
-                  <>
-                    <Avatar ui={ui} name={assignee.name} url={assignee.url} size={26} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[ui.s.body, { fontWeight: "600" }]}>{assignee.name}</Text>
-                      <Text style={ui.s.tiny}>{assignee.kind}</Text>
-                    </View>
-                  </>
-                ) : (
-                  <Text style={ui.s.muted}>未指派</Text>
-                )}
-                <Icon name="ChevronRight" size={14} color={ui.c.muted} />
-              </Pressable>
-            </View>
-            <Divider ui={ui} />
-            <View style={{ gap: 6 }}>
-              <View style={[ui.s.row, { justifyContent: "space-between" }]}>
-                <Text style={ui.s.label}>标签</Text>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="添加标签"
-                  onPress={() => setLabelsOpen(true)}
-                  style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
-                >
-                  <Icon name="Plus" size={14} color={ui.c.muted} />
-                </Pressable>
-              </View>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-                {issueLabels.map((label) => (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`移除标签 ${label.name}`}
-                    key={label.id}
-                    onPress={() => void detachLabel(label)}
-                    style={({ pressed }) => [
-                      {
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 5,
-                        paddingHorizontal: 8,
-                        paddingVertical: 4,
-                        borderRadius: 999,
-                        borderWidth: 1,
-                        borderColor: `${label.color}55`,
-                        backgroundColor: `${label.color}1f`,
-                      },
-                      pressed && ui.s.pressed,
-                    ]}
-                  >
-                    <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: label.color }} />
-                    <Text style={[ui.s.tiny, { color: label.color, fontWeight: "600" }]}>{label.name}</Text>
-                    <Icon name="X" size={11} color={label.color} />
-                  </Pressable>
-                ))}
-                {issueLabels.length === 0 ? <Text style={ui.s.muted}>未添加标签</Text> : null}
-              </View>
-            </View>
-          </Card>
-
-          <Card ui={ui} style={{ gap: 10 }}>
-            <SectionHeader ui={ui} title="快捷操作" />
-            <Btn ui={ui} label="标记已读" icon="CheckCheck" onPress={() => void quick("read", "已标记为已读")} />
-            <Btn ui={ui} label="强制重跑" icon="RotateCw" busy={busy} onPress={() => void rerun()} />
-            <Btn ui={ui} label="打开接口视图" icon="Plug" onPress={() => navigate("api", { q: "issues" })} />
-          </Card>
-        </View>
-      </View>
+          </ScrollView>
+        </Modal.Content>
+      </Modal>
 
       <Modal
         title="指派负责人"
@@ -533,7 +668,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
           <ScrollView style={{ maxHeight: 380 }} contentContainerStyle={{ gap: 2 }}>
             {allLabelsQuery.loading && availableLabels.length === 0 ? <LoadingRow ui={ui} /> : null}
             {!allLabelsQuery.loading && availableLabels.length === 0 ? (
-              <Empty ui={ui} icon="Tags" title="没有可添加的标签" description="在标签页新建标签后即可绑定到需求。" />
+              <Empty ui={ui} icon="Tags" title="没有可添加的标签" description="在标签页新建标签后即可绑定到任务。" />
             ) : null}
             {availableLabels.map((label) => (
               <Pressable
@@ -557,7 +692,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
       </Modal>
 
       <Modal
-        title="编辑需求"
+        title="编辑任务"
         icon={<Icon name="Pencil" size={16} color={ui.c.muted} />}
         open={editOpen}
         onOpenChange={setEditOpen}
@@ -582,7 +717,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
       </Modal>
 
       <Modal
-        title="删除需求"
+        title="删除任务"
         icon={<Icon name="TriangleAlert" size={16} color={ui.c.danger} />}
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
@@ -597,15 +732,38 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
           </View>
         </Modal.Content>
       </Modal>
-    </ScrollView>
+    </View>
   );
+}
 
-  async function quick(action: "read", message: string) {
-    if (!issue) return;
-    const result = await api({ method: "POST", path: `/api/issues/${issue.id}/${action}` });
-    if (result.ok) toast.show(message, { variant: "success" });
-    else toast.error(result.error ?? "操作失败");
-  }
+function PropRow({
+  ui,
+  label,
+  children,
+  onPress,
+  last,
+}: {
+  ui: ReturnType<typeof useUi>;
+  label: string;
+  children: React.ReactNode;
+  onPress?: () => void;
+  last?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      disabled={!onPress}
+      onPress={onPress}
+      style={({ pressed }) => [
+        { gap: 5, paddingVertical: 8, borderBottomWidth: last ? 0 : 1, borderBottomColor: ui.c.border },
+        pressed && ui.s.pressed,
+      ]}
+    >
+      <Text style={{ fontSize: 11.5, color: ui.c.muted, fontWeight: "600" }}>{label}</Text>
+      <View style={[ui.s.row, { gap: 7, minHeight: 20 }]}>{children}</View>
+    </Pressable>
+  );
 }
 
 function CommentRow({
@@ -630,7 +788,7 @@ function CommentRow({
       ? agents.find((agent) => agent.id === item.author_id)?.avatar_url ?? null
       : members.find((member) => member.id === item.author_id)?.avatar_url ?? null;
   return (
-    <View style={{ paddingHorizontal: 14, paddingVertical: 10, gap: 6 }}>
+    <View style={{ paddingVertical: 10, gap: 6 }}>
       <View style={[ui.s.row, { gap: 8 }]}>
         <Avatar ui={ui} name={name} url={avatarUrl} size={22} />
         <Text style={[ui.s.body, { fontWeight: "600" }]}>{name}</Text>
