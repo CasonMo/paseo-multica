@@ -3,7 +3,7 @@ import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { asList, useQuery } from "./api";
-import { Avatar, Btn, Chips, Divider, ErrorNote, Field, LoadingRow, Tag, useUi } from "./bits";
+import { Avatar, Btn, Chips, Divider, ErrorNote, Field, LoadingRow, Tag, useUi , Select } from "./bits";
 import { useWorkbench } from "./context";
 import type { Agent, Squad } from "./model";
 
@@ -306,11 +306,12 @@ function EditSquadModal({
             />
             <View style={{ gap: 6 }}>
               <Text style={ui.s.label}>{t("SquadDetail.10")}</Text>
-              <Chips
+              <Select
                 ui={ui}
-                options={agents.filter((agent) => !agent.archived_at).map((agent) => ({ value: agent.id, label: agent.name }))}
-                value={current.leaderId}
+                value={current.leaderId || null}
+                placeholder={t("TeamCreate.17")}
                 onChange={(next) => patch({ leaderId: next })}
+                options={agents.filter((agent) => !agent.archived_at).map((agent) => ({ value: agent.id, label: agent.name }))}
               />
             </View>
             <Field

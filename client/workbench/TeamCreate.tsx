@@ -2,7 +2,7 @@ import { t } from "./i18n";
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useState } from "react";
 import { Text, View } from "react-native";
-import { Btn, Chips, ErrorNote, Field, useUi } from "./bits";
+import { Btn, Chips, ErrorNote, Field, useUi , Select } from "./bits";
 import { useWorkbench } from "./context";
 import { runtimeName, type Agent, type AgentRuntime } from "./model";
 
@@ -87,11 +87,12 @@ export function CreateAgentModal({
             {runtimes.length === 0 ? (
               <Text style={ui.s.muted}>{t("TeamCreate.9")}</Text>
             ) : (
-              <Chips
+              <Select
                 ui={ui}
-                options={runtimes.map((runtime) => ({ value: runtime.id, label: runtimeName(runtime) }))}
-                value={selectedRuntime}
+                value={selectedRuntime || null}
+                placeholder={t("AgentDetail.108")}
                 onChange={(next) => setRuntimeId(next)}
+                options={runtimes.map((runtime) => ({ value: runtime.id, label: runtimeName(runtime) }))}
               />
             )}
           </View>
@@ -194,11 +195,12 @@ export function CreateSquadModal({
             {active.length === 0 ? (
               <Text style={ui.s.muted}>{t("TeamCreate.25")}</Text>
             ) : (
-              <Chips
+              <Select
                 ui={ui}
-                options={active.map((agent) => ({ value: agent.id, label: agent.name }))}
-                value={selectedLeader}
+                value={selectedLeader || null}
+                placeholder={t("TeamCreate.17")}
                 onChange={(next) => setLeaderId(next)}
+                options={active.map((agent) => ({ value: agent.id, label: agent.name }))}
               />
             )}
           </View>

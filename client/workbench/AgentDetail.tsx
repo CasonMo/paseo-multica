@@ -3,7 +3,7 @@ import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { asList, asRecord, str, usePagedQuery, useQuery } from "./api";
-import { Avatar, Btn, Chips, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, LoadMore, Tag, useUi } from "./bits";
+import { Avatar, Btn, Chips, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, LoadMore, Tag, useUi , Select } from "./bits";
 import { useWorkbench } from "./context";
 import { agentStatusMeta, fmtDateTime, relTime, type Agent, type AgentRuntime, type Label, type Skill } from "./model";
 
@@ -794,10 +794,11 @@ function EditAgentModal({
           />
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("AgentDetail.104")}</Text>
-            <Chips<"public" | "private">
+            <Select<"public" | "private">
               ui={ui}
               value={permission}
               onChange={setPermission}
+              searchable={false}
               options={[
                 { value: "public", label: t("AgentDetail.27"), icon: "Globe" },
                 { value: "private", label: t("AgentDetail.106"), icon: "Lock" },
@@ -806,18 +807,16 @@ function EditAgentModal({
           </View>
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("AgentDetail.16")}</Text>
-            <View style={[ui.s.row, { gap: 6, flexWrap: "wrap" }]}>
-              <ChipButton ui={ui} active={!runtimeId} label={t("AgentDetail.108")} onPress={() => setRuntimeId("")} />
-              {runtimes.map((runtime) => (
-                <ChipButton
-                  key={runtime.id}
-                  ui={ui}
-                  active={runtimeId === runtime.id}
-                  label={runtime.custom_name || runtime.name}
-                  onPress={() => setRuntimeId(runtime.id)}
-                />
-              ))}
-            </View>
+            <Select
+              ui={ui}
+              value={runtimeId || null}
+              placeholder={t("AgentDetail.108")}
+              onChange={(next) => setRuntimeId(next)}
+              options={[
+                { value: "", label: t("AgentDetail.108") },
+                ...runtimes.map((runtime) => ({ value: runtime.id, label: runtime.custom_name || runtime.name })),
+              ]}
+            />
           </View>
           <Field ui={ui} label={t("AgentDetail.31")} value={instructions} onChangeText={setInstructions} multiline placeholder={t("AgentDetail.110")} hint={t("AgentDetail.111")} />
           {error ? <ErrorNote ui={ui} message={error} /> : null}

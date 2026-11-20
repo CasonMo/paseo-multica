@@ -2,7 +2,7 @@ import { t } from "../i18n";
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { Btn, Card, Chips, Divider, Dot, Empty, ErrorNote, Field, IconBtn, LoadingRow, LoadMore, nearBottom, Tag, useUi } from "../bits";
+import { Btn, Card, Chips, Divider, Dot, Empty, ErrorNote, Field, IconBtn, LoadingRow, LoadMore, nearBottom, Tag, useUi , Select } from "../bits";
 import { asList, usePagedQuery, useQuery } from "../api";
 import { useWorkbench } from "../context";
 import {
@@ -618,7 +618,7 @@ function StepModal({
         <ScrollView style={{ maxHeight: 560 }} contentContainerStyle={{ gap: 12 }}>
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("Workflows.65")}</Text>
-            <Chips<HandlerType> ui={ui} options={HANDLER_OPTIONS.map((option) => ({ ...option, label: t(option.label) }))} value={handlerType} onChange={setHandlerType} />
+            <Select<HandlerType> ui={ui} options={HANDLER_OPTIONS.map((option) => ({ ...option, label: t(option.label) }))} value={handlerType} onChange={setHandlerType} searchable={false} />
           </View>
 
           {handlerType === "agent" ? (
@@ -628,15 +628,13 @@ function StepModal({
                 {agents.length === 0 ? (
                   <Text style={ui.s.tiny}>{t("Workflows.67")}</Text>
                 ) : (
-                  agents.map((agent) => (
-                    <ToggleChip
-                      key={agent.id}
-                      ui={ui}
-                      label={agent.name}
-                      active={handlerId === agent.id}
-                      onPress={() => setHandlerId(agent.id)}
-                    />
-                  ))
+                  <Select
+                    ui={ui}
+                    value={handlerId || null}
+                    placeholder={t("Chat.26")}
+                    onChange={setHandlerId}
+                    options={agents.map((agent) => ({ value: agent.id, label: agent.name, icon: "Bot" }))}
+                  />
                 )}
               </View>
             </View>
@@ -649,15 +647,13 @@ function StepModal({
                 {members.length === 0 ? (
                   <Text style={ui.s.tiny}>{t("Workflows.69")}</Text>
                 ) : (
-                  members.map((member) => (
-                    <ToggleChip
-                      key={member.id}
-                      ui={ui}
-                      label={member.name}
-                      active={handlerId === member.id || handlerId === member.userId}
-                      onPress={() => setHandlerId(member.userId || member.id)}
-                    />
-                  ))
+                  <Select
+                    ui={ui}
+                    value={handlerId || null}
+                    placeholder={t("Workflows.68")}
+                    onChange={setHandlerId}
+                    options={members.map((member) => ({ value: member.userId || member.id, label: member.name, icon: "User" }))}
+                  />
                 )}
               </View>
             </View>
@@ -675,34 +671,24 @@ function StepModal({
 
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("Workflows.73")}</Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-              <ToggleChip ui={ui} label={t("Workflows.74")} active={!nextKey} onPress={() => setNextKey(null)} />
-              {otherKeys.map((statusKey) => (
-                <ToggleChip
-                  key={statusKey}
-                  ui={ui}
-                  label={statusLabel(statusKey)}
-                  active={nextKey === statusKey}
-                  onPress={() => setNextKey(statusKey)}
-                />
-              ))}
-            </View>
+            <Select
+              ui={ui}
+              value={nextKey ?? ""}
+              onChange={(next) => setNextKey(next || null)}
+              searchable={false}
+              options={[{ value: "", label: t("Workflows.74") }, ...otherKeys.map((statusKey) => ({ value: statusKey, label: statusLabel(statusKey) }))]}
+            />
           </View>
 
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("Workflows.75")}</Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-              <ToggleChip ui={ui} label={t("Workflows.74")} active={!backKey} onPress={() => setBackKey(null)} />
-              {otherKeys.map((statusKey) => (
-                <ToggleChip
-                  key={statusKey}
-                  ui={ui}
-                  label={statusLabel(statusKey)}
-                  active={backKey === statusKey}
-                  onPress={() => setBackKey(statusKey)}
-                />
-              ))}
-            </View>
+            <Select
+              ui={ui}
+              value={backKey ?? ""}
+              onChange={(next) => setBackKey(next || null)}
+              searchable={false}
+              options={[{ value: "", label: t("Workflows.74") }, ...otherKeys.map((statusKey) => ({ value: statusKey, label: statusLabel(statusKey) }))]}
+            />
           </View>
 
           <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8, paddingTop: 4 }]}>

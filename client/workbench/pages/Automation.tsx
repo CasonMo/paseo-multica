@@ -19,7 +19,7 @@ import {
   Tag,
   useUi,
   type Ui,
-} from "../bits";
+  Select } from "../bits";
 import { useWorkbench, type WorkbenchValue } from "../context";
 import { fmtDateTime, relTime, type Agent, type Autopilot, type Squad } from "../model";
 
@@ -427,10 +427,11 @@ function CreateAutopilotModal({
           <Field ui={ui} label={t("AgentDetail.97")} value={description} onChangeText={setDescription} multiline placeholder={t("Automation.56")} />
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("Automation.57")}</Text>
-            <Chips<"create_issue" | "run_only">
+            <Select<"create_issue" | "run_only">
               ui={ui}
               value={mode}
               onChange={setMode}
+              searchable={false}
               options={[
                 { value: "create_issue", label: t("Automation.58"), icon: "ListTodo" },
                 { value: "run_only", label: t("Automation.34"), icon: "Play" },
@@ -439,46 +440,25 @@ function CreateAutopilotModal({
           </View>
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("Automation.60")}</Text>
-            <ScrollView style={{ maxHeight: 180 }} contentContainerStyle={{ gap: 6 }}>
-              {targets.length === 0 ? (
-                <Text style={ui.s.muted}>{t("Automation.61")}</Text>
-              ) : null}
-              {targets.map((item) => {
-                const active = target === `${item.kind}:${item.id}`;
-                return (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t("Automation.62", { a: item.name })}
-                    key={`${item.kind}:${item.id}`}
-                    onPress={() => setTarget(`${item.kind}:${item.id}`)}
-                    style={({ pressed }) => [
-                      ui.s.row,
-                      {
-                        gap: 8,
-                        padding: 9,
-                        borderRadius: 9,
-                        borderWidth: 1,
-                        borderColor: active ? ui.c.accent : ui.c.border,
-                        backgroundColor: active ? `${ui.c.accent}12` : ui.c.surface0,
-                      },
-                      pressed && ui.s.pressed,
-                    ]}
-                  >
-                    <Avatar ui={ui} name={item.name} url={item.avatar} size={24} />
-                    <Text style={[ui.s.body, { flex: 1 }]}>{item.name}</Text>
-                    <Text style={ui.s.tiny}>{item.kind === "squad" ? t("Nav.36") : t("AgentDetail.23")}</Text>
-                    {active ? <Icon name="Check" size={14} color={ui.c.accent} /> : null}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+            {targets.length === 0 ? (
+              <Text style={ui.s.muted}>{t("Automation.61")}</Text>
+            ) : (
+              <Select
+                ui={ui}
+                value={target || null}
+                placeholder={t("Automation.60")}
+                onChange={setTarget}
+                options={targets.map((item) => ({ value: `${item.kind}:${item.id}`, label: item.name, icon: item.kind === "squad" ? "Users" : "Bot" }))}
+              />
+            )}
           </View>
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("Automation.65")}</Text>
-            <Chips<"schedule" | "webhook">
+            <Select<"schedule" | "webhook">
               ui={ui}
               value={kind}
               onChange={setKind}
+              searchable={false}
               options={[
                 { value: "schedule", label: t("Automation.6"), icon: "Clock" },
                 { value: "webhook", label: "Webhook", icon: "Webhook" },
@@ -497,7 +477,7 @@ function CreateAutopilotModal({
               />
               <View style={{ gap: 6 }}>
                 <Text style={ui.s.label}>{t("Automation.69")}</Text>
-                <Chips<string> ui={ui} value={timezone} onChange={setTimezone} options={TIMEZONES.map((tz) => ({ value: tz, label: tz }))} />
+                <Select ui={ui} value={timezone} onChange={setTimezone} options={TIMEZONES.map((tz) => ({ value: tz, label: tz }))} />
               </View>
               <CronPreview ui={ui} api={api} cron={cron} timezone={timezone} />
             </>
@@ -790,10 +770,11 @@ function AutopilotDetailModal({
 
           <View style={{ gap: 8 }}>
             <Text style={ui.s.label}>{t("Automation.108")}</Text>
-            <Chips<"schedule" | "webhook">
+            <Select<"schedule" | "webhook">
               ui={ui}
               value={kind}
               onChange={setKind}
+              searchable={false}
               options={[
                 { value: "schedule", label: t("Automation.6"), icon: "Clock" },
                 { value: "webhook", label: "Webhook", icon: "Webhook" },
@@ -802,7 +783,7 @@ function AutopilotDetailModal({
             {kind === "schedule" ? (
               <>
                 <Field ui={ui} label={t("Automation.110")} value={cron} onChangeText={setCron} code />
-                <Chips<string> ui={ui} value={timezone} onChange={setTimezone} options={TIMEZONES.map((tz) => ({ value: tz, label: tz }))} />
+                <Select ui={ui} value={timezone} onChange={setTimezone} options={TIMEZONES.map((tz) => ({ value: tz, label: tz }))} />
                 <CronPreview ui={ui} api={api} cron={cron} timezone={timezone} />
               </>
             ) : (
@@ -907,10 +888,11 @@ function EditAutopilotModal({
           <Field ui={ui} label={t("AgentDetail.97")} value={description} onChangeText={setDescription} multiline />
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("Automation.57")}</Text>
-            <Chips<"create_issue" | "run_only">
+            <Select<"create_issue" | "run_only">
               ui={ui}
               value={mode}
               onChange={setMode}
+              searchable={false}
               options={[
                 { value: "create_issue", label: t("Automation.58"), icon: "ListTodo" },
                 { value: "run_only", label: t("Automation.34"), icon: "Play" },
@@ -919,35 +901,13 @@ function EditAutopilotModal({
           </View>
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("Automation.60")}</Text>
-            <ScrollView style={{ maxHeight: 180 }} contentContainerStyle={{ gap: 6 }}>
-              {targets.map((item) => {
-                const active = target === `${item.kind}:${item.id}`;
-                return (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t("Automation.62", { a: item.name })}
-                    key={`${item.kind}:${item.id}`}
-                    onPress={() => setTarget(`${item.kind}:${item.id}`)}
-                    style={({ pressed }) => [
-                      ui.s.row,
-                      {
-                        gap: 8,
-                        padding: 9,
-                        borderRadius: 9,
-                        borderWidth: 1,
-                        borderColor: active ? ui.c.accent : ui.c.border,
-                        backgroundColor: active ? `${ui.c.accent}12` : ui.c.surface0,
-                      },
-                      pressed && ui.s.pressed,
-                    ]}
-                  >
-                    <Avatar ui={ui} name={item.name} url={item.avatar} size={24} />
-                    <Text style={[ui.s.body, { flex: 1 }]}>{item.name}</Text>
-                    {active ? <Icon name="Check" size={14} color={ui.c.accent} /> : null}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+            <Select
+              ui={ui}
+              value={target || null}
+              placeholder={t("Automation.60")}
+              onChange={setTarget}
+              options={targets.map((item) => ({ value: `${item.kind}:${item.id}`, label: item.name, icon: item.kind === "squad" ? "Users" : "Bot" }))}
+            />
           </View>
         </ScrollView>
         <View style={[ui.s.row, { gap: 8, justifyContent: "flex-end", marginTop: 12 }]}>

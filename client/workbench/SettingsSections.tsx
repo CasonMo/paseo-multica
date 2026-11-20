@@ -3,7 +3,7 @@ import { Icon, Modal, copyText } from "@getpaseo/plugin/client/ui";
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { asList, asRecord, str, usePagedQuery, useQuery, type ApiFn } from "./api";
-import { Avatar, Btn, Card, Chips, Empty, ErrorNote, Field, LoadingRow, LoadMore, Tag, useUi, type Ui } from "./bits";
+import { Avatar, Btn, Card, Chips, Empty, ErrorNote, Field, LoadingRow, LoadMore, Tag, useUi, type Ui , Select } from "./bits";
 import { useWorkbench } from "./context";
 import { relTime } from "./model";
 
@@ -400,8 +400,9 @@ function MembersCard({
             <Field ui={ui} label={t("SettingsSections.70")} value={email} onChangeText={setEmail} placeholder="teammate@example.com" hint={t("SettingsSections.71")} />
             <View style={{ gap: 6 }}>
               <Text style={ui.s.label}>{t("SettingsSections.72")}</Text>
-              <Chips
+              <Select
                 ui={ui}
+                searchable={false}
                 options={[
                   { value: "member", label: t("Execution.11"), icon: "User" },
                   { value: "admin", label: t("SettingsSections.2"), icon: "Shield" },
@@ -555,8 +556,9 @@ function NotificationCard({
           <Text style={[ui.s.body, { fontWeight: "600" }]}>{t("SettingsSections.94")}</Text>
           <Text style={ui.s.tiny}>{t("SettingsSections.95")}</Text>
         </View>
-        <Chips
+        <Select
           ui={ui}
+          searchable={false}
           options={[
             { value: "all", label: t("Nav.30"), icon: "Bell" },
             { value: "muted", label: t("SettingsSections.97"), icon: "BellOff" },

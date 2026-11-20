@@ -2,7 +2,7 @@ import { t } from "../i18n";
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { Avatar, Btn, Chips, Empty, ErrorNote, Field, LoadingRow, LoadMore, nearBottom, useUi, type Ui } from "../bits";
+import { Avatar, Btn, Chips, Empty, ErrorNote, Field, LoadingRow, LoadMore, nearBottom, useUi, type Ui , Select } from "../bits";
 import { asList, asRecord, num, str, usePagedQuery, useQuery } from "../api";
 import { useWorkbench } from "../context";
 import { issueCategory, issueStatusEntry, priorityMeta, relTime, type Agent, type Issue, type IssueStatusEntry, type Project } from "../model";
@@ -586,33 +586,20 @@ function CreateIssueModal({
           />
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("IssueDetail.65")}</Text>
-            <View style={[ui.s.row, { gap: 6, flexWrap: "wrap" }]}>
-              {(statuses.length > 0 ? statuses : [{ key: "todo", name: t("Issues.7"), color: "#8b8b93", id: "todo", category: "unstarted" }]).map((entry) => {
-                const active = entry.key === status;
-                return (
-                  <Pressable
-                    accessibilityRole="button"
-                    key={entry.id}
-                    onPress={() => setStatus(entry.key)}
-                    style={({ pressed }) => [
-                      ui.s.chip,
-                      active && { borderColor: entry.color, backgroundColor: `${entry.color}22` },
-                      pressed && ui.s.pressed,
-                    ]}
-                  >
-                    <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: entry.color }} />
-                    <Text style={[ui.s.chipText, active && { color: entry.color, fontWeight: "700" }]}>
-                      {entry.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <Select
+              ui={ui}
+              value={status}
+              onChange={setStatus}
+              options={(statuses.length > 0 ? statuses : [{ key: "todo", name: t("Issues.7"), color: "#8b8b93", id: "todo", category: "unstarted" }]).map((entry) => ({ value: entry.key, label: entry.name, color: entry.color }))}
+            />
           </View>
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("IssueDetail.66")}</Text>
-            <Chips
+            <Select
               ui={ui}
+              value={priority}
+              onChange={setPriority}
+              searchable={false}
               options={[
                 { value: "none", label: t("model.20") },
                 { value: "low", label: t("model.19") },
@@ -620,8 +607,6 @@ function CreateIssueModal({
                 { value: "high", label: t("model.17") },
                 { value: "urgent", label: t("model.16") },
               ]}
-              value={priority}
-              onChange={setPriority}
             />
           </View>
           <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8, paddingTop: 4 }]}>

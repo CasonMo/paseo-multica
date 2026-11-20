@@ -12,7 +12,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
-import { Avatar, Btn, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, Tag, enterToSend, useUi, type Ui } from "../bits";
+import { Avatar, Btn, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, Tag, enterToSend, useUi, type Ui , Select } from "../bits";
 import { asList, asRecord, useQuery } from "../api";
 import { refreshInboxBadge } from "../badge";
 import { useWorkbench } from "../context";
@@ -57,14 +57,12 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const [mentions, setMentions] = useState<Record<string, { id: string; name: string }[]>>({});
   const [sendingKey, setSendingKey] = useState<string | null>(null);
   const [mentionFor, setMentionFor] = useState<string | null>(null);
-  const [assignOpen, setAssignOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [labelsOpen, setLabelsOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [pick, setPick] = useState<null | "status" | "priority">(null);
   const [childOpen, setChildOpen] = useState(false);
   const [childTitle, setChildTitle] = useState("");
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
@@ -761,37 +759,61 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const panel = (
     <>
       <PanelSection ui={ui} title={t("IssueDetail.64")}>
-        <PropRow ui={ui} label={t("IssueDetail.65")} onPress={() => setPick("status")}>
-          <StatusMark ui={ui} issue={issue} statuses={statuses} />
-          <View style={ui.s.grow} />
-          <Icon name="ChevronDown" size={13} color={ui.c.muted} />
-        </PropRow>
-        <PropRow ui={ui} label={t("IssueDetail.66")} onPress={() => setPick("priority")}>
-          {issue.priority && issue.priority !== "none" ? (
-            <PriorityMark ui={ui} priority={issue.priority} />
-          ) : (
-            <Text style={{ fontSize: 13, color: ui.c.muted }}>{t("model.20")}</Text>
-          )}
-          <View style={ui.s.grow} />
-          <Icon name="ChevronDown" size={13} color={ui.c.muted} />
-        </PropRow>
-        <PropRow ui={ui} label={t("IssueDetail.68")} onPress={() => setAssignOpen(true)}>
-          {assignee ? <Avatar ui={ui} name={assignee.name} url={assignee.url} size={20} /> : null}
-          <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, color: ui.c.fg }}>
-            {assignee?.name ?? t("IssueDetail.69")}
-          </Text>
-          <Icon name="ChevronDown" size={13} color={ui.c.muted} />
-        </PropRow>
-        <PropRow
-          ui={ui}
-          label={t("Nav.3")}
-          onPress={project ? () => navigate("issues", { project: project.id }) : undefined}
-        >
-          <Icon name="FolderKanban" size={13} color={ui.c.muted} />
-          <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, color: ui.c.fg }}>
-            {project?.title ?? t("IssueDetail.71")}
-          </Text>
-        </PropRow>
+        <View style={{ gap: 4 }}>
+          <Text style={ui.s.label}>{t("IssueDetail.65")}</Text>
+          <Select
+            ui={ui}
+            value={issue.status}
+            disabled={busy}
+            onChange={(next) => void updateIssue({ status: next }, t("IssueDetail.96"))}
+            options={statuses.map((entry) => ({ value: entry.key, label: entry.name, color: entry.color }))}
+          />
+        </View>
+        <View style={{ gap: 4 }}>
+          <Text style={ui.s.label}>{t("IssueDetail.66")}</Text>
+          <Select
+            ui={ui}
+            value={issue.priority ?? "none"}
+            disabled={busy}
+            searchable={false}
+            onChange={(next) => void updateIssue({ priority: next }, t("IssueDetail.97"))}
+            options={PRIORITIES.map((value) => ({ value, label: priorityMeta(value).label, icon: priorityMeta(value).icon }))}
+          />
+        </View>
+        <View style={{ gap: 4 }}>
+          <Text style={ui.s.label}>{t("IssueDetail.68")}</Text>
+          <Select
+            ui={ui}
+            value={issue.assignee_id ? `${issue.assignee_type}:${issue.assignee_id}` : ""}
+            disabled={busy}
+            placeholder={t("IssueDetail.69")}
+            onChange={(next) => {
+              if (!next) {
+                void updateIssue({ assignee_type: null, assignee_id: null }, t("IssueDetail.99"));
+                return;
+              }
+              const [kind, id] = next.split(":");
+              const name = kind === "agent" ? agents.find((a) => a.id === id)?.name : members.find((m) => m.id === id)?.name;
+              void updateIssue({ assignee_type: kind, assignee_id: id }, t("IssueDetail.102", { a: name ?? "" }));
+            }}
+            options={[
+              { value: "", label: t("IssueDetail.100"), icon: "UserMinus" },
+              ...agents.map((agent) => ({ value: `agent:${agent.id}`, label: agent.name, icon: "Bot" })),
+              ...members.map((member) => ({ value: `member:${member.id}`, label: member.name, icon: "User" })),
+            ]}
+          />
+        </View>
+        <View style={{ gap: 4 }}>
+          <Text style={ui.s.label}>{t("Nav.3")}</Text>
+          <Select
+            ui={ui}
+            value={issue.project_id ?? ""}
+            disabled={busy}
+            placeholder={t("IssueDetail.71")}
+            onChange={(next) => void updateIssue({ project_id: next || null }, t("IssueDetail.11"))}
+            options={[{ value: "", label: t("IssueDetail.71"), icon: "FolderKanban" }, ...(projectsQuery.data ?? []).map((p) => ({ value: p.id, label: p.title, icon: "FolderKanban" }))]}
+          />
+        </View>
         <PropRow ui={ui} label={t("Nav.7")} onPress={() => navigate("workflows")}>
           <Icon name="Workflow" size={13} color={ui.c.muted} />
           <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, color: ui.c.fg }}>
@@ -942,122 +964,6 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
           </ScrollView>
         </View>
       )}
-
-      <Modal
-        title={pick === "status" ? t("IssueDetail.94") : t("IssueDetail.95")}
-        icon={<Icon name={pick === "status" ? "CircleDot" : "Flag"} size={16} color={ui.c.muted} />}
-        open={pick !== null}
-        onOpenChange={(next) => {
-          if (!next) setPick(null);
-        }}
-      >
-        <Modal.Content>
-          <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 2 }}>
-            {pick === "status"
-              ? statuses.map((entry) => {
-                  const active = entry.key === issue.status;
-                  return (
-                    <Pressable
-                      accessibilityRole="button"
-                      key={entry.id}
-                      disabled={busy}
-                      onPress={() => {
-                        setPick(null);
-                        void updateIssue({ status: entry.key }, t("IssueDetail.96"));
-                      }}
-                      style={({ pressed }) => [ui.s.menuItem, active && ui.s.hoverSurface, pressed && ui.s.pressed]}
-                    >
-                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: entry.color }} />
-                      <Text style={{ flex: 1, fontSize: 14, color: ui.c.fg, fontWeight: active ? "600" : "400" }}>
-                        {entry.name}
-                      </Text>
-                      {active ? <Icon name="Check" size={14} color={entry.color} /> : null}
-                    </Pressable>
-                  );
-                })
-              : PRIORITIES.map((value) => {
-                  const meta = priorityMeta(value);
-                  const active = issue.priority === value;
-                  return (
-                    <Pressable
-                      accessibilityRole="button"
-                      key={value}
-                      disabled={busy}
-                      onPress={() => {
-                        setPick(null);
-                        void updateIssue({ priority: value }, t("IssueDetail.97"));
-                      }}
-                      style={({ pressed }) => [ui.s.menuItem, active && ui.s.hoverSurface, pressed && ui.s.pressed]}
-                    >
-                      <Icon name={meta.icon} size={14} color={ui.c.muted} />
-                      <Text style={{ flex: 1, fontSize: 14, color: ui.c.fg, fontWeight: active ? "600" : "400" }}>
-                        {meta.label}
-                      </Text>
-                      {active ? <Icon name="Check" size={14} color={ui.c.brand} /> : null}
-                    </Pressable>
-                  );
-                })}
-          </ScrollView>
-        </Modal.Content>
-      </Modal>
-
-      <Modal
-        title={t("IssueDetail.98")}
-        icon={<Icon name="UserPlus" size={16} color={ui.c.muted} />}
-        open={assignOpen}
-        onOpenChange={setAssignOpen}
-      >
-        <Modal.Content>
-          <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 2 }}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => {
-                setAssignOpen(false);
-                void updateIssue({ assignee_type: null, assignee_id: null }, t("IssueDetail.99"));
-              }}
-              style={({ pressed }) => [ui.s.menuItem, pressed && ui.s.pressed]}
-            >
-              <Icon name="UserMinus" size={16} color={ui.c.muted} />
-              <Text style={{ flex: 1, fontSize: 14, color: ui.c.fg }}>{t("IssueDetail.100")}</Text>
-            </Pressable>
-            <Text style={[ui.s.label, { paddingHorizontal: 8, paddingTop: 8 }]}>{t("AgentDetail.23")}</Text>
-            {agents.map((agent) => (
-              <Pressable
-                accessibilityRole="button"
-                key={`agent-${agent.id}`}
-                onPress={() => {
-                  setAssignOpen(false);
-                  void updateIssue({ assignee_type: "agent", assignee_id: agent.id }, t("IssueDetail.102", { a: agent.name }));
-                }}
-                style={({ pressed }) => [ui.s.menuItem, pressed && ui.s.pressed]}
-              >
-                <Avatar ui={ui} name={agent.name} url={agent.avatar_url} size={24} />
-                <Text style={{ flex: 1, fontSize: 14, color: ui.c.fg }}>{agent.name}</Text>
-                {issue.assignee_id === agent.id ? <Icon name="Check" size={14} color={ui.c.brand} /> : null}
-              </Pressable>
-            ))}
-            <Text style={[ui.s.label, { paddingHorizontal: 8, paddingTop: 8 }]}>{t("Execution.11")}</Text>
-            {members.map((member) => (
-              <Pressable
-                accessibilityRole="button"
-                key={`member-${member.id}`}
-                onPress={() => {
-                  setAssignOpen(false);
-                  void updateIssue({ assignee_type: "member", assignee_id: member.id }, t("IssueDetail.102", { a: member.name }));
-                }}
-                style={({ pressed }) => [ui.s.menuItem, pressed && ui.s.pressed]}
-              >
-                <Avatar ui={ui} name={member.name} url={member.avatar_url} size={24} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, color: ui.c.fg }}>{member.name}</Text>
-                  <Text style={ui.s.tiny}>{member.email}</Text>
-                </View>
-                {issue.assignee_id === member.id ? <Icon name="Check" size={14} color={ui.c.brand} /> : null}
-              </Pressable>
-            ))}
-          </ScrollView>
-        </Modal.Content>
-      </Modal>
 
       <Modal
         title={t("IssueDetail.77")}

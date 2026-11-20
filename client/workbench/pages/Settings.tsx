@@ -16,7 +16,7 @@ import {
   type ConnectionTestOutput,
   type ServerView,
 } from "../../../shared/contracts";
-import { Avatar, Btn, Card, Chips, Divider, Empty, ErrorNote, Field, Tag, useUi } from "../bits";
+import { Avatar, Btn, Card, Chips, Divider, Empty, ErrorNote, Field, Tag, useUi , Select } from "../bits";
 import { useWorkbench } from "../context";
 import { relTime } from "../model";
 import { AccountSettings, WorkspaceMembersSettings } from "../SettingsSections";
@@ -489,33 +489,13 @@ function ConnectionModal({
               {(result.workspaces ?? []).length > 0 ? (
                 <View style={{ gap: 6 }}>
                   <Text style={ui.s.label}>{t("Settings.62")}</Text>
-                  {(result.workspaces ?? []).map((workspace) => {
-                    const active = workspaceId === workspace.id;
-                    return (
-                      <Pressable
-                        accessibilityRole="button"
-                        key={workspace.id}
-                        onPress={() => setWorkspaceId(workspace.id)}
-                        style={({ pressed }) => [
-                          ui.s.row,
-                          {
-                            gap: 8,
-                            padding: 9,
-                            borderRadius: 9,
-                            borderWidth: 1,
-                            borderColor: active ? ui.c.accent : ui.c.border,
-                            backgroundColor: active ? `${ui.c.accent}0d` : ui.c.surface0,
-                          },
-                          pressed && ui.s.pressed,
-                        ]}
-                      >
-                        <Avatar ui={ui} name={workspace.name} url={workspace.avatar_url} size={24} />
-                        <Text style={[ui.s.body, { flex: 1 }]}>{workspace.name}</Text>
-                        <Text style={ui.s.tiny}>{workspace.slug}</Text>
-                        {active ? <Icon name="Check" size={14} color={ui.c.accent} /> : null}
-                      </Pressable>
-                    );
-                  })}
+                  <Select
+                    ui={ui}
+                    value={workspaceId}
+                    placeholder={t("Settings.62")}
+                    onChange={setWorkspaceId}
+                    options={(result.workspaces ?? []).map((workspace) => ({ value: workspace.id, label: `${workspace.name} (${workspace.slug})` }))}
+                  />
                 </View>
               ) : null}
             </View>

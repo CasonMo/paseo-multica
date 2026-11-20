@@ -2,7 +2,7 @@ import { t } from "../i18n";
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { Avatar, Btn, Card, Chips, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, LoadMore, nearBottom, Tag, useUi } from "../bits";
+import { Avatar, Btn, Card, Chips, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, LoadMore, nearBottom, Tag, useUi , Select } from "../bits";
 import { asList, usePagedQuery, useQuery } from "../api";
 import { useWorkbench } from "../context";
 import { priorityMeta, projectStatusMeta, relTime, type Issue, type Project } from "../model";
@@ -601,11 +601,11 @@ function ProjectFormModal({
           />
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("IssueDetail.65")}</Text>
-            <Chips ui={ui} options={EDIT_STATUS.map((option) => ({ ...option, label: t(option.label) }))} value={status} onChange={setStatus} />
+            <Select ui={ui} options={EDIT_STATUS.map((option) => ({ ...option, label: t(option.label) }))} value={status} onChange={setStatus} searchable={false} />
           </View>
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("IssueDetail.66")}</Text>
-            <Chips ui={ui} options={EDIT_PRIORITY.map((option) => ({ ...option, label: t(option.label) }))} value={priority} onChange={setPriority} />
+            <Select ui={ui} options={EDIT_PRIORITY.map((option) => ({ ...option, label: t(option.label) }))} value={priority} onChange={setPriority} searchable={false} />
           </View>
           <View style={[ui.s.row, { gap: 10 }]}>
             <View style={{ flex: 1 }}>

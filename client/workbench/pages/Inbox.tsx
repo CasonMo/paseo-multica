@@ -2,7 +2,7 @@ import { t } from "../i18n";
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { Btn, Card, Chips, Divider, Empty, ErrorNote, LoadingRow, LoadMore, nearBottom, Tag, useUi } from "../bits";
+import { Btn, Card, Chips, Divider, Empty, ErrorNote, LoadingRow, LoadMore, nearBottom, Tag, useUi , Select } from "../bits";
 import { asList, asRecord, num, usePagedQuery, useQuery } from "../api";
 import { refreshInboxBadge } from "../badge";
 import { useWorkbench } from "../context";
@@ -42,6 +42,7 @@ export function InboxPage() {
   const [confirmArchiveAll, setConfirmArchiveAll] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<InboxItem | null>(null);
   const [snoozeItem, setSnoozeItem] = useState<InboxItem | null>(null);
+  const [snoozeChoice, setSnoozeChoice] = useState("0");
   const [busy, setBusy] = useState(false);
 
   const itemsQuery = usePagedQuery<InboxItem & { item_id?: string; snoozed_at?: string }>(
@@ -424,12 +425,17 @@ export function InboxPage() {
         <Modal.Content>
           <View style={{ gap: 10 }}>
             <Text style={ui.s.muted}>{t("Inbox.150")}{snoozeItem?.title}{t("Inbox.51")}</Text>
-            <View style={{ gap: 6 }}>
-              {SNOOZE_OPTIONS.map((option) => (
-                <Btn ui={ui} key={option.label} label={t(option.label)} icon="Clock" busy={busy} onPress={() => void snooze(option.until())} />
-              ))}
+            <Select
+              ui={ui}
+              value={snoozeChoice}
+              onChange={setSnoozeChoice}
+              searchable={false}
+              options={SNOOZE_OPTIONS.map((option, i) => ({ value: String(i), label: t(option.label), icon: "Clock" }))}
+            />
+            <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8 }]}>
+              <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setSnoozeItem(null)} />
+              <Btn ui={ui} label={t("Inbox.31")} icon="AlarmClock" busy={busy} onPress={() => void snooze(SNOOZE_OPTIONS[Number(snoozeChoice)].until())} />
             </View>
-            <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setSnoozeItem(null)} />
           </View>
         </Modal.Content>
       </Modal>

@@ -3,7 +3,7 @@ import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View, type TextStyle } from "react-native";
 import { asList, useQuery } from "../api";
-import { Avatar, Btn, Card, Dot, Empty, ErrorNote, LoadingRow, enterToSend, useUi, type Ui } from "../bits";
+import { Avatar, Btn, Card, Dot, Empty, ErrorNote, LoadingRow, enterToSend, useUi, type Ui , Select } from "../bits";
 import { TaskStepsBlock } from "../Execution";
 import { useWorkbench } from "../context";
 import { relTime, type Agent, type ChatMessage, type ChatSession } from "../model";
@@ -20,6 +20,7 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
   const [sending, setSending] = useState(false);
   const [creating, setCreating] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickAgentId, setPickAgentId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -383,44 +384,44 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
         title={t("Chat.26")}
         icon={<Icon name="Bot" size={16} color={ui.c.muted} />}
         open={pickerOpen}
-        onOpenChange={setPickerOpen}
+        onOpenChange={(next) => {
+          setPickerOpen(next);
+          if (next) setPickAgentId(null);
+        }}
       >
         <Modal.Content>
-          <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 8 }}>
+          <View style={{ gap: 12 }}>
             {agents.length === 0 ? (
               <Empty ui={ui} icon="Bot" title={t("Chat.27")} description={t("Chat.28")} />
             ) : (
-              agents.map((agent) => (
-                <Pressable
-                  accessibilityRole="button"
-                  key={agent.id}
-                  onPress={() => void createChat(agent)}
-                  style={({ pressed }) => [
-                    {
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: 11,
-                      borderRadius: 10,
-                      borderWidth: 1,
-                      borderColor: ui.c.border,
-                      backgroundColor: ui.c.surface0,
-                    },
-                    pressed && ui.s.pressed,
-                  ]}
-                >
-                  <Avatar ui={ui} name={agent.name} url={agent.avatar_url} size={30} />
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={[ui.s.body, { fontWeight: "600" }]}>{agent.name}</Text>
-                    <Text numberOfLines={1} style={ui.s.tiny}>
-                      {agent.model ?? t("Chat.29")} · {agent.status === "idle" ? t("model.21") : agent.status === "working" ? t("model.22") : t("RuntimeDetail.4")}
-                    </Text>
-                  </View>
-                  <Dot color={agent.status === "working" ? ui.c.accent : agent.status === "idle" ? ui.c.success : ui.c.muted} />
-                </Pressable>
-              ))
+              <>
+                <Select
+                  ui={ui}
+                  value={pickAgentId}
+                  placeholder={t("Chat.26")}
+                  onChange={setPickAgentId}
+                  options={agents.map((agent) => ({ value: agent.id, label: agent.name, icon: "Bot" }))}
+                />
+                <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8 }]}>
+                  <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setPickerOpen(false)} />
+                  <Btn
+                    ui={ui}
+                    label={t("Chat.6")}
+                    icon="Plus"
+                    tone="primary"
+                    disabled={!pickAgentId}
+                    onPress={() => {
+                      const agent = agents.find((item) => item.id === pickAgentId);
+                      if (agent) {
+                        setPickerOpen(false);
+                        void createChat(agent);
+                      }
+                    }}
+                  />
+                </View>
+              </>
             )}
-          </ScrollView>
+          </View>
         </Modal.Content>
       </Modal>
     </View>

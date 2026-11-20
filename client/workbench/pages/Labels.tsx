@@ -2,7 +2,7 @@ import { t } from "../i18n";
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { Btn, Card, Chips, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, LoadMore, nearBottom, Tag, useUi } from "../bits";
+import { Btn, Card, Chips, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, LoadMore, nearBottom, Tag, useUi , Select } from "../bits";
 import { usePagedQuery } from "../api";
 import { useWorkbench } from "../context";
 import { pickTextColor, relTime, type Label } from "../model";
@@ -322,11 +322,12 @@ function LabelFormModal({
           />
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("Labels.39")}</Text>
-            <Chips<"issue" | "agent">
+            <Select<"issue" | "agent">
               ui={ui}
+              searchable={false}
               options={[
-                { value: "issue", label: t("Labels.17") },
-                { value: "agent", label: t("AgentDetail.23") },
+                { value: "issue", label: t("Labels.17"), icon: "ListTodo" },
+                { value: "agent", label: t("AgentDetail.23"), icon: "Bot" },
               ]}
               value={kind}
               onChange={setKind}
@@ -334,35 +335,14 @@ function LabelFormModal({
           </View>
           <View style={{ gap: 8 }}>
             <Text style={ui.s.label}>{t("Labels.42")}</Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {COLORS.map((entry) => {
-                const active = entry.toLowerCase() === color.toLowerCase();
-                return (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t("Labels.43", { a: entry })}
-                    accessibilityState={{ selected: active }}
-                    key={entry}
-                    onPress={() => setColor(entry)}
-                    style={({ pressed }) => [
-                      {
-                        width: 28,
-                        height: 28,
-                        borderRadius: 9,
-                        alignItems: "center",
-                        justifyContent: "center",
-                        backgroundColor: entry,
-                        borderWidth: active ? 2 : 0,
-                        borderColor: ui.c.fg,
-                      },
-                      pressed && ui.s.pressed,
-                    ]}
-                  >
-                    {active ? <Icon name="Check" size={14} color={pickTextColor(entry)} /> : null}
-                  </Pressable>
-                );
-              })}
-            </View>
+            <Select
+              ui={ui}
+              value={COLORS.includes(color) ? color : null}
+              placeholder={t("Labels.44")}
+              searchable={false}
+              onChange={setColor}
+              options={COLORS.map((entry) => ({ value: entry, label: entry, color: entry }))}
+            />
             <View style={[ui.s.row, { gap: 8 }]}>
               <View style={{ width: 120 }}>
                 <Field ui={ui} label={t("Labels.44")} value={color} onChangeText={setColor} placeholder="#3b82f6" code />

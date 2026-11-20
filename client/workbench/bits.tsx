@@ -520,6 +520,132 @@ export function Avatar({
   );
 }
 
+/** 下拉选择：面板内选项统一入口；选项多时带搜索，色点/图标/选中态齐全。 */
+export function Select<T extends string>({
+  ui,
+  value,
+  options,
+  onChange,
+  placeholder,
+  disabled,
+  searchable = true,
+}: {
+  ui: Ui;
+  value: T | null | undefined;
+  options: readonly { value: T; label: string; icon?: string; color?: string }[];
+  onChange(value: T): void;
+  placeholder?: string;
+  disabled?: boolean;
+  searchable?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const current = options.find((option) => option.value === value);
+  const needle = q.trim().toLowerCase();
+  const list = needle ? options.filter((option) => option.label.toLowerCase().includes(needle)) : options;
+  return (
+    <View style={{ position: "relative", zIndex: open ? 60 : undefined }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={current?.label ?? placeholder}
+        accessibilityState={{ expanded: open }}
+        disabled={disabled}
+        onPress={() => {
+          setOpen(!open);
+          setQ("");
+        }}
+        style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+          ui.s.row,
+          {
+            gap: 6,
+            minHeight: 32,
+            paddingHorizontal: 10,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: open ? ui.c.accent : ui.c.border,
+            backgroundColor: ui.c.surface0,
+          },
+          hovered && !open && { borderColor: ui.c.faint },
+          pressed && ui.s.pressed,
+          disabled && { opacity: 0.5 },
+        ]}
+      >
+        {current?.color ? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: current.color }} /> : current?.icon ? <Icon name={current.icon} size={13} color={ui.c.muted} /> : null}
+        <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, color: current ? ui.c.fg : ui.c.faint }}>
+          {current?.label ?? placeholder ?? ""}
+        </Text>
+        <Icon name="ChevronDown" size={13} color={ui.c.muted} />
+      </Pressable>
+      {open ? (
+        <>
+          <Pressable
+            accessibilityLabel={t("bits.5")}
+            onPress={() => setOpen(false)}
+            style={{ position: "absolute", top: -2000, left: -2000, right: -2000, bottom: -2000, zIndex: 40 }}
+          />
+          <View
+            style={{
+              position: "absolute",
+              top: 36,
+              left: 0,
+              right: 0,
+              zIndex: 50,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: ui.c.border,
+              backgroundColor: ui.c.card,
+              boxShadow: ui.c.shadowLift,
+              overflow: "hidden",
+            }}
+          >
+            {searchable && options.length > 8 ? (
+              <View style={[ui.s.row, { gap: 6, paddingHorizontal: 8, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: ui.c.line }]}>
+                <Icon name="Search" size={12} color={ui.c.faint} />
+                <TextInput
+                  value={q}
+                  onChangeText={setQ}
+                  autoFocus
+                  placeholder={t("ApiExplorer.2")}
+                  placeholderTextColor={ui.c.faint}
+                  style={{ flex: 1, fontSize: 12, color: ui.c.fg, paddingVertical: 2 }}
+                />
+              </View>
+            ) : null}
+            <ScrollView style={{ maxHeight: 224 }}>
+              {list.length === 0 ? <Text style={[ui.s.tiny, { padding: 10 }]}>{t("ApiExplorer.6")}</Text> : null}
+              {list.map((option) => (
+                <Pressable
+                  key={option.value}
+                  accessibilityRole="button"
+                  accessibilityLabel={option.label}
+                  accessibilityState={{ selected: option.value === value }}
+                  onPress={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                  }}
+                  style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+                    ui.s.row,
+                    { gap: 6, paddingHorizontal: 10, paddingVertical: 7 },
+                    hovered && { backgroundColor: ui.c.fillHover },
+                    pressed && ui.s.pressed,
+                    option.value === value && { backgroundColor: ui.c.fillStrong },
+                  ]}
+                >
+                  {option.color ? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: option.color }} /> : option.icon ? <Icon name={option.icon} size={13} color={ui.c.muted} /> : null}
+                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 12.5, color: ui.c.fg }}>
+                    {option.label}
+                  </Text>
+                  {option.value === value ? <Icon name="Check" size={13} color={ui.c.accent} /> : null}
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        </>
+      ) : null}
+    </View>
+  );
+}
+
 /** Enter 发送 / Shift+Enter 换行；中文输入法组合期间的 Enter 不触发发送。
  *  RN-web 不透传 onKeyDown，故用 callback ref 挂原生 keydown 监听。 */
 export function enterToSend(submit: () => void) {
