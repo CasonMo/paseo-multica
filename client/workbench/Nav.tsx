@@ -356,7 +356,7 @@ function WorkNav() {
   const projects = useQuery(
     api,
     "/api/projects",
-    { query: { limit: 100 }, select: (data) => asList<Project>(data, "projects") },
+    { query: { limit: 20 }, select: (data) => asList<Project>(data, "projects") },
     key,
   );
   const unread = useQuery(api, "/api/inbox/unread-count", {}, key);

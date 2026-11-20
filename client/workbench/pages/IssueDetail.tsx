@@ -81,7 +81,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const childrenQuery = useQuery(
     api,
     issueId ? `/api/issues/${issueId}/children` : null,
-    { select: (data) => asList<Issue>(data, "issues", "children") },
+    { query: { limit: 50 }, select: (data) => asList<Issue>(data, "issues", "children") },
     key,
   );
   const issueLabelsQuery = useQuery(
@@ -93,20 +93,20 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const allLabelsQuery = useQuery(
     api,
     labelsOpen ? "/api/labels" : null,
-    { select: (data) => asList<Label>(data, "labels") },
+    { query: { limit: 50 }, select: (data) => asList<Label>(data, "labels") },
     `${key}:labels`,
   );
   const projectsQuery = useQuery(
     api,
     "/api/projects",
-    { query: { limit: 100 }, select: (data) => asList<Project>(data, "projects") },
+    { query: { limit: 50 }, select: (data) => asList<Project>(data, "projects") },
     key,
   );
-  const agentsQuery = useQuery(api, "/api/agents", { query: { limit: 100 }, select: (data) => asList<Agent>(data, "agents") }, key);
+  const agentsQuery = useQuery(api, "/api/agents", { query: { limit: 50 }, select: (data) => asList<Agent>(data, "agents") }, key);
   const membersQuery = useQuery(
     api,
     workspaceId ? `/api/workspaces/${workspaceId}/members` : null,
-    { select: (data) => asList<Record<string, unknown>>(data, "members") },
+    { query: { limit: 50 }, select: (data) => asList<Record<string, unknown>>(data, "members") },
     key,
   );
 

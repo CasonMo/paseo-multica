@@ -1,8 +1,8 @@
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { asList, asRecord, str, useQuery } from "./api";
-import { Avatar, Btn, Chips, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, Tag, useUi } from "./bits";
+import { asList, asRecord, str, usePagedQuery, useQuery } from "./api";
+import { Avatar, Btn, Chips, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, LoadMore, Tag, useUi } from "./bits";
 import { useWorkbench } from "./context";
 import { agentStatusMeta, fmtDateTime, relTime, type Agent, type AgentRuntime, type Label, type Skill } from "./model";
 
@@ -266,7 +266,7 @@ function SkillsPanel({
 }) {
   const ctx = useWorkbench();
   const key = `${ctx.bump}:${agentId}`;
-  const all = useQuery(api, "/api/skills", { select: (data) => asList<Skill>(data, "skills") }, key);
+  const all = useQuery(api, "/api/skills", { query: { limit: 50 }, select: (data) => asList<Skill>(data, "skills") }, key);
   const bound = useQuery(api, `/api/agents/${agentId}/skills`, { select: (data) => asList<Skill>(data, "skills") }, key);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -352,19 +352,20 @@ function TasksPanel({
   agentId: string;
 }) {
   const ctx = useWorkbench();
-  const query = useQuery(
+  const query = usePagedQuery<AgentTask>(
     api,
     `/api/agents/${agentId}/tasks`,
-    { query: { limit: 20 }, select: (data) => asList<AgentTask>(data, "tasks") },
+    { pageSize: 20 },
     `${ctx.bump}:${agentId}`,
+    "tasks",
   );
-  const items = query.data ?? [];
+  const items = query.items;
 
   return (
     <View style={{ gap: 8 }}>
       <View style={[ui.s.row, { justifyContent: "space-between" }]}>
-        <Text style={ui.s.tiny}>最近 20 条任务派发记录</Text>
-        <IconBtn ui={ui} icon="RefreshCw" label="刷新任务" busy={query.refreshing} onPress={query.refresh} />
+        <Text style={ui.s.tiny}>任务派发记录</Text>
+        <IconBtn ui={ui} icon="RefreshCw" label="刷新任务" busy={query.loadingMore} onPress={query.refresh} />
       </View>
       {query.loading && items.length === 0 ? <LoadingRow ui={ui} /> : null}
       {query.error ? <ErrorNote ui={ui} message={query.error} onRetry={query.refresh} /> : null}
@@ -399,6 +400,15 @@ function TasksPanel({
           </View>
         );
       })}
+      <LoadMore
+        ui={ui}
+        loaded={items.length}
+        total={query.total}
+        hasMore={query.hasMore}
+        loadingMore={query.loadingMore}
+        loading={query.loading}
+        onLoadMore={query.loadMore}
+      />
     </View>
   );
 }
@@ -620,7 +630,7 @@ function LabelPanel({
     { select: (data) => asList<Label>(data, "labels") },
     key,
   );
-  const all = useQuery(api, "/api/labels", { select: (data) => asList<Label>(data, "labels") }, key);
+  const all = useQuery(api, "/api/labels", { query: { limit: 50 }, select: (data) => asList<Label>(data, "labels") }, key);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const current = attached.data ?? [];

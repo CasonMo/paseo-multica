@@ -1,13 +1,13 @@
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { Avatar, Btn, Chips, Empty, ErrorNote, Field, LoadingRow, useUi } from "../bits";
-import { asList, asRecord, num, str, useQuery } from "../api";
+import { Avatar, Btn, Chips, Empty, ErrorNote, Field, LoadingRow, LoadMore, nearBottom, useUi, type Ui } from "../bits";
+import { asList, asRecord, num, str, usePagedQuery, useQuery } from "../api";
 import { useWorkbench } from "../context";
 import { priorityMeta, relTime, type Agent, type Issue, type IssueStatusEntry, type Project } from "../model";
 import { IssueRow } from "../parts";
 import { WORK_VIEWS } from "../Nav";
-import { useWorkingAgents } from "../Execution";
+import { useWorkingAgents, type WorkingAgent } from "../Execution";
 
 const VIEW_LABEL: Record<string, string> = {
   all: "全部任务",
@@ -44,12 +44,6 @@ const BOARD: { key: string; label: string; icon: string; categories: string[]; s
   },
 ];
 
-function bucketOf(issue: Issue, statuses: IssueStatusEntry[]): string {
-  const entry = statuses.find((status) => status.key === issue.status);
-  const raw = String(issue.status_category ?? entry?.category ?? "unstarted");
-  return BOARD.find((column) => column.categories.includes(raw))?.key ?? "todo";
-}
-
 export function IssuesPage() {
   const ctx = useWorkbench();
   const { theme, compact, narrow, stacked, navCollapsed, api, statuses, bump, workspaceId, navigate, params, toast, invalidate, user } = ctx;
@@ -61,7 +55,6 @@ export function IssuesPage() {
   const [mode, setMode] = useState<"board" | "list">(compact ? "list" : "board");
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
-  const [limit, setLimit] = useState(25);
   const [createOpen, setCreateOpen] = useState(params.create === "1");
   const [createStatus, setCreateStatus] = useState<string | undefined>();
   const [filterOpen, setFilterOpen] = useState(false);
@@ -71,39 +64,41 @@ export function IssuesPage() {
     return () => clearTimeout(timer);
   }, [query]);
 
-  useEffect(() => {
-    setLimit(25);
-  }, [search, view, projectId]);
-
   const listKey = `${workspaceId}:${bump}`;
   const workingAgents = useWorkingAgents(api, listKey);
   const request = useMemo(() => {
     const when: Record<string, string | number> = {
-      limit: mode === "board" ? 200 : limit,
-      offset: 0,
       sort: "updated_at",
       direction: "desc",
     };
     if (search) when.q = search;
     if (projectId) when.project_id = projectId;
     if (view === "mine" && user?.id) when.assignee_id = user.id;
-    if (view === "active") when.status_category = "started";
-    if (view === "done") when.status_category = "done";
-    if (view === "closed") when.status_category = "closed";
+    if (mode === "list") {
+      if (view === "active") when.status_category = "started";
+      if (view === "done") when.status_category = "done";
+      if (view === "closed") when.status_category = "closed";
+    }
     return when;
-  }, [limit, mode, search, projectId, view, user?.id]);
+  }, [mode, search, projectId, view, user?.id]);
 
-  const issues = useQuery(api, "/api/issues", { query: request }, listKey);
+  const paged = usePagedQuery<Issue>(
+    api,
+    mode === "list" ? "/api/issues" : null,
+    { query: request, pageSize: 25 },
+    listKey,
+    "issues",
+  );
   const projects = useQuery(
     api,
     "/api/projects",
-    { query: { limit: 100 }, select: (data) => asList<Project>(data, "projects") },
+    { query: { limit: 50 }, select: (data) => asList<Project>(data, "projects") },
     listKey,
   );
   const agents = useQuery(
     api,
     "/api/agents",
-    { query: { limit: 100 }, select: (data) => asList<Agent>(data, "agents") },
+    { query: { limit: 50 }, select: (data) => asList<Agent>(data, "agents") },
     listKey,
   );
   const members = useQuery(
@@ -113,8 +108,8 @@ export function IssuesPage() {
     listKey,
   );
 
-  const list = asList<Issue>(issues.data, "issues");
-  const total = num(asRecord(issues.data).total, list.length);
+  const list = paged.items;
+  const total = paged.total;
   const projectMap = useMemo(
     () => new Map((projects.data ?? []).map((project) => [project.id, project])),
     [projects.data],
@@ -132,14 +127,12 @@ export function IssuesPage() {
   const activeProject = projectId ? projectMap.get(projectId) : null;
   const title = VIEW_LABEL[view] ?? "全部任务";
 
-  const columns = useMemo(() => {
-    const grouped: Record<string, Issue[]> = {};
-    for (const issue of list) {
-      const key = bucketOf(issue, statuses);
-      (grouped[key] ??= []).push(issue);
-    }
-    return BOARD.map((column) => ({ ...column, items: grouped[column.key] ?? [] }));
-  }, [list, statuses]);
+  const visibleColumns = useMemo(() => {
+    if (view === "active") return BOARD.filter((column) => column.key === "started");
+    if (view === "done") return BOARD.filter((column) => column.key === "done");
+    if (view === "closed") return BOARD.filter((column) => column.key === "closed");
+    return BOARD;
+  }, [view]);
 
   const openCreate = (status?: string) => {
     setCreateStatus(status);
@@ -278,13 +271,13 @@ export function IssuesPage() {
         <Btn ui={ui} label="新建" icon="Plus" onPress={() => openCreate()} />
       </View>
 
-      {issues.loading && list.length === 0 ? (
+      {mode === "list" && paged.loading && list.length === 0 ? (
         <LoadingRow ui={ui} />
-      ) : issues.error ? (
+      ) : mode === "list" && paged.error ? (
         <View style={{ padding: 16 }}>
-          <ErrorNote ui={ui} message={issues.error} onRetry={issues.refresh} />
+          <ErrorNote ui={ui} message={paged.error} onRetry={paged.refresh} />
         </View>
-      ) : list.length === 0 ? (
+      ) : mode === "list" && list.length === 0 ? (
         <Empty
           ui={ui}
           icon="Inbox"
@@ -298,53 +291,31 @@ export function IssuesPage() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ flexGrow: 1, gap: narrow ? 12 : 16, padding: compact || narrow ? 12 : 16 }}
         >
-          {columns.map((column) => (
-            <View
+          {visibleColumns.map((column) => (
+            <BoardColumn
               key={column.key}
-              style={{
-                width: compact ? 232 : narrow ? 252 : 272,
-                flexGrow: 1,
-                borderRadius: 12,
-                backgroundColor: `${ui.c.fill}66`,
-                padding: 8,
-              }}
-            >
-              <View style={[ui.s.row, { gap: 6, height: 28, paddingHorizontal: 6, marginBottom: 8 }]}>
-                <Icon name={column.icon} size={12} color={ui.c.muted} />
-                <Text style={{ fontSize: 13, fontWeight: "500", color: ui.c.fg }}>{column.label}</Text>
-                <Text style={{ fontSize: 12, color: ui.c.muted }}>{column.items.length}</Text>
-                <View style={ui.s.grow} />
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`新建${column.label}任务`}
-                  onPress={() => openCreate(column.status)}
-                  style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
-                >
-                  <Icon name="Plus" size={14} color={ui.c.muted} />
-                </Pressable>
-              </View>
-              <ScrollView contentContainerStyle={{ paddingBottom: 16, gap: 8 }} showsVerticalScrollIndicator={false}>
-                {column.items.length === 0 ? (
-                  <Text style={[ui.s.tiny, { textAlign: "center", paddingVertical: 26 }]}>无任务</Text>
-                ) : (
-                  column.items.map((issue) => (
-                    <IssueCard
-                      key={issue.id}
-                      ui={ui}
-                      issue={issue}
-                      project={issue.project_id ? projectMap.get(issue.project_id) : undefined}
-                      assignee={issue.assignee_id ? assigneeMap.get(issue.assignee_id) : undefined}
-                      running={workingAgents.get(issue.id)}
-                      onPress={() => navigate("issue", { id: issue.id })}
-                    />
-                  ))
-                )}
-              </ScrollView>
-            </View>
+              ui={ui}
+              column={column}
+              statuses={statuses}
+              query={request}
+              listKey={listKey}
+              width={compact ? 232 : narrow ? 252 : 272}
+              projectMap={projectMap}
+              assigneeMap={assigneeMap}
+              workingAgents={workingAgents}
+              onOpen={(id) => navigate("issue", { id })}
+              onCreate={openCreate}
+            />
           ))}
         </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: compact ? 12 : 16, paddingBottom: 40 }}>
+        <ScrollView
+          contentContainerStyle={{ padding: compact ? 12 : 16, paddingBottom: 40 }}
+          onScroll={(e) => {
+            if (nearBottom(e)) paged.loadMore();
+          }}
+          scrollEventThrottle={200}
+        >
           <View>
             {list.map((issue) => (
               <IssueRow
@@ -357,17 +328,15 @@ export function IssuesPage() {
               />
             ))}
           </View>
-          {list.length < total ? (
-            <View style={{ alignItems: "center", marginTop: 12 }}>
-              <Btn
-                ui={ui}
-                label={issues.loading ? "加载中…" : `加载更多（已显示 ${list.length}/${total}）`}
-                icon="ChevronDown"
-                busy={issues.loading}
-                onPress={() => setLimit((value) => value + 25)}
-              />
-            </View>
-          ) : null}
+          <LoadMore
+            ui={ui}
+            loaded={list.length}
+            total={total}
+            hasMore={paged.hasMore}
+            loadingMore={paged.loadingMore}
+            loading={paged.loading}
+            onLoadMore={paged.loadMore}
+          />
         </ScrollView>
       )}
 
@@ -644,5 +613,129 @@ function CreateIssueModal({
         </View>
       </Modal.Content>
     </Modal>
+  );
+}
+
+function BoardColumn({
+  ui,
+  column,
+  statuses,
+  query,
+  listKey,
+  width,
+  projectMap,
+  assigneeMap,
+  workingAgents,
+  onOpen,
+  onCreate,
+}: {
+  ui: Ui;
+  column: (typeof BOARD)[number];
+  statuses: IssueStatusEntry[];
+  query: Record<string, string | number>;
+  listKey: string;
+  width: number;
+  projectMap: Map<string, Project>;
+  assigneeMap: Map<string, { name: string; url?: string | null }>;
+  workingAgents: Map<string, WorkingAgent>;
+  onOpen(id: string): void;
+  onCreate(status?: string): void;
+}) {
+  const { api } = useWorkbench();
+  const cats = useMemo(() => {
+    const present = new Set(statuses.map((status) => String(status.category ?? "")));
+    const list = column.categories.filter((category) => present.has(category));
+    return list.length > 0 ? list : [column.categories[0]];
+  }, [statuses, column]);
+  const primary = usePagedQuery<Issue>(
+    api,
+    "/api/issues",
+    { query: { ...query, status_category: cats[0] }, pageSize: 20 },
+    `${listKey}:col:${column.key}`,
+    "issues",
+  );
+  const secondary = usePagedQuery<Issue>(
+    api,
+    cats[1] ? "/api/issues" : null,
+    { query: { ...query, status_category: cats[1] }, pageSize: 20 },
+    `${listKey}:col:${column.key}:2`,
+    "issues",
+  );
+  const items = useMemo(
+    () => [...primary.items, ...secondary.items].sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at)),
+    [primary.items, secondary.items],
+  );
+  const total = primary.total + secondary.total;
+  const hasMore = primary.hasMore || secondary.hasMore;
+  const loadMore = () => {
+    primary.loadMore();
+    secondary.loadMore();
+  };
+  const loading = primary.loading && items.length === 0;
+  return (
+    <View style={{ width, flexGrow: 1, borderRadius: 12, backgroundColor: `${ui.c.fill}66`, padding: 8 }}>
+      <View style={[ui.s.row, { gap: 6, height: 28, paddingHorizontal: 6, marginBottom: 8 }]}>
+        <Icon name={column.icon} size={12} color={ui.c.muted} />
+        <Text style={{ fontSize: 13, fontWeight: "500", color: ui.c.fg }}>{column.label}</Text>
+        <Text style={{ fontSize: 12, color: ui.c.muted }}>{total}</Text>
+        <View style={ui.s.grow} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`新建${column.label}任务`}
+          onPress={() => onCreate(column.status)}
+          style={({ pressed }) => [ui.s.iconBtn, pressed && ui.s.pressed]}
+        >
+          <Icon name="Plus" size={14} color={ui.c.muted} />
+        </Pressable>
+      </View>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 8, gap: 8 }}
+        showsVerticalScrollIndicator={false}
+        onScroll={(e) => {
+          if (nearBottom(e, 160)) loadMore();
+        }}
+        scrollEventThrottle={200}
+      >
+        {loading ? (
+          <View style={{ paddingVertical: 18, alignItems: "center" }}>
+            <ActivityIndicator size="small" color={ui.c.muted} />
+          </View>
+        ) : items.length === 0 ? (
+          <Text style={[ui.s.tiny, { textAlign: "center", paddingVertical: 26 }]}>无任务</Text>
+        ) : (
+          items.map((issue) => (
+            <IssueCard
+              key={issue.id}
+              ui={ui}
+              issue={issue}
+              project={issue.project_id ? projectMap.get(issue.project_id) : undefined}
+              assignee={issue.assignee_id ? assigneeMap.get(issue.assignee_id) : undefined}
+              running={workingAgents.get(issue.id)}
+              onPress={() => onOpen(issue.id)}
+            />
+          ))
+        )}
+        {hasMore ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`加载更多${column.label}任务`}
+            onPress={loadMore}
+            style={({ pressed }) => [
+              ui.s.row,
+              { justifyContent: "center", gap: 6, paddingVertical: 8, borderRadius: 8 },
+              pressed && ui.s.pressed,
+            ]}
+          >
+            {primary.loadingMore || secondary.loadingMore ? (
+              <ActivityIndicator size="small" color={ui.c.muted} />
+            ) : (
+              <Icon name="ChevronDown" size={13} color={ui.c.muted} />
+            )}
+            <Text style={ui.s.tiny}>加载更多（{items.length}/{total}）</Text>
+          </Pressable>
+        ) : null}
+      </ScrollView>
+    </View>
   );
 }

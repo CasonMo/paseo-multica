@@ -184,10 +184,10 @@ export function createHandlers() {
       return Promise.race([fetch, timeout]);
     };
     const [runsRaw, usageRaw, timelineRaw, commentsRaw] = await Promise.all([
-      call(`/api/issues/${input.issueId}/task-runs`),
+      call(`/api/issues/${input.issueId}/task-runs?limit=200`),
       call(`/api/issues/${input.issueId}/usage`),
-      call(`/api/issues/${input.issueId}/timeline`),
-      call(`/api/issues/${input.issueId}/comments`),
+      call(`/api/issues/${input.issueId}/timeline?limit=200`),
+      call(`/api/issues/${input.issueId}/comments?limit=200`),
     ]);
     const asArr = (v: unknown): Record<string, unknown>[] => {
       if (Array.isArray(v)) return v as Record<string, unknown>[];

@@ -1,8 +1,8 @@
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { Avatar, Btn, Card, Chips, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, Tag, useUi } from "../bits";
-import { asList, useQuery } from "../api";
+import { Avatar, Btn, Card, Chips, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, LoadMore, nearBottom, Tag, useUi } from "../bits";
+import { asList, usePagedQuery, useQuery } from "../api";
 import { useWorkbench } from "../context";
 import { priorityMeta, projectStatusMeta, relTime, type Issue, type Project } from "../model";
 import { IssueRow } from "../parts";
@@ -49,11 +49,12 @@ export function ProjectsPage() {
   const [confirmDelete, setConfirmDelete] = useState<Project | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const projectsQuery = useQuery(
+  const projectsQuery = usePagedQuery<Project>(
     api,
     "/api/projects",
-    { query: { include_archived: true }, select: (data) => asList<Project>(data, "projects") },
+    { query: { include_archived: true }, pageSize: 30 },
     key,
+    "projects",
   );
   const membersQuery = useQuery(
     api,
@@ -61,7 +62,7 @@ export function ProjectsPage() {
     { select: (data) => asList<Record<string, unknown>>(data, "members") },
     key,
   );
-  const list = projectsQuery.data ?? [];
+  const list = projectsQuery.items;
   const archivedCount = list.filter((project) => project.archived_at).length;
   const members = useMemo(
     () =>
@@ -93,13 +94,14 @@ export function ProjectsPage() {
     [list, needle, status],
   );
 
-  const issuesQuery = useQuery(
+  const issuesQuery = usePagedQuery<Issue>(
     api,
     activeId ? "/api/issues" : null,
-    { query: { project_id: activeId ?? "", limit: 20, sort: "updated_at", direction: "desc" } },
+    { query: { project_id: activeId ?? "", sort: "updated_at", direction: "desc" }, pageSize: 20 },
     `${key}:${activeId ?? ""}`,
+    "issues",
   );
-  const projectIssues = asList<Issue>(issuesQuery.data, "issues");
+  const projectIssues = issuesQuery.items;
 
   const leadOf = (project: Project) =>
     members.find((member) => member.id === project.lead_id || member.userId === project.lead_id) ?? null;
@@ -153,7 +155,13 @@ export function ProjectsPage() {
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ padding: compact ? 12 : 18, gap: 12, paddingBottom: 48 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: compact ? 12 : 18, gap: 12, paddingBottom: 48 }}
+        onScroll={(e) => {
+          if (nearBottom(e)) projectsQuery.loadMore();
+        }}
+        scrollEventThrottle={200}
+      >
         <View style={[ui.s.row, { gap: 10 }]}>
           <View style={ui.s.grow}>
             <Text style={[ui.s.title, { fontSize: compact ? 18 : 21 }]}>项目</Text>
@@ -235,6 +243,15 @@ export function ProjectsPage() {
             ))}
           </View>
         )}
+        <LoadMore
+          ui={ui}
+          loaded={list.length}
+          total={projectsQuery.total}
+          hasMore={projectsQuery.hasMore}
+          loadingMore={projectsQuery.loadingMore}
+          loading={projectsQuery.loading}
+          onLoadMore={projectsQuery.loadMore}
+        />
       </ScrollView>
 
       <Modal
@@ -247,7 +264,14 @@ export function ProjectsPage() {
       >
         <Modal.Content>
           {active ? (
-            <ScrollView style={{ maxHeight: 520 }} contentContainerStyle={{ gap: 12 }}>
+            <ScrollView
+              style={{ maxHeight: 520 }}
+              contentContainerStyle={{ gap: 12 }}
+              onScroll={(e) => {
+                if (nearBottom(e, 120)) issuesQuery.loadMore();
+              }}
+              scrollEventThrottle={200}
+            >
               <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
                 <Tag ui={ui} label={projectStatusMeta(active.status).label} tone={projectStatusMeta(active.status).tone} />
                 {active.archived_at ? <Tag ui={ui} label="已归档" tone="danger" /> : null}
@@ -335,6 +359,15 @@ export function ProjectsPage() {
                     </View>
                   )}
                 </Card>
+                <LoadMore
+                  ui={ui}
+                  loaded={projectIssues.length}
+                  total={issuesQuery.total}
+                  hasMore={issuesQuery.hasMore}
+                  loadingMore={issuesQuery.loadingMore}
+                  loading={issuesQuery.loading}
+                  onLoadMore={issuesQuery.loadMore}
+                />
                 <Btn
                   ui={ui}
                   label="查看全部需求"

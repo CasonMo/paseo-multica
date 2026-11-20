@@ -1,8 +1,8 @@
 import { Icon } from "@getpaseo/plugin/client/ui";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { Avatar, Btn, Card, Divider, Dot, Empty, ErrorNote, LoadingRow, Tag, useUi } from "../bits";
-import { asList, asRecord, useQuery } from "../api";
+import { Avatar, Btn, Card, Divider, Dot, Empty, ErrorNote, LoadingRow, LoadMore, nearBottom, Tag, useUi } from "../bits";
+import { asList, asRecord, usePagedQuery, useQuery } from "../api";
 import { useWorkbench } from "../context";
 import {
   relTime,
@@ -41,23 +41,42 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
   const [creatingAgent, setCreatingAgent] = useState(false);
   const [creatingSquad, setCreatingSquad] = useState(false);
 
-  const agentsQuery = useQuery(
+  const agentsQuery = usePagedQuery<Agent>(
     api,
-    "/api/agents",
-    {
-      query: { limit: 100, include_archived: "true" },
-      select: (data) => asList<Agent>(data, "agents"),
-    },
+    tab === "agents" ? "/api/agents" : null,
+    { query: { include_archived: "true" }, pageSize: 30 },
+    key,
+    "agents",
+  );
+  const runtimesQuery = usePagedQuery<AgentRuntime>(
+    api,
+    tab === "runtimes" ? "/api/runtimes" : null,
+    { pageSize: 30 },
+    key,
+    "runtimes",
+    "devices",
+  );
+  const squadsQuery = usePagedQuery<Squad>(api, tab === "squads" ? "/api/squads" : null, { pageSize: 30 }, key, "squads");
+  const skillsQuery = usePagedQuery<Skill>(api, tab === "skills" ? "/api/skills" : null, { pageSize: 30 }, key, "skills");
+  // 跨 tab 的小 lookup：只在需要时拉、封顶 50，避免整表下载
+  const squadLeaders = useQuery(
+    api,
+    tab === "squads" ? "/api/agents" : null,
+    { query: { limit: 50 }, select: (data) => asList<Agent>(data, "agents") },
     key,
   );
-  const runtimesQuery = useQuery(api, "/api/runtimes", { select: (data) => asList<AgentRuntime>(data, "runtimes") }, key);
-  const squadsQuery = useQuery(api, "/api/squads", { select: (data) => asList<Squad>(data, "squads") }, key);
-  const skillsQuery = useQuery(api, "/api/skills", { select: (data) => asList<Skill>(data, "skills") }, key);
+  const agentRuntimes = useQuery(
+    api,
+    tab === "agents" ? "/api/runtimes" : null,
+    { query: { limit: 50 }, select: (data) => asList<AgentRuntime>(data, "runtimes", "devices") },
+    key,
+  );
 
-  const agents = agentsQuery.data ?? [];
-  const runtimes = runtimesQuery.data ?? [];
-  const squads = squadsQuery.data ?? [];
-  const skills = skillsQuery.data ?? [];
+  const agents = agentsQuery.items;
+  const runtimes = tab === "runtimes" ? runtimesQuery.items : (agentRuntimes.data ?? []);
+  const squads = squadsQuery.items;
+  const skills = skillsQuery.items;
+  const activePaged = tab === "agents" ? agentsQuery : tab === "squads" ? squadsQuery : tab === "runtimes" ? runtimesQuery : skillsQuery;
   const needle = search.trim().toLowerCase();
 
   const visibleAgents = useMemo(
@@ -97,7 +116,13 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ padding: compact ? 12 : 18, gap: 12, paddingBottom: 48 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: compact ? 12 : 18, gap: 12, paddingBottom: 48 }}
+        onScroll={(e) => {
+          if (nearBottom(e)) activePaged.loadMore();
+        }}
+        scrollEventThrottle={200}
+      >
         <View style={[ui.s.row, { gap: 10 }]}>
           <View style={ui.s.grow}>
             <Text style={[ui.s.title, { fontSize: compact ? 18 : 21 }]}>团队</Text>
@@ -204,7 +229,7 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
             ) : (
               <View style={{ paddingBottom: 6 }}>
                 {filteredSquads.map((squad, index) => {
-                  const leader = agents.find((agent) => agent.id === squad.leader_id);
+                  const leader = (squadLeaders.data ?? []).find((agent) => agent.id === squad.leader_id);
                   return (
                     <View key={squad.id}>
                       {index > 0 ? <Divider ui={ui} style={{ marginHorizontal: 14 }} /> : null}
@@ -316,6 +341,15 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
             )}
           </Card>
         ) : null}
+        <LoadMore
+          ui={ui}
+          loaded={activePaged.items.length}
+          total={activePaged.total}
+          hasMore={activePaged.hasMore}
+          loadingMore={activePaged.loadingMore}
+          loading={activePaged.loading}
+          onLoadMore={activePaged.loadMore}
+        />
       </ScrollView>
 
       <AgentDetailModal

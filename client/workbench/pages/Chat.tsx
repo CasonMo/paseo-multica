@@ -30,7 +30,7 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
   const agentsQuery = useQuery(
     api,
     "/api/agents",
-    { query: { limit: 100 }, select: (data) => asList<Agent>(data, "agents") },
+    { query: { limit: 50 }, select: (data) => asList<Agent>(data, "agents") },
     key,
   );
   const agents = agentsQuery.data ?? [];

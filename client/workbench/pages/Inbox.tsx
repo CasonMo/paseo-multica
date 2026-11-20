@@ -1,8 +1,8 @@
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { Btn, Card, Chips, Divider, Empty, ErrorNote, LoadingRow, Tag, useUi } from "../bits";
-import { asList, asRecord, num, useQuery } from "../api";
+import { Btn, Card, Chips, Divider, Empty, ErrorNote, LoadingRow, LoadMore, nearBottom, Tag, useUi } from "../bits";
+import { asList, asRecord, num, usePagedQuery, useQuery } from "../api";
 import { refreshInboxBadge } from "../badge";
 import { useWorkbench } from "../context";
 import { relTime, type InboxItem, type Issue } from "../model";
@@ -43,17 +43,19 @@ export function InboxPage() {
   const [snoozeItem, setSnoozeItem] = useState<InboxItem | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const itemsQuery = useQuery(
+  const itemsQuery = usePagedQuery<InboxItem & { item_id?: string; snoozed_at?: string }>(
     api,
     tab === "inbox" ? "/api/inbox" : tab === "archived" ? "/api/inbox/archived" : "/api/inbox/snoozed",
-    { query: { limit: 50 } },
+    { pageSize: 30 },
     `${key}:${tab}`,
+    "items",
+    "inbox",
   );
   const unreadQuery = useQuery(api, "/api/inbox/unread-count", { pollMs: 8000 }, key);
   const snoozedIssuesQuery = useQuery(
     api,
     tab === "snoozed" ? "/api/issues" : null,
-    { query: { limit: 100 }, select: (data) => asList<Issue>(data, "issues") },
+    { query: { limit: 30 }, select: (data) => asList<Issue>(data, "issues") },
     key,
   );
   const issueById = useMemo(
@@ -62,7 +64,7 @@ export function InboxPage() {
   );
   const items = useMemo(
     () =>
-      asList<InboxItem & { item_id?: string; snoozed_at?: string }>(itemsQuery.data, "items", "inbox").map((item) => {
+      itemsQuery.items.map((item) => {
         if (!item.item_id) return item;
         const issue = item.issue_id ? issueById.get(item.issue_id) : undefined;
         return {
@@ -77,7 +79,7 @@ export function InboxPage() {
           created_at: item.snoozed_at ?? item.created_at ?? "",
         };
       }),
-    [itemsQuery.data, issueById],
+    [itemsQuery.items, issueById],
   );
   const unreadCount =
     typeof unreadQuery.data === "number"
@@ -250,6 +252,10 @@ export function InboxPage() {
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingHorizontal: compact ? 12 : 16, paddingBottom: 16 }}
+        onScroll={(e) => {
+          if (nearBottom(e)) itemsQuery.loadMore();
+        }}
+        scrollEventThrottle={200}
       >
         <Card ui={ui} padded={false}>
           {itemsQuery.loading && items.length === 0 ? (
@@ -338,6 +344,17 @@ export function InboxPage() {
               ))}
             </View>
           )}
+          {filtered.length > 0 ? (
+            <LoadMore
+              ui={ui}
+              loaded={items.length}
+              total={itemsQuery.total}
+              hasMore={itemsQuery.hasMore}
+              loadingMore={itemsQuery.loadingMore}
+              loading={itemsQuery.loading}
+              onLoadMore={itemsQuery.loadMore}
+            />
+          ) : null}
         </Card>
       </ScrollView>
 
@@ -354,7 +371,7 @@ export function InboxPage() {
           ]}
         >
           <Text style={ui.s.tiny}>
-            共 {filtered.length} 条 · 最近一条 {relTime(filtered[0]?.created_at)}
+            共 {itemsQuery.total} 条 · 最近一条 {relTime(filtered[0]?.created_at)}
           </Text>
         </View>
       ) : null}

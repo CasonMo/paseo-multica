@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import type { StyleProp, TextStyle, ViewStyle } from "react-native";
+import type { NativeScrollEvent, NativeSyntheticEvent, StyleProp, TextStyle, ViewStyle } from "react-native";
 import { pickTextColor } from "./model";
 
 export type Tone = "default" | "accent" | "success" | "warning" | "danger" | "muted";
@@ -511,6 +511,38 @@ export function Avatar({
       ) : (
         <Text style={[ui.s.avatarText, { color: glyphColor, fontSize: Math.max(9, size * 0.4) }]}>{glyph}</Text>
       )}
+    </View>
+  );
+}
+
+/** 瀑布流触底判定：距底 pad 内即预取下一页。 */
+export function nearBottom(e: NativeSyntheticEvent<NativeScrollEvent>, pad = 260): boolean {
+  const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+  return contentOffset.y + layoutMeasurement.height >= contentSize.height - pad;
+}
+
+export function LoadMore({
+  ui,
+  loaded,
+  total,
+  hasMore,
+  loadingMore,
+  loading,
+  onLoadMore,
+}: {
+  ui: Ui;
+  loaded: number;
+  total: number;
+  hasMore: boolean;
+  loadingMore: boolean;
+  loading?: boolean;
+  onLoadMore(): void;
+}) {
+  if (loading && loaded === 0) return null;
+  return (
+    <View style={[ui.s.row, { justifyContent: "space-between", gap: 8, paddingHorizontal: 14, paddingVertical: 10 }]}>
+      <Text style={ui.s.tiny}>{hasMore ? `已加载 ${loaded} / ${total}` : `共 ${total} 条 · 已全部加载`}</Text>
+      {hasMore ? <Btn ui={ui} label="加载更多" icon="ChevronDown" busy={loadingMore} onPress={onLoadMore} /> : null}
     </View>
   );
 }

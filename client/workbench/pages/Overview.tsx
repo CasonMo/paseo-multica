@@ -16,10 +16,10 @@ export function OverviewPage() {
   const recent = useQuery(api, "/api/issues", { query: { limit: 8, sort: "updated_at", direction: "desc" } }, key);
   const started = useQuery(api, "/api/issues", { query: { limit: 1, status_category: "started" } }, key);
   const unread = useQuery(api, "/api/inbox/unread-count", {}, key);
-  const agents = useQuery(api, "/api/agents", { query: { limit: 100 } }, key);
-  const runtimes = useQuery(api, "/api/runtimes", {}, key);
+  const agents = useQuery(api, "/api/agents", { query: { limit: 6 } }, key);
+  const runtimes = useQuery(api, "/api/runtimes", { query: { limit: 50 } }, key);
   const inbox = useQuery(api, "/api/inbox", { query: { limit: 20 } }, key);
-  const projects = useQuery(api, "/api/projects", {}, key);
+  const projects = useQuery(api, "/api/projects", { query: { limit: 5 } }, key);
 
   const recentList = asList<Issue>(recent.data, "issues");
   const totalIssues = num(asRecord(recent.data).total, recentList.length);
@@ -32,7 +32,7 @@ export function OverviewPage() {
   const inboxTotal = num(asRecord(inbox.data).total, inboxList.length);
   const projectList = asList<Project>(projects.data, "projects");
   const onlineRuntimes = runtimeList.filter((runtime) => runtime.status === "online");
-  const workingAgents = agentList.filter((agent) => agent.status === "working" || agent.status === "idle");
+  const agentsTotal = num(asRecord(agents.data).total, agentList.length);
 
   const markRead = async (item: InboxItem) => {
     const result = await api({ method: "POST", path: `/api/inbox/${item.id}/read` });
@@ -250,9 +250,9 @@ export function OverviewPage() {
                     />
                   </View>
                 ))}
-                {workingAgents.length > 0 ? (
+                {agentsTotal > 0 ? (
                   <Text style={[ui.s.tiny, { paddingHorizontal: 14, paddingTop: 6 }]}>
-                    {workingAgents.length} 个智能体可用
+                    共 {agentsTotal} 个智能体
                   </Text>
                 ) : null}
               </View>

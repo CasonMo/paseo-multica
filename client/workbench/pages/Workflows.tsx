@@ -1,8 +1,8 @@
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { Btn, Card, Chips, Divider, Dot, Empty, ErrorNote, Field, IconBtn, LoadingRow, Tag, useUi } from "../bits";
-import { asList, useQuery } from "../api";
+import { Btn, Card, Chips, Divider, Dot, Empty, ErrorNote, Field, IconBtn, LoadingRow, LoadMore, nearBottom, Tag, useUi } from "../bits";
+import { asList, usePagedQuery, useQuery } from "../api";
 import { useWorkbench } from "../context";
 import {
   HANDLER_LABEL,
@@ -39,22 +39,22 @@ export function WorkflowsPage() {
   const [confirmDelete, setConfirmDelete] = useState<Workflow | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const workflowsQuery = useQuery(api, "/api/issue-workflows", { select: (data) => asList<Workflow>(data, "workflows") }, key);
+  const workflowsQuery = usePagedQuery<Workflow>(api, "/api/issue-workflows", { pageSize: 30 }, key, "workflows");
   const agentsQuery = useQuery(
     api,
     "/api/agents",
-    { query: { limit: 100 }, select: (data) => asList<Agent>(data, "agents") },
+    { query: { limit: 50 }, select: (data) => asList<Agent>(data, "agents") },
     key,
   );
   const membersQuery = useQuery(
     api,
     workspaceId ? `/api/workspaces/${workspaceId}/members` : null,
-    { select: (data) => asList<Record<string, unknown>>(data, "members") },
+    { query: { limit: 50 }, select: (data) => asList<Record<string, unknown>>(data, "members") },
     key,
   );
-  const projectsQuery = useQuery(api, "/api/projects", { select: (data) => asList<Project>(data, "projects") }, key);
+  const projectsQuery = useQuery(api, "/api/projects", { query: { limit: 50 }, select: (data) => asList<Project>(data, "projects") }, key);
 
-  const workflowList = workflowsQuery.data ?? [];
+  const workflowList = workflowsQuery.items;
   const agentList = agentsQuery.data ?? [];
   const members: Member[] = useMemo(
     () =>
@@ -108,7 +108,13 @@ export function WorkflowsPage() {
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ padding: compact ? 12 : 18, gap: 12, paddingBottom: 48 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: compact ? 12 : 18, gap: 12, paddingBottom: 48 }}
+        onScroll={(e) => {
+          if (nearBottom(e)) workflowsQuery.loadMore();
+        }}
+        scrollEventThrottle={200}
+      >
         <View style={[ui.s.row, { gap: 10 }]}>
           <View style={ui.s.grow}>
             <Text style={[ui.s.title, { fontSize: compact ? 18 : 21 }]}>工作流</Text>
@@ -229,6 +235,15 @@ export function WorkflowsPage() {
             </View>
           )}
         </Card>
+        <LoadMore
+          ui={ui}
+          loaded={workflowList.length}
+          total={workflowsQuery.total}
+          hasMore={workflowsQuery.hasMore}
+          loadingMore={workflowsQuery.loadingMore}
+          loading={workflowsQuery.loading}
+          onLoadMore={workflowsQuery.loadMore}
+        />
       </ScrollView>
 
       <Modal

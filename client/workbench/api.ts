@@ -141,6 +141,113 @@ export function useQuery<T = unknown>(
   return { data, error, status, loading, refreshing, lastUpdated, refresh, setData };
 }
 
+export interface PagedResult<T> {
+  items: T[];
+  total: number;
+  loading: boolean;
+  loadingMore: boolean;
+  error: string | null;
+  hasMore: boolean;
+  loadMore: () => void;
+  refresh: () => void;
+}
+
+/** offset 分页 + 瀑布流：一次只取一页、串行防请求堆积；key/查询变化时重置回第一页。 */
+export function usePagedQuery<T = Record<string, unknown>>(
+  api: ApiFn,
+  path: string | null,
+  options: { query?: QueryParams; pageSize?: number; enabled?: boolean; serverId?: string; workspaceId?: string } = {},
+  key?: string,
+  ...listKeys: string[]
+): PagedResult<T> {
+  const { query, pageSize = 30, enabled = true, serverId, workspaceId } = options;
+  const queryKey = JSON.stringify(query ?? {});
+  const keysKey = listKeys.join("|");
+  const keysRef = useRef(listKeys);
+  keysRef.current = listKeys;
+  const [items, setItems] = useState<T[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(Boolean(path) && enabled);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const seq = useRef(0);
+  const inFlight = useRef(false);
+  const mounted = useRef(true);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const run = useCallback(
+    async (reset: boolean) => {
+      if (!path || !enabled || inFlight.current) return;
+      inFlight.current = true;
+      const ticket = ++seq.current;
+      if (reset) setLoading(true);
+      else setLoadingMore(true);
+      try {
+        const parsed = JSON.parse(queryKey) as QueryParams;
+        const result = await api({
+          method: "GET",
+          path,
+          query: { ...parsed, limit: pageSize, offset: reset ? 0 : itemsRef.current.length },
+          serverId,
+          workspaceId,
+        });
+        if (!mounted.current || ticket !== seq.current) return;
+        if (result.ok) {
+          const list = asList<T>(result.data, ...keysRef.current);
+          const envelope =
+            result.data && typeof result.data === "object" && !Array.isArray(result.data)
+              ? (result.data as Record<string, unknown>)
+              : {};
+          const nextTotal = Number(envelope.total ?? NaN);
+          setItems((prev) => (reset ? list : [...prev, ...list]));
+          setTotal(Number.isFinite(nextTotal) ? nextTotal : reset ? list.length : itemsRef.current.length + list.length);
+          setError(null);
+        } else {
+          setError(result.error ?? `请求失败 (HTTP ${result.status})`);
+        }
+      } catch (cause) {
+        if (mounted.current && ticket === seq.current) setError(cause instanceof Error ? cause.message : String(cause));
+      } finally {
+        inFlight.current = false;
+        if (mounted.current && ticket === seq.current) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
+      }
+    },
+    [api, path, enabled, queryKey, pageSize, serverId, workspaceId],
+  );
+
+  useEffect(() => {
+    if (!path || !enabled) {
+      setLoading(false);
+      return;
+    }
+    setItems([]);
+    setTotal(0);
+    void run(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [run, key, keysKey]);
+
+  const hasMore = items.length < total;
+  const loadMore = useCallback(() => {
+    if (hasMore) void run(false);
+  }, [hasMore, run]);
+  const refresh = useCallback(() => {
+    void run(true);
+  }, [run]);
+
+  return { items, total, loading, loadingMore, error, hasMore, loadMore, refresh };
+}
+
 export function asList<T = Record<string, unknown>>(data: unknown, ...keys: string[]): T[] {
   if (Array.isArray(data)) return data as T[];
   if (data && typeof data === "object") {

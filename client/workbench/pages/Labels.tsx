@@ -1,8 +1,8 @@
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { Btn, Card, Chips, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, Tag, useUi } from "../bits";
-import { asList, useQuery } from "../api";
+import { Btn, Card, Chips, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, LoadMore, nearBottom, Tag, useUi } from "../bits";
+import { usePagedQuery } from "../api";
 import { useWorkbench } from "../context";
 import { pickTextColor, relTime, type Label } from "../model";
 
@@ -28,8 +28,8 @@ export function LabelsPage() {
   const [confirmDelete, setConfirmDelete] = useState<Label | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const labelsQuery = useQuery(api, "/api/labels", { select: (data) => asList<Label>(data, "labels") }, key);
-  const labels = labelsQuery.data ?? [];
+  const labelsQuery = usePagedQuery<Label>(api, "/api/labels", { pageSize: 50 }, key, "labels");
+  const labels = labelsQuery.items;
   const counts = useMemo(() => {
     const map: Record<string, number> = {};
     for (const label of labels) map[label.resource_type ?? "issue"] = (map[label.resource_type ?? "issue"] ?? 0) + 1;
@@ -56,12 +56,18 @@ export function LabelsPage() {
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ padding: compact ? 12 : 18, gap: 12, paddingBottom: 48 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: compact ? 12 : 18, gap: 12, paddingBottom: 48 }}
+        onScroll={(e) => {
+          if (nearBottom(e)) labelsQuery.loadMore();
+        }}
+        scrollEventThrottle={200}
+      >
         <View style={[ui.s.row, { gap: 10 }]}>
           <View style={ui.s.grow}>
             <Text style={[ui.s.title, { fontSize: compact ? 18 : 21 }]}>标签</Text>
             <Text style={ui.s.muted}>
-              共 {labels.length} 个标签 · 需求 {counts.issue ?? 0} · 智能体 {counts.agent ?? 0}
+              共 {labelsQuery.total} 个标签 · 需求 {counts.issue ?? 0} · 智能体 {counts.agent ?? 0}
             </Text>
           </View>
           <Btn
@@ -191,8 +197,17 @@ export function LabelsPage() {
             </View>
           )}
         </Card>
+        <LoadMore
+          ui={ui}
+          loaded={labels.length}
+          total={labelsQuery.total}
+          hasMore={labelsQuery.hasMore}
+          loadingMore={labelsQuery.loadingMore}
+          loading={labelsQuery.loading}
+          onLoadMore={labelsQuery.loadMore}
+        />
 
-        {labelsQuery.refreshing ? <Text style={[ui.s.tiny, { textAlign: "center" }]}>正在同步…</Text> : null}
+        {labelsQuery.loadingMore ? <Text style={[ui.s.tiny, { textAlign: "center" }]}>正在同步…</Text> : null}
       </ScrollView>
 
       <LabelFormModal

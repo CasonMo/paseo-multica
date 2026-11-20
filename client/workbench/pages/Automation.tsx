@@ -1,7 +1,7 @@
 import { Icon, Modal, copyText } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { asList, asRecord, useQuery, type ApiFn } from "../api";
+import { asList, asRecord, usePagedQuery, useQuery, type ApiFn } from "../api";
 import {
   Avatar,
   Btn,
@@ -13,6 +13,8 @@ import {
   Field,
   IconBtn,
   LoadingRow,
+  LoadMore,
+  nearBottom,
   Tag,
   useUi,
   type Ui,
@@ -68,14 +70,9 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
   const [deleteFor, setDeleteFor] = useState<Autopilot | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const query = useQuery(
-    api,
-    "/api/autopilots",
-    { query: { limit: 100 }, select: (data) => asList<Autopilot>(data, "autopilots") },
-    key,
-  );
-  const agentsQuery = useQuery(api, "/api/agents", { query: { limit: 100 }, select: (data) => asList<Agent>(data, "agents") }, key);
-  const squadsQuery = useQuery(api, "/api/squads", { select: (data) => asList<Squad>(data, "squads") }, key);
+  const query = usePagedQuery<Autopilot>(api, "/api/autopilots", { pageSize: 30 }, key, "autopilots");
+  const agentsQuery = useQuery(api, "/api/agents", { query: { limit: 50 }, select: (data) => asList<Agent>(data, "agents") }, key);
+  const squadsQuery = useQuery(api, "/api/squads", { query: { limit: 50 }, select: (data) => asList<Squad>(data, "squads") }, key);
   const usageQuery = useQuery(
     api,
     "/api/autopilots/usage",
@@ -94,18 +91,18 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
   };
 
   const list = useMemo(
-    () => (query.data ?? []).filter((item) => filter === "all" || item.status === filter),
-    [query.data, filter],
+    () => query.items.filter((item) => filter === "all" || item.status === filter),
+    [query.items, filter],
   );
 
   const counts = useMemo(() => {
-    const all = query.data ?? [];
+    const all = query.items;
     return {
-      all: all.length,
+      all: query.total,
       active: all.filter((item) => item.status === "active").length,
       paused: all.filter((item) => item.status === "paused").length,
     };
-  }, [query.data]);
+  }, [query.items, query.total]);
 
   const refreshAll = () => {
     query.refresh();
@@ -148,14 +145,20 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ padding: compact ? 12 : 20, gap: 12, paddingBottom: 40 }}>
+    <ScrollView
+      contentContainerStyle={{ padding: compact ? 12 : 20, gap: 12, paddingBottom: 40 }}
+      onScroll={(e) => {
+        if (nearBottom(e)) query.loadMore();
+      }}
+      scrollEventThrottle={200}
+    >
       <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
         <View style={ui.s.grow}>
           <Text style={ui.s.title}>自动化</Text>
           <Text style={ui.s.muted}>定时或通过 Webhook / API 触发的智能体任务</Text>
         </View>
         <Btn ui={ui} label="新建" icon="Plus" tone="primary" onPress={() => setCreateOpen(true)} />
-        <IconBtn ui={ui} icon="RefreshCw" label="刷新" busy={query.refreshing} onPress={refreshAll} />
+        <IconBtn ui={ui} icon="RefreshCw" label="刷新" busy={query.loadingMore} onPress={refreshAll} />
       </View>
 
       {quotaUsed !== null && quotaLimit !== null ? (
@@ -192,7 +195,7 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
       />
 
       {query.error ? <ErrorNote ui={ui} message={query.error} onRetry={query.refresh} /> : null}
-      {query.loading && !query.data ? <LoadingRow ui={ui} /> : null}
+      {query.loading && query.items.length === 0 ? <LoadingRow ui={ui} /> : null}
       {!query.loading && list.length === 0 ? (
         <Card ui={ui} padded={false}>
           <Empty
@@ -283,6 +286,15 @@ export function AutomationPage({ initialFilter }: { initialFilter?: Filter }) {
           </Card>
         ))}
       </View>
+      <LoadMore
+        ui={ui}
+        loaded={query.items.length}
+        total={query.total}
+        hasMore={query.hasMore}
+        loadingMore={query.loadingMore}
+        loading={query.loading}
+        onLoadMore={query.loadMore}
+      />
 
       <CreateAutopilotModal
         ui={ui}
@@ -958,22 +970,30 @@ function RunsModal({
   onOpenIssue(id: string): void;
 }) {
   const ctx = useWorkbench();
-  const query = useQuery(
+  const query = usePagedQuery<Record<string, unknown>>(
     ctx.api,
     item ? `/api/autopilots/${item.id}/runs` : null,
-    { query: { limit: 30 }, select: (data) => asList<Record<string, unknown>>(data, "runs") },
+    { pageSize: 20 },
     item?.id,
+    "runs",
   );
   return (
     <Modal title={item ? `运行记录 · ${item.title}` : "运行记录"} open={Boolean(item)} onOpenChange={(next) => !next && onClose()}>
       <Modal.Content>
-        {query.loading ? <LoadingRow ui={ui} /> : null}
+        {query.loading && query.items.length === 0 ? <LoadingRow ui={ui} /> : null}
         {query.error ? <ErrorNote ui={ui} message={query.error} onRetry={query.refresh} /> : null}
-        {!query.loading && (query.data ?? []).length === 0 ? (
+        {!query.loading && query.items.length === 0 ? (
           <Empty ui={ui} icon="History" title="还没有运行记录" description="触发一次运行后，这里会显示结果。" />
         ) : null}
-        <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 6 }}>
-          {(query.data ?? []).map((run) => {
+        <ScrollView
+          style={{ maxHeight: 420 }}
+          contentContainerStyle={{ gap: 6 }}
+          onScroll={(e) => {
+            if (nearBottom(e, 120)) query.loadMore();
+          }}
+          scrollEventThrottle={200}
+        >
+          {query.items.map((run) => {
             const status = String(run.status ?? "");
             const meta = RUN_STATUS[status] ?? { label: status || "未知", tone: "muted" as const };
             const issueId = typeof run.issue_id === "string" ? run.issue_id : null;
@@ -999,6 +1019,15 @@ function RunsModal({
             );
           })}
         </ScrollView>
+        <LoadMore
+          ui={ui}
+          loaded={query.items.length}
+          total={query.total}
+          hasMore={query.hasMore}
+          loadingMore={query.loadingMore}
+        loading={query.loading}
+          onLoadMore={query.loadMore}
+        />
       </Modal.Content>
     </Modal>
   );

@@ -1,8 +1,8 @@
 import { Icon, Modal, copyText } from "@getpaseo/plugin/client/ui";
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
-import { asList, asRecord, str, useQuery, type ApiFn } from "./api";
-import { Avatar, Btn, Card, Chips, Empty, ErrorNote, Field, LoadingRow, Tag, useUi, type Ui } from "./bits";
+import { asList, asRecord, str, usePagedQuery, useQuery, type ApiFn } from "./api";
+import { Avatar, Btn, Card, Chips, Empty, ErrorNote, Field, LoadingRow, LoadMore, Tag, useUi, type Ui } from "./bits";
 import { useWorkbench } from "./context";
 import { relTime } from "./model";
 
@@ -142,8 +142,8 @@ function TokensCard({
   bump: number;
   toast: Toast;
 }) {
-  const query = useQuery(api, "/api/tokens", { select: (data) => asList<TokenRow>(data, "tokens") }, String(bump));
-  const tokens = query.data ?? [];
+  const query = usePagedQuery<TokenRow>(api, "/api/tokens", { pageSize: 30 }, String(bump), "tokens");
+  const tokens = query.items;
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -185,7 +185,7 @@ function TokensCard({
         <Btn ui={ui} label="新建" icon="Plus" tone="primary" onPress={() => setCreating(true)} />
       </View>
       {query.error ? <ErrorNote ui={ui} message={query.error} onRetry={query.refresh} /> : null}
-      {query.loading && !query.data ? (
+      {query.loading && tokens.length === 0 ? (
         <LoadingRow ui={ui} label="读取令牌…" />
       ) : tokens.length === 0 ? (
         <Empty ui={ui} icon="Key" title="还没有访问令牌" description="创建一个令牌后只显示一次完整密钥。" />
@@ -214,6 +214,15 @@ function TokensCard({
           );
         })
       )}
+      <LoadMore
+        ui={ui}
+        loaded={tokens.length}
+        total={query.total}
+        hasMore={query.hasMore}
+        loadingMore={query.loadingMore}
+        loading={query.loading}
+        onLoadMore={query.loadMore}
+      />
 
       <Modal title="新建访问令牌" icon={<Icon name="Key" size={16} color={ui.c.muted} />} open={creating} onOpenChange={(next) => !next && setCreating(false)}>
         <Modal.Content>
@@ -290,13 +299,14 @@ function MembersCard({
   bump: number;
   toast: Toast;
 }) {
-  const query = useQuery(
+  const query = usePagedQuery<MemberRow>(
     api,
     `/api/workspaces/${workspaceId}/members`,
-    { select: (data) => asList<MemberRow>(data, "members") },
+    { pageSize: 30 },
     `${workspaceId}:${bump}`,
+    "members",
   );
-  const members = query.data ?? [];
+  const members = query.items;
   const [inviting, setInviting] = useState(false);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"member" | "admin">("member");
@@ -344,7 +354,7 @@ function MembersCard({
         <Btn ui={ui} label="邀请" icon="UserPlus" tone="primary" onPress={() => setInviting(true)} />
       </View>
       {query.error ? <ErrorNote ui={ui} message={query.error} onRetry={query.refresh} /> : null}
-      {query.loading && !query.data ? <LoadingRow ui={ui} label="读取成员…" /> : null}
+      {query.loading && members.length === 0 ? <LoadingRow ui={ui} label="读取成员…" /> : null}
       {members.map((member) => {
         const isOwner = member.role === "owner";
         return (
@@ -373,6 +383,15 @@ function MembersCard({
           </View>
         );
       })}
+      <LoadMore
+        ui={ui}
+        loaded={members.length}
+        total={query.total}
+        hasMore={query.hasMore}
+        loadingMore={query.loadingMore}
+        loading={query.loading}
+        onLoadMore={query.loadMore}
+      />
 
       <Modal title="邀请成员" icon={<Icon name="UserPlus" size={16} color={ui.c.muted} />} open={inviting} onOpenChange={(next) => !next && setInviting(false)}>
         <Modal.Content>
@@ -432,13 +451,14 @@ function InvitationCard({
   bump: number;
   toast: Toast;
 }) {
-  const query = useQuery(
+  const query = usePagedQuery<InviteRow>(
     api,
     `/api/workspaces/${workspaceId}/invitations`,
-    { select: (data) => asList<InviteRow>(data, "invitations") },
+    { pageSize: 30 },
     `${workspaceId}:${bump}`,
+    "invitations",
   );
-  const rows = query.data ?? [];
+  const rows = query.items;
 
   const revoke = async (row: InviteRow) => {
     const id = str(row.id);
@@ -479,6 +499,15 @@ function InvitationCard({
           );
         })
       )}
+      <LoadMore
+        ui={ui}
+        loaded={rows.length}
+        total={query.total}
+        hasMore={query.hasMore}
+        loadingMore={query.loadingMore}
+        loading={query.loading}
+        onLoadMore={query.loadMore}
+      />
     </Card>
   );
 }

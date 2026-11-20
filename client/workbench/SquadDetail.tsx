@@ -40,7 +40,7 @@ export function SquadDetailModal({
   const members = useQuery(
     api,
     squadId ? `/api/squads/${squadId}/members` : null,
-    { select: (data) => asList<SquadMember>(data, "members") },
+    { query: { limit: 50 }, select: (data) => asList<SquadMember>(data, "members") },
     squadId ?? "",
   );
 
