@@ -1,7 +1,7 @@
 import type { PluginTheme } from "@getpaseo/plugin";
 import { Icon } from "@getpaseo/plugin/client/ui";
 import type { ReactNode } from "react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -439,6 +439,32 @@ export function Dot({ color, size = 7 }: { color: string; size?: number }) {
   return <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color }} />;
 }
 
+const AVATAR_PAIRS: [string, string][] = [
+  ["#7aa2f7", "#56b6c2"],
+  ["#3fb950", "#56b6c2"],
+  ["#e3b341", "#f0883e"],
+  ["#b48ead", "#7aa2f7"],
+  ["#ff7b72", "#b48ead"],
+  ["#56b6c2", "#3fb950"],
+  ["#f0883e", "#e3b341"],
+  ["#a8b0c2", "#8b93a7"],
+];
+
+function avatarSeed(seed: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function mixHex(a: string, b: string): string {
+  const ch = (hex: string, i: number) => parseInt(hex.slice(i, i + 2), 16);
+  const mix = (i: number) => Math.round((ch(a, i) + ch(b, i)) / 2).toString(16).padStart(2, "0");
+  return `#${mix(1)}${mix(3)}${mix(5)}`;
+}
+
 export function Avatar({
   name,
   url,
@@ -452,7 +478,16 @@ export function Avatar({
   color?: string;
   ui: Ui;
 }) {
-  const initials = (name ?? "?").trim().slice(0, 2).toUpperCase() || "?";
+  const [broken, setBroken] = useState(false);
+  useEffect(() => setBroken(false), [url]);
+  const label = (name ?? "?").trim() || "?";
+  // Multica 用 "emoji:🦄" 协议下发头像；其余非 http/data 的值一律走字母头像兜底
+  const emoji = url?.startsWith("emoji:") ? url.slice(6).trim() : null;
+  const pair = AVATAR_PAIRS[avatarSeed(label || url || "?") % AVATAR_PAIRS.length];
+  const imageUri = url && !emoji && !broken && /^(https?:|data:)/i.test(url) ? url : null;
+  const gradient = !color && !emoji && !imageUri ? `linear-gradient(135deg, ${pair[0]} 0%, ${pair[1]} 100%)` : undefined;
+  const glyph = Array.from(label)[0]?.toUpperCase() ?? "?";
+  const glyphColor = color ? pickTextColor(color) : gradient ? pickTextColor(mixHex(pair[0], pair[1])) : ui.c.fg;
   return (
     <View
       style={[
@@ -461,14 +496,20 @@ export function Avatar({
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: color ?? `${ui.c.accent}24`,
-        },
+          backgroundColor: color ?? (emoji ? `${pair[0]}26` : gradient ? pair[1] : ui.c.fill),
+          borderWidth: emoji ? 1 : 0,
+          borderColor: `${pair[0]}55`,
+          backgroundImage: gradient,
+          experimental_backgroundImage: gradient,
+        } as ViewStyle,
       ]}
     >
-      {url ? (
-        <Image source={{ uri: url }} style={{ width: size, height: size }} />
+      {emoji ? (
+        <Text style={{ fontSize: Math.max(10, size * 0.52), lineHeight: Math.max(12, size * 0.66) }}>{emoji}</Text>
+      ) : imageUri ? (
+        <Image source={{ uri: imageUri }} style={{ width: size, height: size }} onError={() => setBroken(true)} />
       ) : (
-        <Text style={[ui.s.avatarText, { color: color ?? ui.c.fg, fontSize: Math.max(9, size * 0.36) }]}>{initials}</Text>
+        <Text style={[ui.s.avatarText, { color: glyphColor, fontSize: Math.max(9, size * 0.4) }]}>{glyph}</Text>
       )}
     </View>
   );

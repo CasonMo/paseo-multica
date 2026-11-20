@@ -67,7 +67,9 @@ index.client.tsx      注册页面、设置页、侧边栏入口与命令面板�
 index.server.ts       注册 RPC 处理器
 client/workbench/     界面：Shell、通用组件、数据 hooks、各页面
                       bits.tsx 的 useUi 是唯一设计入口：Multica 官方色板/圆角/字阶（按宿主明暗自动切换），
-                      不直接沿用 Paseo 主题色；injectChrome 注入官方风格滚动条
+                      不直接沿用 Paseo 主题色；injectChrome 注入官方风格滚动条；
+                      Avatar 支持官方 `emoji:` 头像协议、http/data 图片（加载失败自动兜底）、
+                      无头像时按名字哈希取 Ghostty 色系渐变字母头像（文字色按 WCAG 对比度自动选黑/白）
 server/               store（连接持久化）、multica（HTTP 客户端）、handlers（RPC）
 shared/contracts.ts   RPC 契约（zod）
 shared/routes.ts      接口清单（方法、路径、所属域、处理函数）
