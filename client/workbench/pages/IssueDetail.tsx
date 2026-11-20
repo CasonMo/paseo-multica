@@ -356,7 +356,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                     borderRadius: 7,
                     borderWidth: 1,
                     borderColor: ui.c.border,
-                    backgroundColor: ui.c.surface1,
+                    backgroundColor: ui.c.surface2,
                   },
                   pressed && ui.s.pressed,
                 ]}
@@ -989,7 +989,7 @@ function CommentCard({
         borderRadius: 10,
         borderWidth: 1,
         borderColor: resolved ? `${ui.c.success}44` : ui.c.border,
-        backgroundColor: resolved ? `${ui.c.success}0f` : ui.c.surface0,
+        backgroundColor: resolved ? `${ui.c.success}0f` : ui.c.surface2,
       }}
     >
       <View style={[ui.s.row, { gap: 7, flexWrap: "wrap" }]}>

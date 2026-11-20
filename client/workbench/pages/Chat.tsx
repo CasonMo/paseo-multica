@@ -425,7 +425,7 @@ function Bubble({ ui, message, agentName }: { ui: Ui; message: ChatMessage; agen
           borderRadius: 12,
           borderTopRightRadius: mine ? 4 : 12,
           borderTopLeftRadius: mine ? 12 : 4,
-          backgroundColor: failed ? `${ui.c.danger}14` : mine ? ui.c.accent : ui.c.surface1,
+          backgroundColor: failed ? `${ui.c.danger}14` : mine ? ui.c.accent : ui.c.surface2,
           borderWidth: mine && !failed ? 0 : 1,
           borderColor: failed ? `${ui.c.danger}55` : ui.c.border,
         }}
