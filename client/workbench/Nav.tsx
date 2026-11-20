@@ -502,7 +502,6 @@ function SettingsNav() {
   const links = [
     { label: "服务器连接", icon: "Plug", tab: "connection" },
     { label: "工作区", icon: "Layers", tab: "workspace" },
-    { label: "企业微信", icon: "MessagesSquare", tab: "wecom" },
     { label: "账户", icon: "CircleUser", tab: "account" },
   ];
   return (

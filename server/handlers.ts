@@ -13,12 +13,6 @@ import {
   preferencesSaveRpc,
   workspaceSelectRpc,
   taskLogRpc,
-  wecomListRpc,
-  wecomPushRpc,
-  wecomRemoveRpc,
-  wecomSaveRpc,
-  wecomTestRpc,
-  wecomUnbindRpc,
 } from "../shared/contracts";
 import { normalizeBaseUrl, probeConnection, requestMultica } from "./multica";
 import {
@@ -32,8 +26,6 @@ import {
   updateWorkspaceMeta,
   type ResolvedServer,
 } from "./store";
-import { mutateWecom, newBotId } from "./wecomStore";
-import { wecomBridge } from "./wecomBridge";
 
 export function createHandlers() {
   const logInflight = new Map<string, Promise<RpcOutput<typeof taskLogRpc>>>();
@@ -182,107 +174,6 @@ export function createHandlers() {
     _input: RpcInput<typeof connectionsListRpc>,
   ): Promise<RpcOutput<typeof connectionsListRpc>> => list();
 
-  const wecomList = async (): Promise<RpcOutput<typeof wecomListRpc>> => wecomBridge.view();
-
-  const wecomSave = async (
-    input: RpcInput<typeof wecomSaveRpc>,
-  ): Promise<RpcOutput<typeof wecomSaveRpc>> => {
-    await mutateWecom((state) => {
-      let bot = input.id ? state.bots.find((item) => item.id === input.id) : undefined;
-      if (!bot) {
-        if (!input.serverId) throw new Error("请选择 Multica 服务器");
-        bot = {
-          id: newBotId(),
-          serverId: input.serverId,
-          workspaceId: input.workspaceId ?? null,
-          enabled: false,
-          botId: "",
-          secret: "",
-          agentId: null,
-          pushUnread: true,
-          delegate: false,
-          pushIntervalSec: 60,
-          targetChatId: "",
-          bindings: {},
-          pushedIds: [],
-          updatedAt: new Date().toISOString(),
-        };
-        state.bots.push(bot);
-      }
-      if (typeof input.serverId === "string" && input.serverId) {
-        if (input.serverId !== bot.serverId) {
-          bot.bindings = {};
-          bot.targetChatId = "";
-          bot.pushedIds = [];
-        }
-        bot.serverId = input.serverId;
-      }
-      if (input.workspaceId !== undefined) {
-        if (input.workspaceId !== bot.workspaceId) {
-          bot.bindings = {};
-          bot.targetChatId = "";
-          bot.pushedIds = [];
-        }
-        bot.workspaceId = input.workspaceId;
-      }
-      if (typeof input.enabled === "boolean") bot.enabled = input.enabled;
-      if (typeof input.botId === "string") bot.botId = input.botId.trim();
-      if (typeof input.secret === "string" && input.secret.trim()) bot.secret = input.secret.trim();
-      if (input.agentId !== undefined) bot.agentId = input.agentId;
-      if (typeof input.pushUnread === "boolean") bot.pushUnread = input.pushUnread;
-      if (typeof input.delegate === "boolean") bot.delegate = input.delegate;
-      if (typeof input.pushIntervalSec === "number") bot.pushIntervalSec = Math.max(15, Math.min(600, Math.round(input.pushIntervalSec)));
-      if (typeof input.targetChatId === "string") bot.targetChatId = input.targetChatId.trim();
-      bot.updatedAt = new Date().toISOString();
-    });
-    await wecomBridge.apply();
-    return wecomBridge.view();
-  };
-
-  const wecomRemove = async (
-    input: RpcInput<typeof wecomRemoveRpc>,
-  ): Promise<RpcOutput<typeof wecomRemoveRpc>> => {
-    await mutateWecom((state) => {
-      state.bots = state.bots.filter((bot) => bot.id !== input.id);
-    });
-    await wecomBridge.apply();
-    return wecomBridge.view();
-  };
-
-  const wecomTest = async (
-    input: RpcInput<typeof wecomTestRpc>,
-  ): Promise<RpcOutput<typeof wecomTestRpc>> => {
-    try {
-      await wecomBridge.test(input.id);
-      return { ok: true, error: null };
-    } catch (cause) {
-      return { ok: false, error: cause instanceof Error ? cause.message : String(cause) };
-    }
-  };
-
-  const wecomPush = async (
-    input: RpcInput<typeof wecomPushRpc>,
-  ): Promise<RpcOutput<typeof wecomPushRpc>> => {
-    try {
-      const pushed = await wecomBridge.pushCycle(input.id, true);
-      return { ok: true, pushed, error: null };
-    } catch (cause) {
-      return { ok: false, pushed: 0, error: cause instanceof Error ? cause.message : String(cause) };
-    }
-  };
-
-  const wecomUnbind = async (
-    input: RpcInput<typeof wecomUnbindRpc>,
-  ): Promise<RpcOutput<typeof wecomUnbindRpc>> => {
-    await mutateWecom((state) => {
-      const bot = state.bots.find((item) => item.id === input.id);
-      if (!bot) return;
-      delete bot.bindings[input.chatid];
-      if (bot.targetChatId === input.chatid) bot.targetChatId = Object.keys(bot.bindings)[0] ?? "";
-    });
-    return wecomBridge.view();
-  };
-
   const issueInsights = async (
     input: RpcInput<typeof issueInsightsRpc>,
   ): Promise<RpcOutput<typeof issueInsightsRpc>> => {
@@ -370,12 +261,6 @@ export function createHandlers() {
     selectWorkspace: selectWorkspaceHandler,
     preferences,
     inboxBadge,
-    wecomList,
-    wecomSave,
-    wecomRemove,
-    wecomTest,
-    wecomPush,
-    wecomUnbind,
     issueInsights,
     taskLog,
   };

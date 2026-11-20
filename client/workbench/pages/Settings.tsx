@@ -18,10 +18,9 @@ import { Avatar, Btn, Card, Chips, Divider, Empty, ErrorNote, Field, Tag, useUi 
 import { useWorkbench } from "../context";
 import { relTime } from "../model";
 import { AccountSettings, WorkspaceMembersSettings } from "../SettingsSections";
-import { WecomSection } from "../WecomSection";
 import { openExternalUrl } from "@getpaseo/plugin/client";
 
-export function SettingsPage({ initialTab }: { initialTab?: "connection" | "workspace" | "account" | "wecom" }) {
+export function SettingsPage({ initialTab }: { initialTab?: "connection" | "workspace" | "account" }) {
   const ctx = useWorkbench();
   const { theme, compact, connections, server, servers, user, workspaces, workspaceId, toast } = ctx;
   const ui = useUi(theme, compact);
@@ -31,7 +30,7 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
   const testRpc = useRpc(connectionsTestRpc);
   const prefRpc = useRpc(preferencesSaveRpc);
 
-  const [tab, setTab] = useState<"connection" | "workspace" | "account" | "wecom">(initialTab ?? "connection");
+  const [tab, setTab] = useState<"connection" | "workspace" | "account">(initialTab ?? "connection");
   const [editing, setEditing] = useState<ServerView | "new" | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<ServerView | null>(null);
@@ -97,14 +96,11 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
         options={[
           { value: "connection", label: "连接", icon: "Plug" },
           { value: "workspace", label: "工作区", icon: "Users" },
-          { value: "wecom", label: "企业微信", icon: "MessagesSquare" },
           { value: "account", label: "账户", icon: "User" },
         ] as const}
         value={tab}
         onChange={(next) => setTab(next as typeof tab)}
       />
-
-      {tab === "wecom" ? <WecomSection /> : null}
 
       {tab === "connection" ? (
       <Card ui={ui} style={{ gap: 10 }}>

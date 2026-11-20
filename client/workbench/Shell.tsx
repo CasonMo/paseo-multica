@@ -68,7 +68,7 @@ export function Shell() {
         ) : page === "api" ? (
           <ApiExplorerPage />
         ) : (
-          <SettingsPage key={params.tab ?? "connection"} initialTab={params.tab as "connection" | "workspace" | "account" | "wecom"} />
+          <SettingsPage key={params.tab ?? "connection"} initialTab={params.tab as "connection" | "workspace" | "account"} />
         )}
       </View>
 
