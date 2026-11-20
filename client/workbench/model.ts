@@ -95,6 +95,7 @@ export interface Skill {
   slug?: string;
   description?: string;
   source?: string;
+  enabled?: boolean;
   created_at?: string;
   updated_at?: string;
 }

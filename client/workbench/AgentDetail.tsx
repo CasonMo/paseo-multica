@@ -4,16 +4,41 @@ import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { asList, asRecord, str, useQuery } from "./api";
 import { Avatar, Btn, Chips, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, Tag, useUi } from "./bits";
 import { useWorkbench } from "./context";
-import { agentStatusMeta, fmtDateTime, type Agent, type AgentRuntime, type Label } from "./model";
+import { agentStatusMeta, fmtDateTime, relTime, type Agent, type AgentRuntime, type Label, type Skill } from "./model";
 
-type DetailTab = "overview" | "env" | "mcp" | "labels";
+type DetailTab = "overview" | "skills" | "tasks" | "env" | "mcp" | "labels";
 
 const TABS: { key: DetailTab; label: string; icon: string }[] = [
   { key: "overview", label: "概览", icon: "Info" },
+  { key: "skills", label: "技能", icon: "Blocks" },
+  { key: "tasks", label: "任务", icon: "ListChecks" },
   { key: "env", label: "环境变量", icon: "KeyRound" },
   { key: "mcp", label: "MCP", icon: "Plug" },
   { key: "labels", label: "标签", icon: "Tags" },
 ];
+
+type AgentTask = {
+  id: string;
+  status?: string;
+  issue_id?: string;
+  error?: string | null;
+  attempt?: number;
+  max_attempts?: number;
+  dispatched_at?: string;
+  completed_at?: string;
+  result?: { output?: string; pr_url?: string } | null;
+};
+
+const TASK_STATUS: Record<string, { label: string; tone: "success" | "danger" | "accent" | "warning" | "muted" }> = {
+  completed: { label: "已完成", tone: "success" },
+  failed: { label: "失败", tone: "danger" },
+  error: { label: "失败", tone: "danger" },
+  cancelled: { label: "已取消", tone: "muted" },
+  running: { label: "运行中", tone: "accent" },
+  started: { label: "运行中", tone: "accent" },
+  dispatched: { label: "已派发", tone: "warning" },
+  claimed: { label: "已领取", tone: "warning" },
+};
 
 function runtimeLabelOf(agent: Agent, runtimes: AgentRuntime[]): string {
   if (!agent.runtime_id) return "未绑定运行时";
@@ -171,6 +196,8 @@ export function AgentDetailModal({
                   </>
                 ) : null}
 
+                {tab === "skills" ? <SkillsPanel ui={ui} api={api} agentId={agent.id} toast={toast} /> : null}
+                {tab === "tasks" ? <TasksPanel ui={ui} api={api} agentId={agent.id} /> : null}
                 {tab === "env" ? <EnvPanel ui={ui} api={api} agentId={agent.id} toast={toast} /> : null}
                 {tab === "mcp" ? <McpPanel ui={ui} api={api} agentId={agent.id} toast={toast} /> : null}
                 {tab === "labels" ? <LabelPanel ui={ui} api={api} agentId={agent.id} toast={toast} key={key} /> : null}
@@ -223,6 +250,156 @@ export function AgentDetailModal({
         onError={(message) => toast.error(message)}
       />
     </>
+  );
+}
+
+function SkillsPanel({
+  ui,
+  api,
+  agentId,
+  toast,
+}: {
+  ui: ReturnType<typeof useUi>;
+  api: ReturnType<typeof useWorkbench>["api"];
+  agentId: string;
+  toast: ReturnType<typeof useWorkbench>["toast"];
+}) {
+  const ctx = useWorkbench();
+  const key = `${ctx.bump}:${agentId}`;
+  const all = useQuery(api, "/api/skills", { select: (data) => asList<Skill>(data, "skills") }, key);
+  const bound = useQuery(api, `/api/agents/${agentId}/skills`, { select: (data) => asList<Skill>(data, "skills") }, key);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const boundMap = useMemo(() => new Map((bound.data ?? []).map((skill) => [skill.id, skill])), [bound.data]);
+  const items = all.data ?? [];
+
+  const setBound = async (skill: Skill, next: boolean) => {
+    setBusyId(skill.id);
+    const result = next
+      ? await api({ method: "POST", path: `/api/agents/${agentId}/skills/add`, body: { skill_ids: [skill.id] } })
+      : await api({ method: "DELETE", path: `/api/agents/${agentId}/skills/${skill.id}` });
+    setBusyId(null);
+    if (result.ok) bound.refresh();
+    else toast.error(result.error ?? "更新失败");
+  };
+
+  const setEnabled = async (skill: Skill, next: boolean) => {
+    setBusyId(skill.id);
+    const result = await api({
+      method: "PUT",
+      path: `/api/agents/${agentId}/skills/${skill.id}/enabled`,
+      body: { enabled: next },
+    });
+    setBusyId(null);
+    if (result.ok) bound.refresh();
+    else toast.error(result.error ?? "更新失败");
+  };
+
+  return (
+    <View style={{ gap: 8 }}>
+      <Text style={ui.s.tiny}>技能为智能体提供可复用的工具与知识，绑定后可在开关里单独停用。</Text>
+      {all.loading && items.length === 0 ? <LoadingRow ui={ui} /> : null}
+      {!all.loading && items.length === 0 ? (
+        <Empty ui={ui} icon="Blocks" title="工作区还没有技能" description="在 Multica 后台创建技能后回到「团队 → 技能」即可看到并绑定。" />
+      ) : null}
+      {items.map((skill) => {
+        const linked = boundMap.get(skill.id);
+        const enabled = linked ? linked.enabled !== false : false;
+        return (
+          <View key={skill.id} style={[ui.s.row, { gap: 8, padding: 9, borderRadius: 9, backgroundColor: ui.c.surface0 }]}>
+            <Icon name="Blocks" size={14} color={linked ? ui.c.accent : ui.c.muted} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text numberOfLines={1} style={[ui.s.body, { fontWeight: "600" }]}>
+                {skill.name}
+              </Text>
+              <Text numberOfLines={2} style={ui.s.tiny}>
+                {skill.description || skill.slug || "—"}
+              </Text>
+            </View>
+            {linked ? <Tag ui={ui} label={enabled ? "已启用" : "已停用"} tone={enabled ? "success" : "muted"} /> : null}
+            {linked ? (
+              <IconBtn
+                ui={ui}
+                icon={enabled ? "ToggleRight" : "ToggleLeft"}
+                label={enabled ? "停用技能" : "启用技能"}
+                color={enabled ? ui.c.accent : ui.c.muted}
+                busy={busyId === skill.id}
+                onPress={() => void setEnabled(skill, !enabled)}
+              />
+            ) : null}
+            <IconBtn
+              ui={ui}
+              icon={linked ? "Minus" : "Plus"}
+              label={linked ? `解绑技能 ${skill.name}` : `绑定技能 ${skill.name}`}
+              color={linked ? ui.c.danger : ui.c.accent}
+              busy={busyId === skill.id}
+              onPress={() => void setBound(skill, !linked)}
+            />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function TasksPanel({
+  ui,
+  api,
+  agentId,
+}: {
+  ui: ReturnType<typeof useUi>;
+  api: ReturnType<typeof useWorkbench>["api"];
+  agentId: string;
+}) {
+  const ctx = useWorkbench();
+  const query = useQuery(
+    api,
+    `/api/agents/${agentId}/tasks`,
+    { query: { limit: 20 }, select: (data) => asList<AgentTask>(data, "tasks") },
+    `${ctx.bump}:${agentId}`,
+  );
+  const items = query.data ?? [];
+
+  return (
+    <View style={{ gap: 8 }}>
+      <View style={[ui.s.row, { justifyContent: "space-between" }]}>
+        <Text style={ui.s.tiny}>最近 20 条任务派发记录</Text>
+        <IconBtn ui={ui} icon="RefreshCw" label="刷新任务" busy={query.refreshing} onPress={query.refresh} />
+      </View>
+      {query.loading && items.length === 0 ? <LoadingRow ui={ui} /> : null}
+      {query.error ? <ErrorNote ui={ui} message={query.error} onRetry={query.refresh} /> : null}
+      {!query.loading && !query.error && items.length === 0 ? (
+        <Empty ui={ui} icon="ListChecks" title="暂无任务" description="智能体被派发需求或对话后会在这里留下记录。" />
+      ) : null}
+      {items.map((task) => {
+        const meta = TASK_STATUS[task.status ?? ""] ?? { label: task.status || "未知", tone: "muted" as const };
+        const output = task.result?.output?.trim();
+        const cost = task.completed_at
+          ? Math.max(0, Math.round((Date.parse(task.completed_at) - Date.parse(task.dispatched_at ?? task.completed_at)) / 1000))
+          : null;
+        return (
+          <View key={task.id} style={{ gap: 4, padding: 9, borderRadius: 9, backgroundColor: ui.c.surface0 }}>
+            <View style={[ui.s.row, { gap: 8 }]}>
+              <Tag ui={ui} label={meta.label} tone={meta.tone} />
+              <Text numberOfLines={1} style={[ui.s.tiny, ui.s.grow]}>
+                {task.issue_id ? `需求 ${task.issue_id.slice(0, 8)}` : "对话任务"} · 第 {task.attempt ?? 1}/
+                {task.max_attempts ?? 1} 次
+              </Text>
+              <Text style={ui.s.tiny}>{cost === null ? relTime(task.dispatched_at) : `${cost}s`}</Text>
+            </View>
+            {task.error ? (
+              <Text numberOfLines={3} style={[ui.s.tiny, { color: ui.c.danger }]}>
+                {task.error}
+              </Text>
+            ) : output ? (
+              <Text numberOfLines={3} style={ui.s.tiny}>
+                {output}
+              </Text>
+            ) : null}
+          </View>
+        );
+      })}
+    </View>
   );
 }
 
