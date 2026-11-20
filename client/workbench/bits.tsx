@@ -520,6 +520,32 @@ export function Avatar({
   );
 }
 
+/** Enter 发送 / Shift+Enter 换行；中文输入法组合期间的 Enter 不触发发送。
+ *  RN-web 不透传 onKeyDown，故用 callback ref 挂原生 keydown 监听。 */
+export function enterToSend(submit: () => void) {
+  type EnterNode = {
+    addEventListener?: (type: string, fn: (e: { key: string; shiftKey: boolean; isComposing: boolean; preventDefault(): void }) => void) => void;
+    __enterSubmit?: () => void;
+    __enterHook?: boolean;
+  };
+  return {
+    ref: (node: unknown) => {
+      const el = node as EnterNode | null;
+      if (!el || typeof el.addEventListener !== "function") return;
+      el.__enterSubmit = submit;
+      if (!el.__enterHook) {
+        el.__enterHook = true;
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+            e.preventDefault();
+            el.__enterSubmit?.();
+          }
+        });
+      }
+    },
+  } as object;
+}
+
 /** 瀑布流触底判定：距底 pad 内即预取下一页。 */
 export function nearBottom(e: NativeSyntheticEvent<NativeScrollEvent>, pad = 260): boolean {
   const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;

@@ -12,7 +12,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
-import { Avatar, Btn, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, Tag, useUi, type Ui } from "../bits";
+import { Avatar, Btn, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, Tag, enterToSend, useUi, type Ui } from "../bits";
 import { asList, asRecord, useQuery } from "../api";
 import { refreshInboxBadge } from "../badge";
 import { useWorkbench } from "../context";
@@ -1365,7 +1365,7 @@ function ReplyBand({
           placeholder={t("IssueDetail.134")}
           placeholderTextColor={ui.c.faint}
           multiline
-          onSubmitEditing={onSend}
+          {...enterToSend(onSend)}
           style={{
             flex: 1,
             minHeight: 24,
@@ -1445,6 +1445,7 @@ function CommentComposer({
         placeholder={placeholder}
         placeholderTextColor={ui.c.faint}
         multiline
+        {...enterToSend(onSend)}
         style={{
           minHeight: 36,
           maxHeight: 140,

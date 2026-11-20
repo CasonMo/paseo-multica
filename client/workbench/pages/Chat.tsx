@@ -3,7 +3,7 @@ import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View, type TextStyle } from "react-native";
 import { asList, useQuery } from "../api";
-import { Avatar, Btn, Card, Dot, Empty, ErrorNote, LoadingRow, useUi, type Ui } from "../bits";
+import { Avatar, Btn, Card, Dot, Empty, ErrorNote, LoadingRow, enterToSend, useUi, type Ui } from "../bits";
 import { TaskStepsBlock } from "../Execution";
 import { useWorkbench } from "../context";
 import { relTime, type Agent, type ChatMessage, type ChatSession } from "../model";
@@ -329,8 +329,8 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
             placeholder={t("Chat.20")}
             placeholderTextColor={ui.c.muted}
             multiline
-            onSubmitEditing={() => void send()}
             blurOnSubmit={false}
+            {...enterToSend(() => void send())}
             style={[
               ui.s.input,
               { flex: 1, minHeight: 42, maxHeight: 140, paddingTop: 11, backgroundColor: ui.c.surface0 },
