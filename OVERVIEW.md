@@ -1,88 +1,99 @@
 # Multica
 
-在 Paseo 里原生复刻 Multica 管理后台：需求、团队、聊天、自动化、接口调试与工作区设置，全部直接调用 Multica 后端 API。同时支持 `https://api.multica.ai` 官方云与任意自建 Multica 服务器。
+Multica is a native admin console for Multica inside Paseo. It covers issues and kanban,
+projects, team (agents, squads, runtimes, skills), chat, automation, workflows, labels,
+inbox, execution logs and workspace settings. It works with the official Multica cloud
+(`https://api.multica.ai`) and with any self-hosted Multica server.
 
-## 安装
+## How it works
 
-```bash
-cd /path/to/paseo-multica
-npm install
-paseo plugin install /path/to/paseo-multica
-```
+The interface runs inside Paseo and recreates the layout of the official Multica console:
+an icon rail for sections, a contextual second sidebar, and a main content area. Every
+Multica API request is made by the Paseo daemon; the interface talks to the daemon over
+Paseo's plugin RPC, so the browser tab never holds credentials or calls Multica directly.
+Colors follow the official Multica palette and adapt to Paseo's light and dark themes.
+The UI language follows the Paseo app language (English or Simplified Chinese); a
+plugin-level override in Settings → Language can pin either language on this device.
 
-开发模式改完代码执行 `paseo plugin reload multica` 即可生效。
+## Setup
 
-## 配置连接
+Requires Paseo 0.16.2 or later, on any operating system the Paseo daemon supports
+(macOS, Linux, Windows). You need a Multica account or server and a personal access
+token; the plugin does not create accounts. Installation commands are in the README.
 
-1. 打开侧边栏底部 `Multica`，或命令面板搜索「Multica」。
-2. 首次进入会自动跳到「设置」，点击「添加」：
-   - 服务器地址：官方云填 `https://api.multica.ai`；自建填自己的 API 根地址
-   - API Key：在 Multica 后台「个人设置 → API Key」创建，形如 `mul_...`
-   - 工作区：可留空，连接成功后自动选中第一个
-3. 保存后「测试」按钮会实际请求 `/api/me` 与 `/api/workspaces`，失败会给出具体原因。
+1. Open **Multica** from the Paseo sidebar or the command center. The first run lands on
+   Settings → Connections.
+2. Add a server:
+   - **Base URL** — `https://api.multica.ai` for the official cloud, or the API root of
+     your self-hosted server.
+   - **API key** — a personal access token created in Multica under Settings → API
+     tokens, shaped like `mul_...`.
+   - **Workspace** — optional; after a successful connection test the first workspace is
+     selected automatically.
+3. The **Test** button makes real requests to `/api/me` and `/api/workspaces` and reports
+   the concrete failure reason if the connection does not work.
 
-可以添加多个服务器随时切换，每个连接各自保存 Key、工作区与内部接口开关。
+You can save several servers and switch between them at any time. Each connection keeps
+its own key, workspace and internal-route preference.
 
-## 功能
+## What you can do
 
-| 页面 | 能力 |
-| --- | --- |
-| 概览 | 需求统计、最近更新、收件箱（固定高度内部滚动 + 条数统计与「查看全部」入口）、在线运行时、智能体状态、用量与稳定性 |
-| 工作 | 六列看板（待规划/待办/进行中/审核中/已完成/已取消）与 36px 单行列表视图、搜索、按项目筛选；任务详情为「面包屑 + 居中正文 + 右侧可折叠属性面板」，支持状态/优先级/负责人/项目/标签变更、父任务与子任务同块展示、子任务创建、评论线程（每条根评论一张卡片，底部常驻「回复...」输入条，回复全宽排列并以「N 条动态」折叠，`@` 弹出智能体选择浮层并序列化为 `mention://agent/<id>`，可标记解决；触发评论下方显示官方同款「智能体正在响应」行：实时步骤文本 + 秒级计时 + 展开单次运行日志 + 停止运行（二次确认），运行结束自动落为评论与运行日志链接）、评论每 8 秒自动刷新并在右下角提供「到底部 / 回顶部」悬浮按钮（有新评论时显示条数）、重跑与删除 |
-| 项目 | 项目列表、进度与负责人、新建/编辑/归档 |
-| 收件箱 | 标题栏与筛选/搜索吸顶、列表在固定高度内滚动、底部常驻条数统计；**进入收件箱自动标记已读**（侧栏未读徽章随之清零，无需手动点），停留期间新到未读也会自动已读（本次停留手动「标记未读」的除外，保留到离开收件箱）；通知分类与已读/未读筛选、手动全部标为已读；未读数会同步到 Paseo 左侧「Multica」菜单项的徽章上 |
-| 工作流 | 状态与流转规则编排、新建/编辑/删除 |
-| 标签 | 标签分组与颜色、新建/编辑/删除 |
-| 团队 | 智能体 / 小队 / 运行时 / 技能四个标签页；新建智能体、新建小队，小队成员增删、编辑与删除，运行时详情（24h 活动、按日/按智能体用量）；智能体详情含技能绑定与启停、最近任务记录、环境变量、MCP 与标签 |
-| 聊天 | 会话列表、按智能体发起新对话、消息流、发送消息 |
-| 自动化 | 列表筛选、新建（执行方式 + 执行者 + Cron）、暂停/恢复、立即运行、运行记录 |
-| 设置 | 连接 / 工作区 / 接口调试 / 账户四个标签：多服务器管理、工作区切换、成员与邀请、个人资料、访问令牌（仅显示一次）、通知偏好、内部接口开关；接口调试内嵌于此（唯一入口）：内置 524 个公开接口（开启内部接口后 568 个），支持路径/查询/请求体编辑、实际调用并查看状态码、耗时与响应 JSON |
+- **Overview** — issue statistics, recently updated issues, project progress, a
+  fixed-height inbox preview with unread count, online runtimes, agent status, and
+  seven-day usage and stability (tokens, tasks, failure reasons, average duration).
+- **Issues** — a six-column kanban with per-column totals and a compact list view,
+  search and project filters. The detail view edits status, priority, assignee, project
+  and labels through dropdowns, shows parent and child issues together, and carries a
+  threaded comment section: replies, `@` agent mentions, resolve toggles, and per-comment
+  activity groups. A comment that dispatches an agent shows a live "agent is responding"
+  row with step text, a seconds timer, a run-log shortcut and a confirmed stop action;
+  when the run finishes it becomes a comment with a link to its run log.
+- **Execution logs** — a right-panel summary (cost, tokens, agent work time), a run
+  history modal with per-agent bars and a day-grouped table, and a searchable per-run
+  step log with offsets, durations, commands and outputs.
+- **Inbox** — category and read filters, search, archive, snooze and delete. Entering the
+  inbox marks notifications read automatically; the unread count also appears on the
+  Paseo sidebar entry. Clicking the badge opens the inbox; clicking the row returns to
+  the last opened page.
+- **Team** — agents, squads, runtimes and skills. Create agents with a model picked from
+  the runtime's live model list, manage squad members and leaders, bind skills, inspect
+  runtime activity and per-agent usage, and review agent tasks, environment variables,
+  MCP servers and labels.
+- **Chat** — start conversations per agent, send messages, and follow execution steps
+  and suggested follow-ups inside the thread.
+- **Automation, workflows, labels, projects** — full create and edit surfaces with
+  dropdown option fields, cron triggers, status handoff rules, colors and progress.
+- **Settings** — connections, workspace switching, members and invitations, profile,
+  access tokens (shown once), notification preferences, an internal-route toggle, and an
+  embedded API explorer with 524 public routes (568 with internal routes enabled) that
+  sends real requests and shows status, duration and response JSON.
+- **Loading behavior** — paginated lists fetch 20–50 items first and prefetch the next
+  page near the bottom, with a load-more button and a loaded/total footer. Endpoints
+  without upstream pagination (inbox, chat) load in a single request and say so.
 
-界面按官方后台还原：最左图标栏保留分区（概览/工作/项目/团队/聊天/自动化/工作流/标签）与新建/搜索/刷新/设置/账户；接口调试不设独立菜单，唯一入口为设置→接口调试标签（命令面板与需求详情快捷按钮均指向该标签）；图标栏底部的「收起导航」可把图标栏压成纯图标并隐藏二级侧栏，状态持久化。二级侧栏只保留该分区独有内容：工作页为收件箱入口 + 可折叠的「最近通知 / 视图 / 项目」分组，团队页为组织分组，自动化页为任务分组，设置页为设置项分组；分组收起/展开状态持久化。概览/收件箱/项目/工作流/标签等二级侧栏内容与主区域或图标栏重复的分区直接不显示二级侧栏，把宽度让给主内容。两侧栏宽度随面板实测宽度收窄（图标栏 48、二级侧栏 224/196、详情右栏 248/224），面板不足 820px 时二级侧栏隐藏、详情右栏改为堆叠在正文下方；此时工作页工具栏提供「视图与项目筛选」入口保证筛选不丢失。
+## Where your data goes
 
-Paseo 左侧「Multica」菜单项带未读通知徽章：由 daemon 侧 `workbench.inbox_badge` 读取当前连接的 `/api/inbox/unread-count`，客户端每 20 秒轮询，工作台里标记已读/归档后立即重取；徽章配色跟随宿主主题，与相邻插件的徽章同规格。**点击菜单行**恢复上次打开的页面（无记录时落概览），**只有点击未读徽章**才跳转收件箱；上次页面持久化到本机。
+- The only network destination is the Multica base URL you configure. There is no
+  telemetry, no hidden network call, no dynamic code execution, and nothing is downloaded
+  or installed while the plugin runs.
+- The API key is stored only on the daemon host, in `~/.paseo/multica/connections.json`
+  with file mode `0600`. It is never sent to the interface; settings show a masked form
+  such as `mul_…abcd`. The daemon attaches it as an `Authorization: Bearer` header on
+  requests to the selected server only.
+- Issue content, comments, chat messages and agent instructions you write are sent to the
+  configured Multica server, which dispatches them to its own agent runtimes. This plugin
+  sends nothing to any other third party.
+- `/api/internal` and `/api/daemon` routes stay hidden until you explicitly enable them
+  in settings. Requests sent from the API explorer are real and carry your token's
+  permissions.
+- Listing screenshots are rendered from synthetic seed data and contain no real
+  workspace content.
 
-## 列表加载策略
+## Limitations
 
-- 支持 offset 分页的列表（需求列表与看板各列、团队四个 tab、自动化、项目、标签、工作流、成员/邀请/令牌、智能体派发记录、自动化运行记录）统一走 `usePagedQuery`：首屏 20–50 条，滚动触底自动预取下一页（瀑布流），并保留「加载更多」按钮与「已加载 / 总数」footer；搜索/筛选/key 变化重置回第一页；请求串行防堆积。
-- 看板按列独立分页（`status_category`），列头计数为该列服务端总数；视图筛选（执行中/已完成/已取消）时只展示对应列。
-- 团队页只请求当前 tab；跨 tab lookup（小队队长、智能体运行时）封顶 50 且按需加载。
-- 不支持分页的接口（收件箱、聊天会话/消息）优雅降级为单次全量，footer 显示「已全部加载」；聊天消息保持服务端升序，不做倒序假设。
-- 概览/二级侧栏/详情 lookup 由整表（limit 100）降为 5–50；insights 服务端对 comments/timeline/task-runs 加 limit=200 上限。
-
-## 运行状态与执行日志
-
-- 看板卡片 / 列表行通过 `/api/working-agents`（10s 轮询）标出正在跑任务的智能体；详情顶栏通过 active-task 显示「<智能体> 在工作」胶囊。
-- 每条评论卡片下的「N 条动态」按时间把 `/api/issues/{id}/timeline` 的活动（状态变更 / 完成运行 / 失败 / 负责人变更）归到它前面最近的根评论下，展开后逐条显示「谁 做了什么 · 时间」，与官方后台形式一致；回复另以「N 条回复」折叠。
-- 执行日志放在**右侧属性栏**的「执行日志」分区（不在评论底部）：已花费 / Token / 智能体工作时长汇总 + 最近运行 + 「详情」入口。
-- 「详情」打开**运行记录**弹窗：汇总统计、按次/累计 × 费用/Token/智能体工作 切换、按智能体着色的运行条形图、按天分组的明细表（时间/触发/智能体/模型/时长/Token），点行进入单次运行日志。
-- 单次**运行日志**弹窗：状态/智能体/触发人/用时、触发内容、产出命令数、模型与工具耗时条、可搜索的步骤列表（+偏移 / 工具 / 描述 / 耗时），展开看完整命令与输出（等宽、限高内滚动）；运行中每 4s 刷新。
-- 评论若由某次运行产生，卡片上显示「运行日志 · 时长」入口；运行中时在触发评论/回复下方显示官方同款「智能体正在响应」行（实时步骤文本 + 秒级计时 + 展开运行日志 + 停止运行二次确认），无触发评论证据时兜底挂线程末尾。
-- 数据经服务端聚合 RPC（`workbench.issue_insights` / `workbench.task_log`）拉取并做字段投影与截断，8s 轮询，避免大 payload 与客户端逐条查询的不稳定。
-
-## 安全
-
-- 网络目的地仅有两个：用户配置的 Multica base URL（默认 `https://api.multica.ai`，或任意自建服务器）；无遥测、无隐藏网络调用、无动态代码执行。
-- listing 媒体（assets/screenshots/{en,zh}/*.png、assets/icon.png）为虚构种子数据（tools/demo-data.mjs）经 tools/render-media.mjs 构造的脱敏渲染图（英/中两语），不含任何真实工作区数据；tools/demo-server.mjs 提供同一种子数据的本地演示 API。
-- 国际化：UI 默认跟随 Paseo 宿主语言（English/中文）；设置→语言提供插件级_override（跟随 Paseo/English/中文，本机持久化，默认跟随）。906 条双语 catalog（tools/i18n-zh.json / i18n-en.json）经 tools/i18n-build.mjs 编译为 i18n-resources.ts；调用点统一 t()，命令面板/设置页标题等持久注册用 SDK PluginMessage 由宿主按呈现语言解析；设置页显示当前生效 locale。
-- API Key 只保存在本机 Paseo 后台：`~/.paseo/multica/connections.json`（权限 `0600`）。
-- Key 不会下发到客户端界面，设置页只显示 `mul_…abcd` 形式的掩码。
-- 所有请求由 daemon 侧发起，客户端通过 RPC 间接调用，浏览器标签页里拿不到明文 Key。
-- `/api/internal`、`/api/daemon` 默认隐藏，需在设置里显式开启。
-
-## 结构
-
-```
-index.client.tsx      注册页面、设置页、侧边栏入口与命令面板项
-index.server.ts       注册 RPC 处理器
-client/workbench/     界面：Shell、通用组件、数据 hooks、各页面
-                      bits.tsx 的 useUi 是唯一设计入口：Multica 官方色板/圆角/字阶（按宿主明暗自动切换），
-                      不直接沿用 Paseo 主题色；injectChrome 注入官方风格滚动条；
-                      Avatar 支持官方 `emoji:` 头像协议、http/data 图片（加载失败自动兜底）、
-                      无头像时按名字哈希取 Ghostty 色系渐变字母头像（文字色按 WCAG 对比度自动选黑/白）
-server/               store（连接持久化）、multica（HTTP 客户端）、handlers（RPC）
-shared/contracts.ts   RPC 契约（zod）
-shared/routes.ts      接口清单（方法、路径、所属域、处理函数）
-```
-
-类型检查：`npm run typecheck`。
+- A Multica server and a personal access token are required; without them the plugin
+  shows the connection setup and nothing else.
+- Inbox and chat lists cannot paginate because the upstream endpoints ignore pagination
+  parameters; they load in one request.
+- The plugin manages one workspace per connection at a time; switching workspaces or
+  servers is done in settings.
