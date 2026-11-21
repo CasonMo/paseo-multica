@@ -56,7 +56,7 @@ export const resources = {
     "58": "Issue {{a}}",
     "59": "Chat task",
     "60": "· attempt ",
-    "61": "",
+    "61": "attempts",
     "62": "Invalid variable name {{a}}",
     "63": "Environment saved",
     "64": "Save failed",
@@ -986,6 +986,25 @@ export const resources = {
       "21": "Multica connection settings",
       "24": "server"
     }
+  },
+  "ServerErr": {
+    "1": "Enter a server name",
+    "2": "Invalid server URL",
+    "3": "Invalid API key format",
+    "4": "Changing the server URL requires the API key of the new server",
+    "5": "No API key configured yet; add one in Multica settings",
+    "6": "No Multica server configured yet",
+    "7": "Only Multica routes under /api are supported",
+    "8": "Invalid route path",
+    "9": "This route does not accept personal access tokens; blocked",
+    "10": "Route {{a}} {{b}} not found in the route table; check parameter placeholders",
+    "11": "Daemon routes are an internal executor protocol; enable \"Allow internal routes\" in settings first",
+    "12": "Request failed (HTTP {{a}})",
+    "13": "Request timed out; check network or server URL",
+    "14": "Cannot reach the server; check URL, network or proxy",
+    "15": "Connection failed",
+    "16": "Failed to read inbox",
+    "17": "Failed to read steps"
   }
 },
   "zh-CN": {
@@ -1974,6 +1993,25 @@ export const resources = {
       "21": "Multica 连接设置",
       "24": "服务器"
     }
+  },
+  "ServerErr": {
+    "1": "请填写服务器名称",
+    "2": "服务器地址不合法",
+    "3": "API Key 格式不正确",
+    "4": "更换服务器地址后必须输入新服务器的 API Key",
+    "5": "尚未配置 API Key，请到 Multica 设置中填写",
+    "6": "尚未配置 Multica 服务器",
+    "7": "仅支持 /api 下的 Multica 接口",
+    "8": "接口路径不合法",
+    "9": "该接口不接受个人访问令牌，已阻止",
+    "10": "未在路由表中找到 {{a}} {{b}}，请检查参数占位符",
+    "11": "守护进程接口属于执行器内部协议，请在设置中开启「允许内部接口」后再调用",
+    "12": "请求失败 (HTTP {{a}})",
+    "13": "请求超时，请检查网络或服务器地址",
+    "14": "无法连接到服务器，请检查地址、网络或代理",
+    "15": "连接失败",
+    "16": "读取收件箱失败",
+    "17": "读取步骤失败"
   }
 },
 } as const;

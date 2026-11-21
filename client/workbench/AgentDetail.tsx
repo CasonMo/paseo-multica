@@ -3,7 +3,7 @@ import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { asList, asRecord, str, usePagedQuery, useQuery, useRuntimeModels } from "./api";
-import { Avatar, Btn, Chips, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, LoadMore, Tag, useUi , Select } from "./bits";
+import { Avatar, Btn, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, LoadMore, Tag, useUi , Select } from "./bits";
 import { useWorkbench } from "./context";
 import { agentStatusMeta, fmtDateTime, relTime, type Agent, type AgentRuntime, type Label, type Skill } from "./model";
 
@@ -248,7 +248,6 @@ export function AgentDetailModal({
           detail.refresh();
           invalidate();
         }}
-        onError={(message) => toast.error(message)}
       />
     </>
   );
@@ -735,7 +734,6 @@ function EditAgentModal({
   runtimes,
   onClose,
   onSaved,
-  onError,
 }: {
   ui: ReturnType<typeof useUi>;
   api: ReturnType<typeof useWorkbench>["api"];
@@ -743,7 +741,6 @@ function EditAgentModal({
   runtimes: AgentRuntime[];
   onClose(): void;
   onSaved(): void;
-  onError(message: string): void;
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -860,15 +857,4 @@ function EditAgentModal({
   );
 }
 
-function ChipButton({ ui, active, label, onPress }: { ui: ReturnType<typeof useUi>; active: boolean; label: string; onPress(): void }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [ui.s.chip, active && ui.s.chipActive, pressed && ui.s.pressed]}
-    >
-      <Text style={[ui.s.chipText, active && ui.s.chipTextActive]}>{label}</Text>
-    </Pressable>
-  );
-}
 

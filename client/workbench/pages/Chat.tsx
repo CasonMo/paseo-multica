@@ -1,9 +1,9 @@
 import { t } from "../i18n";
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View, type TextStyle } from "react-native";
+import { Pressable, ScrollView, Text, TextInput, View, type TextStyle } from "react-native";
 import { asList, useQuery } from "../api";
-import { Avatar, Btn, Card, Dot, Empty, ErrorNote, LoadingRow, enterToSend, useUi, type Ui , Select } from "../bits";
+import { Avatar, Btn, Empty, ErrorNote, LoadingRow, enterToSend, useUi, type Ui , Select } from "../bits";
 import { TaskStepsBlock } from "../Execution";
 import { useWorkbench } from "../context";
 import { relTime, type Agent, type ChatMessage, type ChatSession } from "../model";

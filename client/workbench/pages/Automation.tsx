@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { asList, asRecord, usePagedQuery, useQuery, type ApiFn } from "../api";
 import {
-  Avatar,
   Btn,
   Card,
   Chips,

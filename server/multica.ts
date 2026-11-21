@@ -68,19 +68,19 @@ export async function requestMultica(
   const routePath = path.split("?")[0];
 
   if (!path.startsWith("/api/")) {
-    return { ok: false, status: 0, error: "仅支持 /api 下的 Multica 接口", code: "invalid_path", durationMs: 0 };
+    return { ok: false, status: 0, error: "err.invalid_path", code: "invalid_path", durationMs: 0 };
   }
   if (path.includes("..") || path.includes("//") || path.length > 2000) {
-    return { ok: false, status: 0, error: "接口路径不合法", code: "invalid_path", durationMs: 0 };
+    return { ok: false, status: 0, error: "err.bad_path", code: "invalid_path", durationMs: 0 };
   }
   if (isBlockedRoute(routePath)) {
-    return { ok: false, status: 0, error: "该接口不接受个人访问令牌，已阻止", code: "blocked_route", durationMs: 0 };
+    return { ok: false, status: 0, error: "err.blocked_route", code: "blocked_route", durationMs: 0 };
   }
   if (!options.skipRouteCheck && !routeMatches(upper, routePath)) {
     return {
       ok: false,
       status: 0,
-      error: `未在路由表中找到 ${upper} ${routePath}，请检查参数占位符`,
+      error: `err.route_not_found ${upper} ${routePath}`,
       code: "unknown_route",
       durationMs: 0,
     };
@@ -89,13 +89,13 @@ export async function requestMultica(
     return {
       ok: false,
       status: 0,
-      error: "守护进程接口属于执行器内部协议，请在设置中开启「允许内部接口」后再调用",
+      error: "err.internal_disabled",
       code: "internal_route",
       durationMs: 0,
     };
   }
   if (!server.token) {
-    return { ok: false, status: 0, error: "尚未配置 API Key，请到 Multica 设置中填写", code: "no_token", durationMs: 0 };
+    return { ok: false, status: 0, error: "err.no_token", code: "no_token", durationMs: 0 };
   }
 
   const headers = authHeaders(server, options.workspaceId ?? server.workspaceId);
@@ -131,7 +131,7 @@ export async function requestMultica(
           ? payload.message
           : typeof data === "string" && data.trim()
             ? data.trim().slice(0, 300)
-            : `请求失败 (HTTP ${response.status})`;
+            : `err.http_status ${response.status}`;
     return {
       ok: false,
       status: response.status,
@@ -143,9 +143,9 @@ export async function requestMultica(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const friendly = /timeout|aborted/i.test(message)
-      ? "请求超时，请检查网络或服务器地址"
+      ? "err.timeout"
       : /fetch failed|ENOTFOUND|ECONNREFUSED|EAI_AGAIN/i.test(message)
-        ? `无法连接到 ${server.baseUrl}，请检查地址、网络或代理`
+        ? "err.unreachable"
         : message;
     return { ok: false, status: 0, error: friendly, code: "network_error", durationMs: Date.now() - started };
   } finally {

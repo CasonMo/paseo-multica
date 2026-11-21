@@ -2,7 +2,7 @@ import { t } from "./i18n";
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useState } from "react";
 import { Text, View } from "react-native";
-import { Btn, Chips, ErrorNote, Field, useUi , Select } from "./bits";
+import { Btn, ErrorNote, Field, useUi , Select } from "./bits";
 import { useRuntimeModels } from "./api";
 import { useWorkbench } from "./context";
 import { runtimeName, type Agent, type AgentRuntime } from "./model";

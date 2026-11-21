@@ -3,7 +3,7 @@ import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { asList, useQuery } from "./api";
-import { Avatar, Btn, Chips, Divider, ErrorNote, Field, LoadingRow, Tag, useUi , Select } from "./bits";
+import { Avatar, Btn, Divider, ErrorNote, Field, LoadingRow, Tag, useUi , Select } from "./bits";
 import { useWorkbench } from "./context";
 import type { Agent, Squad } from "./model";
 

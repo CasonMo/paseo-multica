@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View, type TextStyle } from "react-native";
 import { issueInsightsRpc, taskLogRpc } from "../../shared/contracts";
 import { asList, useQuery, type ApiFn } from "./api";
-import { Avatar, Btn, IconBtn, Tag, useUi, type Ui } from "./bits";
+import { Avatar, IconBtn, Tag, type Ui } from "./bits";
 import { displayMentions, relTime, type Agent, type Comment, type IssueStatusEntry } from "./model";
 
 export interface TaskRun {
@@ -805,7 +805,6 @@ export function RunLogModal({
   const runId = run?.id ?? null;
   const runStatus = run?.status ?? null;
   const { steps, loading: logLoading } = useTaskSteps(runId, runStatus === "running", run?.started_at ?? null);
-  const started = run?.started_at ? Date.parse(run.started_at) : 0;
   const totalMs = run ? runDurationMs(run) : 0;
 
   const toolMs = steps.reduce((s, x) => s + (x.durationMs ?? 0), 0);

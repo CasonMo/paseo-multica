@@ -2,8 +2,8 @@ import { t } from "./i18n";
 import { Icon, Modal, copyText } from "@getpaseo/plugin/client/ui";
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
-import { asList, asRecord, str, usePagedQuery, useQuery, type ApiFn } from "./api";
-import { Avatar, Btn, Card, Chips, Empty, ErrorNote, Field, LoadingRow, LoadMore, Tag, useUi, type Ui , Select } from "./bits";
+import { asRecord, str, usePagedQuery, useQuery, type ApiFn } from "./api";
+import { Avatar, Btn, Card, Empty, ErrorNote, Field, LoadingRow, LoadMore, Tag, useUi, type Ui , Select } from "./bits";
 import { useWorkbench } from "./context";
 import { relTime } from "./model";
 

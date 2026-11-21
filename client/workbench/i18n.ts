@@ -73,3 +73,40 @@ export function t(key: string, args?: Args): string {
 export function useI18n(bundle: PluginTranslations = messages) {
   return useTranslation(bundle);
 }
+
+// daemon 侧错误以稳定码回传（err.<code> [args…]），界面按当前语言还原；上游 Multica 原文透传
+const SERVER_ERR: Record<string, string> = {
+  name_required: "ServerErr.1",
+  invalid_url: "ServerErr.2",
+  invalid_token: "ServerErr.3",
+  destination_key_required: "ServerErr.4",
+  no_token: "ServerErr.5",
+  no_server: "ServerErr.6",
+  invalid_path: "ServerErr.7",
+  bad_path: "ServerErr.8",
+  blocked_route: "ServerErr.9",
+  route_not_found: "ServerErr.10",
+  internal_disabled: "ServerErr.11",
+  http_status: "ServerErr.12",
+  timeout: "ServerErr.13",
+  unreachable: "ServerErr.14",
+  connect_failed: "ServerErr.15",
+  inbox_read: "ServerErr.16",
+  steps_read: "ServerErr.17",
+};
+
+export function localizeError(message: string | null | undefined): string | null {
+  if (!message) return null;
+  if (!message.startsWith("err.")) return message;
+  const [code, ...rest] = message.slice(4).split(" ");
+  const key = SERVER_ERR[code];
+  if (!key) return message;
+  if (code === "route_not_found") return t(key, { a: rest[0] ?? "", b: rest.slice(1).join(" ") });
+  if (code === "http_status") return t(key, { a: rest[0] ?? "" });
+  return t(key);
+}
+
+export function errorMessage(cause: unknown): string {
+  const raw = cause instanceof Error ? cause.message : String(cause);
+  return localizeError(raw) ?? raw;
+}

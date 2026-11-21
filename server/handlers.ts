@@ -35,16 +35,16 @@ export function createHandlers() {
     input: RpcInput<typeof connectionsSaveRpc>,
   ): Promise<RpcOutput<typeof connectionsSaveRpc>> => {
     const name = input.name.trim();
-    if (!name) throw new Error("请填写服务器名称");
+    if (!name) throw new Error("err.name_required");
     const baseUrl = normalizeBaseUrl(input.baseUrl);
-    if (!/^https?:\/\/[^/\s]+/i.test(baseUrl)) throw new Error("服务器地址不合法");
+    if (!/^https?:\/\/[^/\s]+/i.test(baseUrl)) throw new Error("err.invalid_url");
     const token = input.token?.trim();
-    if (token && !/^[A-Za-z0-9_\-.]{8,}$/.test(token)) throw new Error("API Key 格式不正确");
+    if (token && !/^[A-Za-z0-9_\-.]{8,}$/.test(token)) throw new Error("err.invalid_token");
     // 目的地变更时禁止沿用旧 Key：旧凭据绝不能发往/留存到新服务器
     if (input.id) {
       const stored = (await readConnections()).servers.find((server) => server.id === input.id);
       if (stored && stored.baseUrl !== baseUrl && !token) {
-        throw new Error("更换服务器地址后必须输入新服务器的 API Key");
+        throw new Error("err.destination_key_required");
       }
     }
     return saveConnection({ ...input, name, baseUrl, token: token || undefined });
@@ -59,13 +59,13 @@ export function createHandlers() {
     if (input.id || !baseUrl) {
       const stored = await resolveServer(input.id);
       if (input.id && baseUrl && baseUrl !== stored.baseUrl && !token) {
-        return { ok: false, error: "更换服务器地址后必须输入新服务器的 API Key" };
+        return { ok: false, error: "err.destination_key_required" };
       }
       baseUrl = baseUrl || stored.baseUrl;
       token = token || stored.token;
       workspaceId = workspaceId ?? stored.workspaceId;
     }
-    if (!token) return { ok: false, error: "请填写 API Key" };
+    if (!token) return { ok: false, error: "err.no_token" };
     const result = await probeConnection({
       id: "probe",
       name: "probe",
@@ -89,7 +89,7 @@ export function createHandlers() {
         server: view.servers.find((item) => item.id === server.id) ?? null,
         user: null,
         workspaces: [],
-        error: "尚未配置 API Key",
+        error: "err.no_token",
         fetchedAt,
       };
     }
@@ -100,7 +100,7 @@ export function createHandlers() {
         server: view.servers.find((item) => item.id === server.id) ?? null,
         user: null,
         workspaces: [],
-        error: probe.error ?? "连接失败",
+        error: probe.error ?? "err.connect_failed",
         fetchedAt,
       };
     }
@@ -161,7 +161,7 @@ export function createHandlers() {
       workspaceId: server.workspaceId,
       allowInternal: server.allowInternal,
     });
-    if (!result.ok) return { ...base, count: 0, error: result.error ?? "读取收件箱失败" };
+    if (!result.ok) return { ...base, count: 0, error: result.error ?? "err.inbox_read" };
     const payload = result.data && typeof result.data === "object" ? (result.data as Record<string, unknown>) : {};
     const raw = typeof result.data === "number" ? result.data : Number(payload.count ?? payload.unread ?? 0);
     const count = Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0;
@@ -252,7 +252,7 @@ export function createHandlers() {
           content: clip(m.content, 1500),
         };
       });
-      return { messages: messages as Record<string, unknown>[], error: result.ok ? null : result.error ?? "读取步骤失败" };
+      return { messages: messages as Record<string, unknown>[], error: result.ok ? null : result.error ?? "err.steps_read" };
     })();
     logInflight.set(input.taskId, promise);
     const clear = () => logInflight.delete(input.taskId);

@@ -2,7 +2,6 @@ import { t } from "../i18n";
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -31,7 +30,6 @@ import {
   type Label,
   type Project,
 } from "../model";
-import { PriorityMark, StatusMark } from "../parts";
 import {
   ActivityList,
   ExecutionLogSection,

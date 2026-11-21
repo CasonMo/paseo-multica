@@ -928,5 +928,22 @@
   "IssueDetail.152": "该需求有 {{a}} 个子任务；删除后子任务会保留为独立需求。",
   "Projects.84": "归档「",
   "Settings.72": "更换服务器地址后必须输入新服务器的 API Key；旧 Key 不会发往新地址。",
-  "Chat.45": "正在思考中…"
+  "Chat.45": "正在思考中…",
+  "ServerErr.1": "请填写服务器名称",
+  "ServerErr.2": "服务器地址不合法",
+  "ServerErr.3": "API Key 格式不正确",
+  "ServerErr.4": "更换服务器地址后必须输入新服务器的 API Key",
+  "ServerErr.5": "尚未配置 API Key，请到 Multica 设置中填写",
+  "ServerErr.6": "尚未配置 Multica 服务器",
+  "ServerErr.7": "仅支持 /api 下的 Multica 接口",
+  "ServerErr.8": "接口路径不合法",
+  "ServerErr.9": "该接口不接受个人访问令牌，已阻止",
+  "ServerErr.10": "未在路由表中找到 {{a}} {{b}}，请检查参数占位符",
+  "ServerErr.11": "守护进程接口属于执行器内部协议，请在设置中开启「允许内部接口」后再调用",
+  "ServerErr.12": "请求失败 (HTTP {{a}})",
+  "ServerErr.13": "请求超时，请检查网络或服务器地址",
+  "ServerErr.14": "无法连接到服务器，请检查地址、网络或代理",
+  "ServerErr.15": "连接失败",
+  "ServerErr.16": "读取收件箱失败",
+  "ServerErr.17": "读取步骤失败"
 }

@@ -1,4 +1,4 @@
-import { t, useLocaleOverride, setLocaleOverride, type LocaleOverride } from "../i18n";
+import { t, errorMessage, localizeError, useLocaleOverride, setLocaleOverride, type LocaleOverride } from "../i18n";
 import { Icon, Modal, copyText, useToast } from "@getpaseo/plugin/client/ui";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -53,7 +53,7 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
       await activateRpc({ id: item.id });
       await afterChange(t("context.2", { a: item.name }));
     } catch (cause) {
-      toast.error(cause instanceof Error ? cause.message : String(cause));
+      toast.error(errorMessage(cause));
     } finally {
       setBusyId(null);
     }
@@ -66,7 +66,7 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
       await removeRpc({ id: item.id });
       await afterChange(t("Settings.2"));
     } catch (cause) {
-      toast.error(cause instanceof Error ? cause.message : String(cause));
+      toast.error(errorMessage(cause));
     } finally {
       setBusyId(null);
     }
@@ -80,7 +80,7 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
       await ctx.reloadConnections();
       toast.show(connections.allowInternal ? t("Settings.3") : t("Settings.4"), { variant: "success" });
     } catch (cause) {
-      toast.error(cause instanceof Error ? cause.message : String(cause));
+      toast.error(errorMessage(cause));
     } finally {
       setAllowInternalBusy(false);
     }
@@ -349,7 +349,7 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
             await afterChange(t("Settings.42"));
             return null;
           } catch (cause) {
-            return cause instanceof Error ? cause.message : String(cause);
+            return errorMessage(cause);
           }
         }}
         onTest={(input) => testRpc(input)}
@@ -467,13 +467,13 @@ function ConnectionModal({
                     id: existing?.id,
                   });
                   setResult(next);
-                  if (!next.ok) setError(next.error ?? t("Settings.58"));
+                  if (!next.ok) setError(localizeError(next.error) ?? t("Settings.58"));
                   else {
                     setWorkspaceId(next.workspaces?.[0]?.id ?? workspaceId);
                     toast.show(t("Settings.59", { a: next.workspaces?.length ?? 0 }), { variant: "success" });
                   }
                 } catch (cause) {
-                  setError(cause instanceof Error ? cause.message : String(cause));
+                  setError(errorMessage(cause));
                 } finally {
                   setTesting(false);
                 }

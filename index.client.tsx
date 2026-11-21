@@ -35,7 +35,7 @@ const PAGE_KEYS: PageKey[] = [
 ];
 
 // 深链/历史参数可能用导航语义名（automation），内部页键为 autopilot
-const PAGE_ALIASES: Record<string, PageKey> = { automation: "autopilot", work: "issues" };
+const PAGE_ALIASES: Record<string, PageKey> = { automation: "autopilot" };
 
 function asPage(value: string | undefined): PageKey | null {
   if (!value) return null;

@@ -1,11 +1,11 @@
 import { t } from "../i18n";
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ScrollView, Text, TextInput, View } from "react-native";
 import { Btn, Card, Chips, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, LoadMore, nearBottom, Tag, useUi , Select } from "../bits";
 import { usePagedQuery } from "../api";
 import { useWorkbench } from "../context";
-import { pickTextColor, relTime, type Label } from "../model";
+import { relTime, type Label } from "../model";
 
 const COLORS = ["#3b82f6", "#8b5cf6", "#22c55e", "#f59e0b", "#ef4444", "#ec4899", "#14b8a6", "#64748b", "#a855f7", "#f97316"];
 

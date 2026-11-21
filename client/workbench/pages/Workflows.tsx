@@ -2,7 +2,7 @@ import { t } from "../i18n";
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { Btn, Card, Chips, Divider, Dot, Empty, ErrorNote, Field, IconBtn, LoadingRow, LoadMore, nearBottom, Tag, useUi , Select } from "../bits";
+import { Btn, Card, Divider, Dot, Empty, ErrorNote, Field, IconBtn, LoadingRow, LoadMore, nearBottom, Tag, useUi , Select } from "../bits";
 import { asList, usePagedQuery, useQuery } from "../api";
 import { useWorkbench } from "../context";
 import {

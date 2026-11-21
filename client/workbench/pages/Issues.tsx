@@ -2,7 +2,7 @@ import { t } from "../i18n";
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { Avatar, Btn, Chips, Empty, ErrorNote, Field, LoadingRow, LoadMore, nearBottom, useUi, type Ui , Select } from "../bits";
+import { Avatar, Btn, Empty, ErrorNote, Field, LoadingRow, LoadMore, nearBottom, useUi, type Ui , Select } from "../bits";
 import { asList, asRecord, num, str, usePagedQuery, useQuery } from "../api";
 import { useWorkbench } from "../context";
 import { issueCategory, issueStatusEntry, priorityMeta, relTime, statusLabel, type Agent, type Issue, type IssueStatusEntry, type Project } from "../model";

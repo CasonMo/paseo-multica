@@ -1,4 +1,4 @@
-import { t, useI18n, bindTranslation, useLocaleOverride, messagesFor } from "./i18n";
+import { t, errorMessage, useI18n, bindTranslation, useLocaleOverride, messagesFor } from "./i18n";
 import type { PluginTheme } from "@getpaseo/plugin";
 import { useRpc } from "@getpaseo/plugin/client";
 import { useToast } from "@getpaseo/plugin/client/ui";
@@ -158,7 +158,7 @@ export function WorkbenchProvider({
       if (alive.current) setConnections(next);
     } catch (cause) {
       if (alive.current) {
-        toast.error(t("context.1", { a: cause instanceof Error ? cause.message : String(cause) }));
+        toast.error(t("context.1", { a: errorMessage(cause) }));
       }
     }
   }, [listRpc, toast]);
@@ -174,7 +174,7 @@ export function WorkbenchProvider({
           server: null,
           user: null,
           workspaces: [],
-          error: cause instanceof Error ? cause.message : String(cause),
+          error: errorMessage(cause),
         });
       }
     } finally {

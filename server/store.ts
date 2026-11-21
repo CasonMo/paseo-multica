@@ -163,7 +163,7 @@ export async function resolveServer(serverId?: string): Promise<ResolvedServer> 
     (serverId ? state.servers.find((server) => server.id === serverId) : undefined) ??
     state.servers.find((server) => server.id === state.activeServerId) ??
     state.servers[0];
-  if (!target) throw new Error("尚未配置 Multica 服务器");
+  if (!target) throw new Error("err.no_server");
   return {
     id: target.id,
     name: target.name,
@@ -183,7 +183,7 @@ export async function saveConnection(input: SaveConnectionInput): Promise<Connec
     if (existing) {
       const nextToken = typeof input.token === "string" ? input.token.trim() : "";
       if (baseUrl !== existing.baseUrl && !nextToken) {
-        throw new Error("更换服务器地址后必须输入新服务器的 API Key");
+        throw new Error("err.destination_key_required");
       }
       existing.name = input.name.trim() || existing.name;
       existing.baseUrl = baseUrl;

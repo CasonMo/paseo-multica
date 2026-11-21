@@ -1,4 +1,4 @@
-import { t } from "./i18n";
+import { localizeError, t } from "./i18n";
 import { useRpc } from "@getpaseo/plugin/client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiRequestRpc } from "../../shared/contracts";
@@ -26,9 +26,10 @@ export function useApi(): ApiFn {
   return useCallback(
     async (input: ApiRequestInput): Promise<ApiResponse> => {
       try {
-        return await rpc(input);
+        const result = await rpc(input);
+        return { ...result, error: localizeError(result.error) ?? undefined };
       } catch (cause) {
-        return { ok: false, status: 0, durationMs: 0, error: cause instanceof Error ? cause.message : String(cause) };
+        return { ok: false, status: 0, durationMs: 0, error: localizeError(cause instanceof Error ? cause.message : String(cause)) ?? String(cause) };
       }
     },
     [rpc],
@@ -288,11 +289,9 @@ export interface RuntimeModel {
 export function useRuntimeModels(api: ApiFn, runtimeId: string | null | undefined) {
   const [models, setModels] = useState<RuntimeModel[]>([]);
   const [loading, setLoading] = useState(false);
-  const [supported, setSupported] = useState(true);
   useEffect(() => {
     if (!runtimeId) {
       setModels([]);
-      setSupported(true);
       return;
     }
     let alive = true;
@@ -301,7 +300,6 @@ export function useRuntimeModels(api: ApiFn, runtimeId: string | null | undefine
     const apply = (d: Record<string, unknown> | null) => {
       if (!d) return false;
       if (d.supported === false) {
-        setSupported(false);
         setModels([]);
         setLoading(false);
         return true;
@@ -309,7 +307,6 @@ export function useRuntimeModels(api: ApiFn, runtimeId: string | null | undefine
       const list = Array.isArray(d.models) ? (d.models as RuntimeModel[]) : null;
       if (list && list.length > 0) {
         setModels(list);
-        setSupported(true);
         setLoading(false);
         return true;
       }
@@ -349,7 +346,7 @@ export function useRuntimeModels(api: ApiFn, runtimeId: string | null | undefine
       if (timer) clearTimeout(timer);
     };
   }, [api, runtimeId]);
-  return { models, loading, supported };
+  return { models, loading };
 }
 
 export function asList<T = Record<string, unknown>>(data: unknown, ...keys: string[]): T[] {

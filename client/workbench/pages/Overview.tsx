@@ -1,7 +1,7 @@
 import { t } from "../i18n";
 import { Icon } from "@getpaseo/plugin/client/ui";
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import { Btn, Card, Divider, Empty, ErrorNote, LoadingRow, LoadMore, nearBottom, SectionHeader, Stat, Tag, useUi } from "../bits";
+import { Btn, Card, Divider, Empty, ErrorNote, LoadingRow, LoadMore, nearBottom, SectionHeader, Tag, useUi } from "../bits";
 import { asList, asRecord, num, usePagedQuery, useQuery } from "../api";
 import { useWorkbench } from "../context";
 import { relTime, type Agent, type AgentRuntime, type InboxItem, type Issue, type Project } from "../model";
