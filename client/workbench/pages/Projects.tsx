@@ -534,7 +534,7 @@ function ProjectFormModal({
   onSaved(project: Project | null): void;
   toast: ReturnType<typeof useWorkbench>["toast"];
 }) {
-  const { theme, compact, api } = useWorkbench();
+  const { theme, compact, api, workspaceId } = useWorkbench();
   const ui = useUi(theme, compact);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -542,7 +542,14 @@ function ProjectFormModal({
   const [priority, setPriority] = useState("none");
   const [dueDate, setDueDate] = useState("");
   const [startDate, setStartDate] = useState("");
+  const [leadId, setLeadId] = useState("");
   const [busy, setBusy] = useState(false);
+  const membersQ = useQuery(
+    api,
+    workspaceId ? `/api/workspaces/${workspaceId}/members` : null,
+    { select: (data) => asList<Record<string, unknown>>(data, "members") },
+    "project-form-members",
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -552,6 +559,7 @@ function ProjectFormModal({
     setPriority(project?.priority ?? "none");
     setDueDate(project?.due_date ?? "");
     setStartDate(project?.start_date ?? "");
+    setLeadId(project?.lead_id ?? "");
   }, [open, project]);
 
   const submit = async () => {
@@ -567,6 +575,7 @@ function ProjectFormModal({
       priority,
       start_date: startDate.trim() || null,
       due_date: dueDate.trim() || null,
+      lead_id: leadId || null,
     };
     const result = project
       ? await api({ method: "PUT", path: `/api/projects/${project.id}`, body })
@@ -606,6 +615,19 @@ function ProjectFormModal({
           <View style={{ gap: 6 }}>
             <Text style={ui.s.label}>{t("IssueDetail.66")}</Text>
             <Select ui={ui} options={EDIT_PRIORITY.map((option) => ({ ...option, label: t(option.label) }))} value={priority} onChange={setPriority} searchable={false} />
+          </View>
+          <View style={{ gap: 6 }}>
+            <Text style={ui.s.label}>{t("Projects.64")}</Text>
+            <Select
+              ui={ui}
+              value={leadId}
+              placeholder={t("Projects.64")}
+              onChange={setLeadId}
+              options={[
+                { value: "", label: t("Projects.64"), icon: "UserMinus" },
+                ...(membersQ.data ?? []).map((m) => ({ value: String(m.user_id ?? m.id), label: String(m.name ?? m.email ?? ""), icon: "User" })),
+              ]}
+            />
           </View>
           <View style={[ui.s.row, { gap: 10 }]}>
             <View style={{ flex: 1 }}>

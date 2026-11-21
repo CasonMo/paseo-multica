@@ -2,7 +2,7 @@ import { t } from "./i18n";
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { asList, asRecord, str, usePagedQuery, useQuery } from "./api";
+import { asList, asRecord, str, usePagedQuery, useQuery, useRuntimeModels } from "./api";
 import { Avatar, Btn, Chips, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, LoadMore, Tag, useUi , Select } from "./bits";
 import { useWorkbench } from "./context";
 import { agentStatusMeta, fmtDateTime, relTime, type Agent, type AgentRuntime, type Label, type Skill } from "./model";
@@ -736,6 +736,7 @@ function EditAgentModal({
   const [maxTasks, setMaxTasks] = useState("");
   const [permission, setPermission] = useState<"public" | "private">("public");
   const [runtimeId, setRuntimeId] = useState("");
+  const { models: modelOptions } = useRuntimeModels(api, runtimeId);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -784,7 +785,20 @@ function EditAgentModal({
         <ScrollView style={{ maxHeight: 520 }} contentContainerStyle={{ gap: 12 }}>
           <Field ui={ui} label={t("AgentDetail.95")} value={name} onChangeText={setName} placeholder={t("AgentDetail.96")} />
           <Field ui={ui} label={t("AgentDetail.97")} value={description} onChangeText={setDescription} multiline placeholder={t("AgentDetail.98")} />
-          <Field ui={ui} label={t("AgentDetail.99")} value={model} onChangeText={setModel} placeholder={t("AgentDetail.100")} hint={t("AgentDetail.101")} />
+          <View style={{ gap: 6 }}>
+            <Text style={ui.s.label}>{t("AgentDetail.99")}</Text>
+            {modelOptions.length > 0 ? (
+              <Select
+                ui={ui}
+                value={model || null}
+                placeholder={t("AgentDetail.101")}
+                onChange={setModel}
+                options={modelOptions.map((m) => ({ value: m.id, label: m.label }))}
+              />
+            ) : (
+              <Field ui={ui} label="" value={model} onChangeText={setModel} placeholder={t("AgentDetail.100")} hint={t("AgentDetail.101")} />
+            )}
+          </View>
           <Field
             ui={ui}
             label={t("AgentDetail.102")}

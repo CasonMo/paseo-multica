@@ -3,6 +3,7 @@ import { Icon, Modal } from "@getpaseo/plugin/client/ui";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { Btn, Chips, ErrorNote, Field, useUi , Select } from "./bits";
+import { useRuntimeModels } from "./api";
 import { useWorkbench } from "./context";
 import { runtimeName, type Agent, type AgentRuntime } from "./model";
 
@@ -25,6 +26,7 @@ export function CreateAgentModal({
   const [instructions, setInstructions] = useState("");
   const [runtimeId, setRuntimeId] = useState<string | null>(null);
   const selectedRuntime = runtimeId ?? runtimes[0]?.id ?? "";
+  const { models: modelOptions } = useRuntimeModels(api, selectedRuntime);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -96,7 +98,20 @@ export function CreateAgentModal({
               />
             )}
           </View>
-          <Field ui={ui} label={t("AgentDetail.99")} value={model} onChangeText={setModel} placeholder={t("TeamCreate.11")} />
+          <View style={{ gap: 6 }}>
+            <Text style={ui.s.label}>{t("AgentDetail.99")}</Text>
+            {modelOptions.length > 0 ? (
+              <Select
+                ui={ui}
+                value={model || null}
+                placeholder={t("TeamCreate.11")}
+                onChange={setModel}
+                options={modelOptions.map((m) => ({ value: m.id, label: m.label }))}
+              />
+            ) : (
+              <Field ui={ui} label="" value={model} onChangeText={setModel} placeholder={t("TeamCreate.11")} />
+            )}
+          </View>
           <Field
             ui={ui}
             label={t("TeamCreate.12")}

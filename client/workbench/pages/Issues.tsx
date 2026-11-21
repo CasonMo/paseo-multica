@@ -527,13 +527,23 @@ function CreateIssueModal({
   onCreated(issue: Issue | null): void;
   toast: ReturnType<typeof useWorkbench>["toast"];
 }) {
-  const { theme, compact, api, statuses } = useWorkbench();
+  const { theme, compact, api, statuses, workspaceId } = useWorkbench();
   const ui = useUi(theme, compact);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("none");
   const [status, setStatus] = useState("");
+  const [project, setProject] = useState<string | null>(null);
+  const [assignee, setAssignee] = useState("");
   const [busy, setBusy] = useState(false);
+  const projectsQ = useQuery(api, "/api/projects", { query: { limit: 50 }, select: (data) => asList<Project>(data, "projects") }, "issue-create-projects");
+  const agentsQ = useQuery(api, "/api/agents", { query: { limit: 50 }, select: (data) => asList<Agent>(data, "agents") }, "issue-create-agents");
+  const membersQ = useQuery(
+    api,
+    workspaceId ? `/api/workspaces/${workspaceId}/members` : null,
+    { select: (data) => asList<Record<string, unknown>>(data, "members") },
+    "issue-create-members",
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -541,7 +551,9 @@ function CreateIssueModal({
     setDescription("");
     setPriority("none");
     setStatus(initialStatus ?? statuses[0]?.key ?? "todo");
-  }, [open, statuses, initialStatus]);
+    setProject(projectId ?? null);
+    setAssignee("");
+  }, [open, statuses, initialStatus, projectId]);
 
   const submit = async () => {
     if (!title.trim()) {
@@ -552,7 +564,13 @@ function CreateIssueModal({
     const body: Record<string, unknown> = { title: title.trim(), priority };
     if (description.trim()) body.description = description.trim();
     if (status) body.status = status;
-    if (projectId) body.project_id = projectId;
+    if (project) body.project_id = project;
+    else if (projectId) body.project_id = projectId;
+    if (assignee) {
+      const [kind, id] = assignee.split(":");
+      body.assignee_type = kind;
+      body.assignee_id = id;
+    }
     const result = await api({ method: "POST", path: "/api/issues", body });
     setBusy(false);
     if (result.ok) {
@@ -606,6 +624,30 @@ function CreateIssueModal({
                 { value: "medium", label: t("model.18") },
                 { value: "high", label: t("model.17") },
                 { value: "urgent", label: t("model.16") },
+              ]}
+            />
+          </View>
+          <View style={{ gap: 6 }}>
+            <Text style={ui.s.label}>{t("Nav.3")}</Text>
+            <Select
+              ui={ui}
+              value={project ?? ""}
+              placeholder={t("IssueDetail.71")}
+              onChange={(next) => setProject(next || null)}
+              options={[{ value: "", label: t("IssueDetail.71"), icon: "FolderKanban" }, ...(projectsQ.data ?? []).map((p) => ({ value: p.id, label: p.title, icon: "FolderKanban" }))]}
+            />
+          </View>
+          <View style={{ gap: 6 }}>
+            <Text style={ui.s.label}>{t("IssueDetail.68")}</Text>
+            <Select
+              ui={ui}
+              value={assignee}
+              placeholder={t("IssueDetail.69")}
+              onChange={setAssignee}
+              options={[
+                { value: "", label: t("IssueDetail.69"), icon: "UserMinus" },
+                ...(agentsQ.data ?? []).map((a) => ({ value: `agent:${a.id}`, label: a.name, icon: "Bot" })),
+                ...(membersQ.data ?? []).map((m) => ({ value: `member:${String(m.user_id ?? m.id)}`, label: String(m.name ?? m.email ?? ""), icon: "User" })),
               ]}
             />
           </View>

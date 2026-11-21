@@ -44,7 +44,7 @@ export function TeamPage({ initialTab }: { initialTab?: Tab }) {
 
   const agentsQuery = usePagedQuery<Agent>(
     api,
-    tab === "agents" ? "/api/agents" : null,
+    tab === "agents" || tab === "squads" ? "/api/agents" : null,
     { query: { include_archived: "true" }, pageSize: 30 },
     key,
     "agents",

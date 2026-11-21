@@ -249,6 +249,76 @@ export function usePagedQuery<T = Record<string, unknown>>(
   return { items, total, loading, loadingMore, error, hasMore, loadMore, refresh };
 }
 
+export interface RuntimeModel {
+  id: string;
+  label: string;
+  default?: boolean;
+}
+
+/** 运行时模型列表：InitiateListModels 发起（常命中缓存立即返回），未完成时轮询 GetModelListRequest。 */
+export function useRuntimeModels(api: ApiFn, runtimeId: string | null | undefined) {
+  const [models, setModels] = useState<RuntimeModel[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [supported, setSupported] = useState(true);
+  useEffect(() => {
+    if (!runtimeId) {
+      setModels([]);
+      setSupported(true);
+      return;
+    }
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    setLoading(true);
+    const apply = (d: Record<string, unknown> | null) => {
+      if (!d) return false;
+      if (d.supported === false) {
+        setSupported(false);
+        setModels([]);
+        setLoading(false);
+        return true;
+      }
+      const list = Array.isArray(d.models) ? (d.models as RuntimeModel[]) : null;
+      if (list && list.length > 0) {
+        setModels(list);
+        setSupported(true);
+        setLoading(false);
+        return true;
+      }
+      if (d.status === "failed" || d.status === "error") {
+        setModels([]);
+        setLoading(false);
+        return true;
+      }
+      return false;
+    };
+    const poll = async (requestId: string) => {
+      const res = await api({ method: "GET", path: `/api/runtimes/${runtimeId}/models/${requestId}` });
+      if (!alive) return;
+      if (res.ok && apply(res.data as Record<string, unknown>)) return;
+      timer = setTimeout(() => void poll(requestId), 1500);
+    };
+    const start = async () => {
+      const init = await api({ method: "POST", path: `/api/runtimes/${runtimeId}/models`, body: {} });
+      if (!alive) return;
+      if (!init.ok) {
+        setLoading(false);
+        return;
+      }
+      const d = init.data as Record<string, unknown>;
+      if (apply(d)) return;
+      const requestId = typeof d.id === "string" ? d.id : null;
+      if (requestId) void poll(requestId);
+      else setLoading(false);
+    };
+    void start();
+    return () => {
+      alive = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [api, runtimeId]);
+  return { models, loading, supported };
+}
+
 export function asList<T = Record<string, unknown>>(data: unknown, ...keys: string[]): T[] {
   if (Array.isArray(data)) return data as T[];
   if (data && typeof data === "object") {

@@ -130,7 +130,7 @@ export function SquadDetailModal({
                 <Text style={ui.s.muted}>{t("SquadDetail.9")}</Text>
               ) : (
                 rows.map((member, index) => {
-                  const isLeader = member.role === "leader" || (leaderId && member.member_id === leaderId);
+                  const isLeader = leaderId ? member.member_id === leaderId : member.role === "leader";
                   return (
                     <View key={String(member.id ?? member.member_id ?? index)} style={[ui.s.row, { gap: 8, paddingVertical: 5 }]}>
                       <Avatar ui={ui} name={nameOf(member.member_id)} size={24} />
