@@ -927,5 +927,6 @@
   "AgentDetail.113": "The MCP list is slow to load. Retry or check another tab.",
   "IssueDetail.152": "This issue has {{a}} subtasks; they will remain as standalone issues after deletion.",
   "Projects.84": "Archive \"",
-  "Settings.72": "Changing the server URL requires the new server's API key; the old key is never sent to the new destination."
+  "Settings.72": "Changing the server URL requires the new server's API key; the old key is never sent to the new destination.",
+  "Chat.45": "Thinking…"
 }

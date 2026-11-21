@@ -713,29 +713,31 @@ export function TaskStepsBlock({
   elapsedMs,
 }: {
   ui: Ui;
-  taskId: string;
+  taskId: string | null;
   running: boolean;
   startedAt: string | null;
   elapsedMs?: number | null;
 }) {
-  const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(running);
   const [openStep, setOpenStep] = useState<string | null>(null);
   const [, setTick] = useState(0);
   const { steps, loading } = useTaskSteps(taskId, running, startedAt);
+  useEffect(() => {
+    if (running) setExpanded(true);
+  }, [running]);
   useEffect(() => {
     if (!running) return;
     const timer = setInterval(() => setTick((x) => x + 1), 1000);
     return () => clearInterval(timer);
   }, [running]);
   const elapsed = running ? (startedAt ? Math.max(0, Date.now() - Date.parse(startedAt)) : 0) : (elapsedMs ?? 0);
-  const expanded = open || running;
   return (
     <View style={{ gap: 4, marginTop: 6 }}>
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ expanded }}
         accessibilityLabel={running ? t("Chat.39") : t("Chat.43", { a: steps.length })}
-        onPress={() => setOpen(!open)}
+        onPress={() => setExpanded(!expanded)}
         style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
           ui.s.row,
           { gap: 6, paddingVertical: 3, borderRadius: 6 },
@@ -743,7 +745,7 @@ export function TaskStepsBlock({
           pressed && ui.s.pressed,
         ]}
       >
-        {running ? <ActivityIndicator size="small" color={ui.c.brand} /> : <Icon name={open ? "ChevronDown" : "ChevronRight"} size={13} color={ui.c.muted} />}
+        {running ? <ActivityIndicator size="small" color={ui.c.brand} /> : <Icon name={expanded ? "ChevronDown" : "ChevronRight"} size={13} color={ui.c.muted} />}
         <Text style={{ fontSize: 12, fontWeight: 600, color: running ? ui.c.brand : ui.c.muted }}>
           {running ? `${t("Chat.39")} · ${fmtDuration(elapsed)}` : t("Chat.43", { a: steps.length })}
         </Text>
@@ -751,7 +753,8 @@ export function TaskStepsBlock({
       </Pressable>
       {expanded ? (
         <View style={{ gap: 2, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: ui.c.line, marginLeft: 6 }}>
-          {loading && steps.length === 0 ? <Text style={ui.s.tiny}>{t("Execution.80")}</Text> : null}
+          {running && steps.length === 0 ? <Text style={ui.s.tiny}>{t("Chat.45")}</Text> : null}
+          {!running && loading && steps.length === 0 ? <Text style={ui.s.tiny}>{t("Execution.80")}</Text> : null}
           {steps.map((s) => (
             <View key={s.id} style={{ gap: 2 }}>
               <Pressable

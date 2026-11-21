@@ -554,7 +554,8 @@ export const resources = {
     "39": "Processing",
     "42": "Follow-ups",
     "43": "{{a}} steps",
-    "44": "replied in {{a}}"
+    "44": "replied in {{a}}",
+    "45": "Thinking…"
   },
   "Inbox": {
     "3": "Snoozed",
@@ -1541,7 +1542,8 @@ export const resources = {
     "39": "处理中",
     "42": "后续提问",
     "43": "{{a}} 步",
-    "44": "{{a}} 内回复"
+    "44": "{{a}} 内回复",
+    "45": "正在思考中…"
   },
   "Inbox": {
     "3": "已搁置",

@@ -22,6 +22,7 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickAgentId, setPickAgentId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [sentAt, setSentAt] = useState<number | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
   const sessionsQuery = useQuery(
@@ -111,8 +112,16 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
 
   useEffect(() => {
     if (!activeId) return;
+    setSentAt(null);
     void api({ method: "POST", path: `/api/chat/sessions/${activeId}/read` });
   }, [activeId, api]);
+
+  // 服务端未产生任务（如智能体离线）时不让占位行永久停留
+  useEffect(() => {
+    if (sentAt == null || runningTask) return;
+    const timer = setTimeout(() => setSentAt(null), 45000);
+    return () => clearTimeout(timer);
+  }, [sentAt, runningTask]);
 
   const select = (id: string) => {
     setActiveId(id);
@@ -132,7 +141,10 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
     });
     setSending(false);
     if (result.ok) {
+      // 乐观挂运行行：不等 task_id 关联，发送后立即显示「正在思考中」
+      setSentAt(Date.now());
       messagesQuery.refresh();
+      pendingQuery.refresh();
       sessionsQuery.refresh();
       invalidate();
     } else {
@@ -302,16 +314,27 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
             </Text>
           </View>
         ) : null}
-        {messages.map((message) => (
-          <Bubble
-            key={message.id}
-            ui={ui}
-            message={message}
-            agentName={agentMap.get(active.agent_id)?.name}
-            runningTask={runningTask}
-            onQuickAction={(text) => setDraft(text)}
-          />
-        ))}
+        {messages.map((message, index) => {
+          const isLast = index === messages.length - 1;
+          const pending =
+            isLast && message.role === "user" && (runningTask || sentAt != null)
+              ? {
+                  taskId: runningTask?.id ?? null,
+                  startedAt: runningTask?.started_at ?? (sentAt != null ? new Date(sentAt).toISOString() : null),
+                }
+              : null;
+          return (
+            <Bubble
+              key={message.id}
+              ui={ui}
+              message={message}
+              agentName={agentMap.get(active.agent_id)?.name}
+              runningTask={runningTask}
+              pending={pending}
+              onQuickAction={(text) => setDraft(text)}
+            />
+          );
+        })}
       </ScrollView>
 
       <View
@@ -433,12 +456,14 @@ function Bubble({
   message,
   agentName,
   runningTask,
+  pending,
   onQuickAction,
 }: {
   ui: Ui;
   message: ChatMessage;
   agentName?: string;
   runningTask?: { id: string; started_at?: string | null } | null;
+  pending?: { taskId: string | null; startedAt: string | null } | null;
   onQuickAction?(text: string): void;
 }) {
   const mine = message.role === "user";
@@ -507,6 +532,10 @@ function Bubble({
               })}
             </View>
           ) : null}
+        </View>
+      ) : pending ? (
+        <View style={{ alignSelf: "stretch", maxWidth: "88%" }}>
+          <TaskStepsBlock ui={ui} taskId={pending.taskId} running startedAt={pending.startedAt} elapsedMs={null} />
         </View>
       ) : null}
     </View>
