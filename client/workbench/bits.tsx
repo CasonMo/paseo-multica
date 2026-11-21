@@ -2,7 +2,7 @@ import { t } from "./i18n";
 import type { PluginTheme } from "@getpaseo/plugin";
 import { Icon } from "@getpaseo/plugin/client/ui";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -540,11 +540,34 @@ export function Select<T extends string>({
 }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
+  const boxRef = useRef<View | null>(null);
   const current = options.find((option) => option.value === value);
   const needle = q.trim().toLowerCase();
   const list = needle ? options.filter((option) => option.label.toLowerCase().includes(needle)) : options;
+  useEffect(() => {
+    if (!open) return;
+    type Doc = {
+      addEventListener(type: string, fn: (e: { key?: string; target?: unknown }) => void): void;
+      removeEventListener(type: string, fn: (e: { key?: string; target?: unknown }) => void): void;
+    };
+    const doc = (globalThis as { document?: Doc }).document;
+    if (!doc) return;
+    const onDown = (e: { target?: unknown }) => {
+      const box = boxRef.current as unknown as { contains?(node: unknown): boolean } | null;
+      if (box?.contains && !box.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e: { key?: string }) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    doc.addEventListener("mousedown", onDown);
+    doc.addEventListener("keydown", onKey);
+    return () => {
+      doc.removeEventListener("mousedown", onDown);
+      doc.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
   return (
-    <View style={{ position: "relative", zIndex: open ? 60 : undefined }}>
+    <View ref={boxRef}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={current?.label ?? placeholder}
@@ -577,27 +600,19 @@ export function Select<T extends string>({
         <Icon name="ChevronDown" size={13} color={ui.c.muted} />
       </Pressable>
       {open ? (
-        <>
-          <Pressable
-            accessibilityLabel={t("bits.5")}
-            onPress={() => setOpen(false)}
-            style={{ position: "absolute", top: -2000, left: -2000, right: -2000, bottom: -2000, zIndex: 40 }}
-          />
-          <View
-            style={{
-              position: "absolute",
-              top: 36,
-              left: 0,
-              right: 0,
-              zIndex: 50,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: ui.c.border,
-              backgroundColor: ui.c.card,
-              boxShadow: ui.c.shadowLift,
-              overflow: "hidden",
-            }}
-          >
+        // 宿主 RN-web 在可滚动 Modal 内绝对定位浮层的堆叠不可靠（选项被表单字段压住/穿透），
+        // 展开面板改流内布局：不依赖任何祖先 stacking/overflow 上下文。
+        <View
+          style={{
+            marginTop: 4,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: ui.c.border,
+            backgroundColor: ui.c.card,
+            boxShadow: ui.c.shadowLift,
+            overflow: "hidden",
+          }}
+        >
             {searchable && options.length > 8 ? (
               <View style={[ui.s.row, { gap: 6, paddingHorizontal: 8, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: ui.c.line }]}>
                 <Icon name="Search" size={12} color={ui.c.faint} />
@@ -639,8 +654,7 @@ export function Select<T extends string>({
                 </Pressable>
               ))}
             </ScrollView>
-          </View>
-        </>
+        </View>
       ) : null}
     </View>
   );

@@ -1173,13 +1173,9 @@ function MentionPopover({
   return (
     <View
       style={{
-        position: "absolute",
-        bottom: "100%",
-        left: 0,
         marginBottom: 6,
         width: 288,
         maxHeight: 300,
-        zIndex: 30,
         borderRadius: 6,
         borderWidth: 1,
         borderColor: ui.c.border,
