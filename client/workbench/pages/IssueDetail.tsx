@@ -879,7 +879,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
         />
       </PanelSection>
 
-      <PanelSection ui={ui} title={t("IssueDetail.84")}>
+      <PanelSection ui={ui} title={t("IssueDetail.84")} defaultOpen={false}>
         <View style={{ gap: 6, paddingHorizontal: 7 }}>
           <Btn ui={ui} label={t("IssueDetail.85")} icon="CheckCheck" onPress={() => void quick("read", t("Inbox.28"))} />
           <Btn ui={ui} label={t("IssueDetail.87")} icon="RotateCw" busy={busy} onPress={() => void rerun()} />
@@ -1082,8 +1082,8 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   );
 }
 
-function PanelSection({ ui, title, children }: { ui: Ui; title: string; children: React.ReactNode }) {
-  const [open, setOpen] = useState(true);
+function PanelSection({ ui, title, children, defaultOpen = true }: { ui: Ui; title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <View style={{ gap: 2 }}>
       <Pressable
