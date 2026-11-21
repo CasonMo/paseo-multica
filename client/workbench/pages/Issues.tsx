@@ -5,7 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { Avatar, Btn, Chips, Empty, ErrorNote, Field, LoadingRow, LoadMore, nearBottom, useUi, type Ui , Select } from "../bits";
 import { asList, asRecord, num, str, usePagedQuery, useQuery } from "../api";
 import { useWorkbench } from "../context";
-import { issueCategory, issueStatusEntry, priorityMeta, relTime, type Agent, type Issue, type IssueStatusEntry, type Project } from "../model";
+import { issueCategory, issueStatusEntry, priorityMeta, relTime, statusLabel, type Agent, type Issue, type IssueStatusEntry, type Project } from "../model";
 import { IssueRow } from "../parts";
 import { WORK_VIEWS } from "../Nav";
 import { useWorkingAgents, type WorkingAgent } from "../Execution";
@@ -87,11 +87,10 @@ export function IssuesPage() {
     if (search) when.q = search;
     if (projectId) when.project_id = projectId;
     if (view === "mine" && user?.id) when.assignee_id = user.id;
-    if (mode === "list") {
-      if (view === "active") when.status_category = "started";
-      if (view === "done") when.status_category = "done";
-      if (view === "closed") when.status_category = "closed";
-    }
+    // 视图过滤对列表与看板总数同时生效；看板各列会再按自己的粗桶覆盖 status_category
+    if (view === "active") when.status_category = "started";
+    if (view === "done") when.status_category = "done";
+    if (view === "closed") when.status_category = "closed";
     return when;
   }, [mode, search, projectId, view, user?.id]);
 
@@ -147,9 +146,10 @@ export function IssuesPage() {
   const title = VIEW_LABEL[view] ? t(VIEW_LABEL[view]) : t("Nav.20");
 
   const visibleColumns = useMemo(() => {
-    if (view === "active") return BOARD.filter((column) => column.key === "started");
-    if (view === "done") return BOARD.filter((column) => column.key === "done");
-    if (view === "closed") return BOARD.filter((column) => column.key === "closed");
+    // 执行中 = 服务端 started 粗桶（含进行中与审核中两列），与视图总数口径一致
+    if (view === "active") return BOARD.filter((column) => COLUMN_BUCKET[column.key] === "started");
+    if (view === "done") return BOARD.filter((column) => COLUMN_BUCKET[column.key] === "done");
+    if (view === "closed") return BOARD.filter((column) => COLUMN_BUCKET[column.key] === "closed");
     return BOARD;
   }, [view]);
 
@@ -608,7 +608,7 @@ function CreateIssueModal({
               ui={ui}
               value={status}
               onChange={setStatus}
-              options={(statuses.length > 0 ? statuses : [{ key: "todo", name: t("Issues.7"), color: "#8b8b93", id: "todo", category: "unstarted" }]).map((entry) => ({ value: entry.key, label: entry.name, color: entry.color }))}
+              options={(statuses.length > 0 ? statuses : [{ key: "todo", name: t("Issues.7"), color: "#8b8b93", id: "todo", category: "unstarted" }]).map((entry) => ({ value: entry.key, label: statusLabel(entry), color: entry.color }))}
             />
           </View>
           <View style={{ gap: 6 }}>

@@ -289,10 +289,59 @@ export function issueStatusEntry(issue: Issue, statuses: IssueStatusEntry[]): Is
   return statuses.find((status) => status.key === issue.status) ?? null;
 }
 
+// 内置状态键统一走双语 catalog，避免 zh 界面混排服务端原始英文名；
+// 工作区若重命名过内置状态（服务端名 ≠ 默认英文名）或自定义状态，保留服务端名
+const BUILTIN_STATUS_LABEL: Record<string, string> = {
+  backlog: "Issues.6",
+  todo: "Issues.7",
+  unstarted: "model.12",
+  in_progress: "Execution.60",
+  started: "Execution.60",
+  blocked: "model.35",
+  in_review: "Issues.9",
+  review: "Issues.9",
+  done: "AgentDetail.6",
+  completed: "AgentDetail.6",
+  cancelled: "AgentDetail.9",
+  closed: "AgentDetail.9",
+};
+
+const BUILTIN_STATUS_EN: Record<string, string> = {
+  backlog: "backlog",
+  todo: "todo",
+  unstarted: "not started",
+  in_progress: "in progress",
+  started: "in progress",
+  blocked: "blocked",
+  in_review: "in review",
+  review: "in review",
+  done: "done",
+  completed: "completed",
+  cancelled: "cancelled",
+  closed: "closed",
+};
+
+function isDefaultStatusName(key: string, name?: string | null): boolean {
+  if (!name || !name.trim()) return true;
+  return name.trim().toLowerCase() === (BUILTIN_STATUS_EN[key] ?? key).toLowerCase();
+}
+
+export function statusLabel(status: IssueStatusEntry): string {
+  const key = BUILTIN_STATUS_LABEL[status.key];
+  return key && isDefaultStatusName(status.key, status.name) ? t(key) : status.name;
+}
+
+/** 展示用：把 [@名字](mention://agent/<id>) 还原为 @名字，避免原始 URI 暴露给用户。 */
+export function displayMentions(text: string): string {
+  return text.replace(/\[@([^\]]+)\]\(mention:\/\/[^)]*\)/g, "@$1");
+}
+
 export function issueStatusLabel(issue: Issue, statuses: IssueStatusEntry[]): string {
+  const builtin = BUILTIN_STATUS_LABEL[issue.status];
+  if (builtin && isDefaultStatusName(issue.status, issue.status_name)) return t(builtin);
   if (issue.status_name) return issue.status_name;
   const entry = issueStatusEntry(issue, statuses);
-  if (entry) return entry.name;
+  if (entry) return statusLabel(entry);
   const category = issueCategory(issue, statuses);
   const meta = CATEGORY_META[category];
   return meta ? t(meta.label) : issue.status;

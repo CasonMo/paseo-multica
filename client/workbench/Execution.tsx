@@ -6,7 +6,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View, type T
 import { issueInsightsRpc, taskLogRpc } from "../../shared/contracts";
 import { asList, useQuery, type ApiFn } from "./api";
 import { Avatar, Btn, IconBtn, Tag, useUi, type Ui } from "./bits";
-import { relTime, type Agent, type Comment, type IssueStatusEntry } from "./model";
+import { displayMentions, relTime, type Agent, type Comment, type IssueStatusEntry } from "./model";
 
 export interface TaskRun {
   id: string;
@@ -834,7 +834,7 @@ export function RunLogModal({
           <View style={{ gap: 4 }}>
             <Text style={ui.s.label}>{t("Execution.69")}</Text>
             <Text style={{ fontSize: 13, color: ui.c.fg }}>
-              {triggerComment?.content?.slice(0, 300) ??
+              {(triggerComment?.content ? displayMentions(triggerComment.content).slice(0, 300) : null) ??
                 (run.attribution?.evidence?.kind === "comment"
                   ? t("Execution.23")
                   : run.attribution?.source === "direct_human"

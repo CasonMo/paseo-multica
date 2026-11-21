@@ -48,6 +48,7 @@ export function ProjectsPage() {
   const [editing, setEditing] = useState<Project | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Project | null>(null);
+  const [confirmArchive, setConfirmArchive] = useState<Project | null>(null);
   const [busy, setBusy] = useState(false);
 
   const projectsQuery = usePagedQuery<Project>(
@@ -117,12 +118,15 @@ export function ProjectsPage() {
     setFormOpen(true);
   };
 
-  const archive = async (project: Project) => {
+  const archive = async () => {
+    if (!confirmArchive) return;
+    const project = confirmArchive;
     setBusy(true);
     const result = await api({ method: "POST", path: `/api/projects/${project.id}/archive` });
     setBusy(false);
     if (result.ok) {
       toast.show(t("Projects.19"), { variant: "success" });
+      setConfirmArchive(null);
       projectsQuery.refresh();
       invalidate();
     } else toast.error(result.error ?? t("AgentDetail.20"));
@@ -284,7 +288,7 @@ export function ProjectsPage() {
                 {active.archived_at ? (
                   <IconBtn ui={ui} icon="ArchiveRestore" label={t("Inbox.35")} busy={busy} onPress={() => void restore(active)} />
                 ) : (
-                  <IconBtn ui={ui} icon="Archive" label={t("Projects.41")} busy={busy} onPress={() => void archive(active)} />
+                  <IconBtn ui={ui} icon="Archive" label={t("Projects.41")} busy={busy} onPress={() => setConfirmArchive(active)} />
                 )}
                 <IconBtn ui={ui} icon="Trash2" label={t("Projects.42")} color={ui.c.danger} onPress={() => setConfirmDelete(active)} />
               </View>
@@ -396,6 +400,25 @@ export function ProjectsPage() {
         }}
         toast={toast}
       />
+
+      <Modal
+        title={t("Projects.41")}
+        icon={<Icon name="Archive" size={16} color={ui.c.muted} />}
+        open={Boolean(confirmArchive)}
+        onOpenChange={(next) => {
+          if (!next) setConfirmArchive(null);
+        }}
+      >
+        <Modal.Content>
+          <View style={{ gap: 12 }}>
+            <Text style={ui.s.body}>{t("Projects.84")}{confirmArchive?.title}{t("Projects.83")}</Text>
+            <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8 }]}>
+              <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setConfirmArchive(null)} />
+              <Btn ui={ui} label={t("Projects.41")} icon="Archive" busy={busy} onPress={() => void archive()} />
+            </View>
+          </View>
+        </Modal.Content>
+      </Modal>
 
       <Modal
         title={t("Projects.42")}

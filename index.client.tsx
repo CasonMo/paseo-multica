@@ -34,8 +34,13 @@ const PAGE_KEYS: PageKey[] = [
   "settings",
 ];
 
+// 深链/历史参数可能用导航语义名（automation），内部页键为 autopilot
+const PAGE_ALIASES: Record<string, PageKey> = { automation: "autopilot", work: "issues" };
+
 function asPage(value: string | undefined): PageKey | null {
-  return value && (PAGE_KEYS as string[]).includes(value) ? (value as PageKey) : null;
+  if (!value) return null;
+  if ((PAGE_KEYS as string[]).includes(value)) return value as PageKey;
+  return PAGE_ALIASES[value] ?? null;
 }
 
 const LAST_SCREEN_KEY = "multica.lastScreen";

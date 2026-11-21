@@ -8,6 +8,7 @@ import { useWorkbench } from "../context";
 import {
   HANDLER_LABEL,
   relTime,
+  statusLabel as statusLabelOf,
   type Agent,
   type IssueStatusEntry,
   type Project,
@@ -77,7 +78,10 @@ export function WorkflowsPage() {
 
   const statusOf = (statusKey: string): IssueStatusEntry | null =>
     statuses.find((status) => status.key === statusKey) ?? null;
-  const statusName = (statusKey: string) => statusOf(statusKey)?.name ?? statusKey;
+  const statusName = (statusKey: string) => {
+    const entry = statusOf(statusKey);
+    return entry ? statusLabelOf(entry) : statusKey;
+  };
 
   const handlerText = (handler?: WorkflowHandler | null): string => {
     if (!handler || handler.type === "none") return t(HANDLER_LABEL.none);
@@ -573,7 +577,10 @@ function StepModal({
   const open = Boolean(target);
   const status = step ? statuses.find((entry) => entry.key === step.status_key) ?? null : null;
   const otherKeys = workflowSteps.map((entry) => entry.status_key).filter((entry) => entry !== step?.status_key);
-  const statusLabel = (statusKey: string) => statuses.find((entry) => entry.key === statusKey)?.name ?? statusKey;
+  const statusLabel = (statusKey: string) => {
+    const entry = statuses.find((item) => item.key === statusKey);
+    return entry ? statusLabelOf(entry) : statusKey;
+  };
 
   const save = async () => {
     if (!target || !step) return;

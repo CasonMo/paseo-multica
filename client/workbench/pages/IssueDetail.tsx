@@ -24,6 +24,7 @@ import {
   pickTextColor,
   priorityMeta,
   relTime,
+  statusLabel,
   type Agent,
   type Comment,
   type Issue,
@@ -766,7 +767,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
             value={issue.status}
             disabled={busy}
             onChange={(next) => void updateIssue({ status: next }, t("IssueDetail.96"))}
-            options={statuses.map((entry) => ({ value: entry.key, label: entry.name, color: entry.color }))}
+            options={statuses.map((entry) => ({ value: entry.key, label: statusLabel(entry), color: entry.color }))}
           />
         </View>
         <View style={{ gap: 4 }}>
@@ -1032,6 +1033,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
         <Modal.Content>
           <View style={{ gap: 12 }}>
             <Text style={ui.s.body}>{t("IssueDetail.117")} {issue.identifier}{t("IssueDetail.118")}</Text>
+            {children.length > 0 ? <Text style={ui.s.muted}>{t("IssueDetail.152", { a: children.length })}</Text> : null}
             <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8 }]}>
               <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setConfirmDelete(false)} />
               <Btn ui={ui} label={t("SquadDetail.21")} tone="danger" busy={busy} onPress={() => void removeIssue()} />

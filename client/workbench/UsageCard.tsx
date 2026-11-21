@@ -78,6 +78,19 @@ export function UsageCard() {
     const reason = str(row.failure_reason);
     reasons.set(reason, (reasons.get(reason) ?? 0) + num(row.task_count));
   }
+  const reasonLabel = (code: string): string => {
+    const known: Record<string, string> = {
+      "agent_error.provider_auth_or_access": "UsageCard.17",
+      "agent_error.provider_rate_limit": "UsageCard.18",
+      "agent_error.provider_overloaded": "UsageCard.19",
+      "agent_error.runtime_offline": "UsageCard.20",
+      timeout: "UsageCard.21",
+      cancelled: "UsageCard.22",
+    };
+    const key = known[code];
+    if (key) return t(key);
+    return code.replace(/^agent_error\./, "").replace(/_/g, " ");
+  };
 
   const runtimeSeconds = (runtime.data ?? []).reduce((sum, row) => sum + num(row.total_seconds), 0);
   const runtimeTasks = (runtime.data ?? []).reduce((sum, row) => sum + num(row.task_count), 0);
@@ -138,8 +151,8 @@ export function UsageCard() {
               .map(([reason, count]) => (
                 <View key={reason} style={[ui.s.row, { gap: 8 }]}>
                   <Icon name="AlertTriangle" size={13} color={ui.c.warning} />
-                  <Text numberOfLines={1} style={[ui.s.tiny, { flex: 1, fontFamily: "Menlo" }]}>
-                    {reason}
+                  <Text numberOfLines={1} style={[ui.s.tiny, { flex: 1 }]}>
+                    {reasonLabel(reason)}
                   </Text>
                   <Tag ui={ui} label={t("UsageCard.16", { a: count })} tone="warning" />
                 </View>

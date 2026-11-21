@@ -912,5 +912,19 @@
   "Chat.39": "Processing",
   "Chat.42": "Follow-ups",
   "Chat.43": "{{a}} steps",
-  "Chat.44": "replied in {{a}}"
+  "Chat.44": "replied in {{a}}",
+  "Inbox.151": "Archive \"",
+  "Inbox.152": "\"? All notifications for this issue are archived together and can be restored from the Archived tab.",
+  "Inbox.153": "{{a}} matches · latest",
+  "Projects.83": "\"? The project will be hidden from the default list and can be restored from the Archived filter.",
+  "model.35": "Blocked",
+  "UsageCard.17": "Provider auth or access failure",
+  "UsageCard.18": "Provider rate limited",
+  "UsageCard.19": "Provider overloaded",
+  "UsageCard.20": "Runtime offline",
+  "UsageCard.21": "Execution timed out",
+  "UsageCard.22": "Cancelled",
+  "AgentDetail.113": "The MCP list is slow to load. Retry or check another tab.",
+  "IssueDetail.152": "This issue has {{a}} subtasks; they will remain as standalone issues after deletion.",
+  "Projects.84": "Archive \""
 }

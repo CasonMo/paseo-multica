@@ -99,7 +99,8 @@ export const resources = {
     "108": "Not bound",
     "110": "System prompt / working rules",
     "111": "Markdown supported.",
-    "112": "MCP"
+    "112": "MCP",
+    "113": "The MCP list is slow to load. Retry or check another tab."
   },
   "Execution": {
     "1": " working",
@@ -362,7 +363,13 @@ export const resources = {
     "13": "{{a}} metered tasks",
     "14": "Daily tokens",
     "15": "Failure reasons",
-    "16": "{{a}}×"
+    "16": "{{a}}×",
+    "17": "Provider auth or access failure",
+    "18": "Provider rate limited",
+    "19": "Provider overloaded",
+    "20": "Runtime offline",
+    "21": "Execution timed out",
+    "22": "Cancelled"
   },
   "api": {
     "1": "Request failed (HTTP {{a}})"
@@ -402,7 +409,8 @@ export const resources = {
     "31": "just now",
     "32": "{{a}} min ago",
     "33": "{{a}} h ago",
-    "34": "{{a}} d ago"
+    "34": "{{a}} d ago",
+    "35": "Blocked"
   },
   "ApiExplorer": {
     "1": "{{a}} routes",
@@ -585,7 +593,10 @@ export const resources = {
     "43": "Archive everything in the inbox? Archived items remain visible under Archived.",
     "51": "\" returns to the inbox after the selected time.",
     "149": "\"?",
-    "150": "\""
+    "150": "\"",
+    "151": "Archive \"",
+    "152": "\"? All notifications for this issue are archived together and can be restored from the Archived tab.",
+    "153": "{{a}} matches · latest"
   },
   "IssueDetail": {
     "1": "Run stopped",
@@ -686,7 +697,8 @@ export const resources = {
     "146": "View the run log triggered by this comment",
     "147": "Run log ·",
     "148": "Resolved",
-    "151": ": "
+    "151": ": ",
+    "152": "This issue has {{a}} subtasks; they will remain as standalone issues after deletion."
   },
   "Issues": {
     "6": "Backlog",
@@ -807,7 +819,9 @@ export const resources = {
     "75": "Goals, scope, milestones… (Markdown supported)",
     "78": "Start date",
     "79": "Due date",
-    "82": "Create project"
+    "82": "Create project",
+    "83": "\"? The project will be hidden from the default list and can be restored from the Archived filter.",
+    "84": "Archive \""
   },
   "Settings": {
     "2": "Connection deleted",
@@ -1071,7 +1085,8 @@ export const resources = {
     "108": "不绑定",
     "110": "系统提示词 / 工作规则",
     "111": "支持 Markdown。",
-    "112": "MCP"
+    "112": "MCP",
+    "113": "MCP 列表加载较慢，可重试或先查看其他标签。"
   },
   "Execution": {
     "1": "在工作",
@@ -1334,7 +1349,13 @@ export const resources = {
     "13": "{{a}} 个已计量任务",
     "14": "每日 Tokens",
     "15": "失败原因",
-    "16": "{{a}} 次"
+    "16": "{{a}} 次",
+    "17": "模型服务鉴权或访问失败",
+    "18": "模型服务限流",
+    "19": "模型服务过载",
+    "20": "运行时离线",
+    "21": "执行超时",
+    "22": "已取消"
   },
   "api": {
     "1": "请求失败 (HTTP {{a}})"
@@ -1374,7 +1395,8 @@ export const resources = {
     "31": "刚刚",
     "32": "{{a}} 分钟前",
     "33": "{{a}} 小时前",
-    "34": "{{a}} 天前"
+    "34": "{{a}} 天前",
+    "35": "阻塞"
   },
   "ApiExplorer": {
     "1": "{{a}} 个接口",
@@ -1557,7 +1579,10 @@ export const resources = {
     "43": "把当前收件箱里的通知全部归档？归档后仍可在「已归档」里查看。",
     "51": "」将在选定时间后重新回到收件箱。",
     "149": "」？",
-    "150": "「"
+    "150": "「",
+    "151": "归档「",
+    "152": "」？该需求下的全部通知会一并归档，之后可在「已归档」标签恢复。",
+    "153": "匹配 {{a}} 条 · 最近一条"
   },
   "IssueDetail": {
     "1": "已停止该运行",
@@ -1658,7 +1683,8 @@ export const resources = {
     "146": "查看该评论触发的运行日志",
     "147": "运行日志 ·",
     "148": "解决于",
-    "151": "："
+    "151": "：",
+    "152": "该需求有 {{a}} 个子任务；删除后子任务会保留为独立需求。"
   },
   "Issues": {
     "6": "待规划",
@@ -1779,7 +1805,9 @@ export const resources = {
     "75": "目标、范围、里程碑…（支持 Markdown）",
     "78": "开始日期",
     "79": "截止日期",
-    "82": "创建项目"
+    "82": "创建项目",
+    "83": "」？归档后项目会从默认列表隐藏，可在「已归档」筛选中恢复。",
+    "84": "归档「"
   },
   "Settings": {
     "2": "连接已删除",

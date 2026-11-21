@@ -1,6 +1,6 @@
 import { t } from "../i18n";
 import { Icon } from "@getpaseo/plugin/client/ui";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { Btn, Card, Divider, Empty, ErrorNote, LoadingRow, LoadMore, nearBottom, SectionHeader, Stat, Tag, useUi } from "../bits";
 import { asList, asRecord, num, usePagedQuery, useQuery } from "../api";
 import { useWorkbench } from "../context";
@@ -10,7 +10,10 @@ import { UsageCard } from "../UsageCard";
 
 export function OverviewPage() {
   const ctx = useWorkbench();
-  const { theme, compact, api, statuses, bump, user, workspaceId, navigate, invalidate, toast } = ctx;
+  const { theme, compact, narrow, api, statuses, bump, user, workspaceId, navigate, invalidate, toast } = ctx;
+  const { width: windowWidth } = useWindowDimensions();
+  // 独立窗口窄视口时 onLayout 可能滞后，用窗口尺寸兜底保证 hero 指标 2×2
+  const halfMetrics = compact || narrow || windowWidth < 1000;
   const ui = useUi(theme, compact);
   const key = `${workspaceId}:${bump}`;
 
@@ -105,16 +108,18 @@ export function OverviewPage() {
         <View
           style={{
             flexDirection: "row",
+            flexWrap: "wrap",
             borderTopWidth: 1,
             borderTopColor: ui.c.border,
             backgroundColor: ui.c.surface2,
           }}
         >
-          <HeroMetric ui={ui} label={t("Overview.9")} value={totalIssues} loading={recent.loading} icon="ListTodo" />
-          <HeroMetric ui={ui} label={t("Execution.60")} value={startedTotal} loading={started.loading} icon="Loader" />
-          <HeroMetric ui={ui} label={t("Overview.11")} value={unreadCount} loading={unread.loading} icon="Bell" />
+          <HeroMetric ui={ui} half={halfMetrics} label={t("Overview.9")} value={totalIssues} loading={recent.loading} icon="ListTodo" />
+          <HeroMetric ui={ui} half={halfMetrics} label={t("Execution.60")} value={startedTotal} loading={started.loading} icon="Loader" />
+          <HeroMetric ui={ui} half={halfMetrics} label={t("Overview.11")} value={unreadCount} loading={unread.loading} icon="Bell" />
           <HeroMetric
             ui={ui}
+            half={halfMetrics}
             label={t("Overview.12")}
             value={`${onlineRuntimes.length}/${runtimeList.length || 0}`}
             loading={runtimes.loading}
@@ -321,15 +326,17 @@ function HeroMetric({
   value,
   loading,
   icon,
+  half,
 }: {
   ui: ReturnType<typeof useUi>;
   label: string;
   value: number | string;
   loading?: boolean;
   icon: string;
+  half?: boolean;
 }) {
   return (
-    <View style={{ flex: 1, paddingVertical: 12, paddingHorizontal: 12, gap: 4 }}>
+    <View style={{ flexGrow: 1, flexBasis: half ? "50%" : 0, paddingVertical: 12, paddingHorizontal: 12, gap: 4 }}>
       <View style={[ui.s.row, { gap: 5 }]}>
         <Icon name={icon} size={11} color={ui.c.muted} />
         <Text style={ui.s.tiny}>{label}</Text>

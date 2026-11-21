@@ -111,7 +111,15 @@ export function WorkbenchProvider({
   const { locale: hostLocale, t: translate } = useI18n(messagesFor(override));
   bindTranslation((key, args) => translate(key as never, args as never));
   const locale = override === "auto" ? hostLocale : override;
-  const toast = useToast();
+  const hostToast = useToast();
+  // 成功提示默认 3 秒收起，避免「已标记为已读」一类 toast 长时间停留
+  const toast = useMemo<ReturnType<typeof useToast>>(
+    () => ({
+      show: (message, options) => hostToast.show(message, { durationMs: 3000, ...options }),
+      error: (message) => hostToast.error(message),
+    }),
+    [hostToast],
+  );
   const listRpc = useRpc(connectionsListRpc);
   const bootstrapRpcFn = useRpc(bootstrapRpc);
   const selectRpc = useRpc(workspaceSelectRpc);

@@ -21,7 +21,18 @@ export type ApiFn = (input: ApiRequestInput) => Promise<ApiResponse>;
 export type QueryParams = Record<string, string | number | boolean | undefined | null>;
 
 export function useApi(): ApiFn {
-  return useRpc(apiRequestRpc) as unknown as ApiFn;
+  const rpc = useRpc(apiRequestRpc) as unknown as ApiFn;
+  // RPC 通道异常（如插件重载瞬间 Plugin is not available）转为 ok:false，避免调用方静默失败
+  return useCallback(
+    async (input: ApiRequestInput): Promise<ApiResponse> => {
+      try {
+        return await rpc(input);
+      } catch (cause) {
+        return { ok: false, status: 0, durationMs: 0, error: cause instanceof Error ? cause.message : String(cause) };
+      }
+    },
+    [rpc],
+  );
 }
 
 export interface QueryResult<T> {
@@ -173,6 +184,7 @@ export function usePagedQuery<T = Record<string, unknown>>(
   const [error, setError] = useState<string | null>(null);
   const seq = useRef(0);
   const inFlight = useRef(false);
+  const pendingReset = useRef(false);
   const mounted = useRef(true);
   const itemsRef = useRef(items);
   itemsRef.current = items;
@@ -218,7 +230,11 @@ export function usePagedQuery<T = Record<string, unknown>>(
         if (mounted.current && ticket === seq.current) setError(cause instanceof Error ? cause.message : String(cause));
       } finally {
         inFlight.current = false;
-        if (mounted.current && ticket === seq.current) {
+        // 视图/查询在请求在途时变化：旧响应已作废，落地后立即补发重置请求，避免残留旧列表
+        if (pendingReset.current) {
+          pendingReset.current = false;
+          void run(true);
+        } else if (mounted.current && ticket === seq.current) {
           setLoading(false);
           setLoadingMore(false);
         }
@@ -228,13 +244,21 @@ export function usePagedQuery<T = Record<string, unknown>>(
   );
 
   useEffect(() => {
+    seq.current++;
+    pendingReset.current = false;
     if (!path || !enabled) {
       setLoading(false);
       return;
     }
     setItems([]);
     setTotal(0);
-    void run(true);
+    setError(null);
+    if (inFlight.current) {
+      pendingReset.current = true;
+      setLoading(true);
+    } else {
+      void run(true);
+    }
      
   }, [run, key, keysKey]);
 
@@ -243,7 +267,12 @@ export function usePagedQuery<T = Record<string, unknown>>(
     if (hasMore) void run(false);
   }, [hasMore, run]);
   const refresh = useCallback(() => {
-    void run(true);
+    if (inFlight.current) {
+      pendingReset.current = true;
+      setLoading(true);
+    } else {
+      void run(true);
+    }
   }, [run]);
 
   return { items, total, loading, loadingMore, error, hasMore, loadMore, refresh };
@@ -295,6 +324,10 @@ export function useRuntimeModels(api: ApiFn, runtimeId: string | null | undefine
       const res = await api({ method: "GET", path: `/api/runtimes/${runtimeId}/models/${requestId}` });
       if (!alive) return;
       if (res.ok && apply(res.data as Record<string, unknown>)) return;
+      if (res.status === 0) {
+        setLoading(false);
+        return;
+      }
       timer = setTimeout(() => void poll(requestId), 1500);
     };
     const start = async () => {

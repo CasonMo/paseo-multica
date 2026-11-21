@@ -540,6 +540,15 @@ function McpPanel({
     `${ctx.bump}:${agentId}`,
   );
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!query.loading) {
+      setSlow(false);
+      return;
+    }
+    const timer = setTimeout(() => setSlow(true), 10000);
+    return () => clearTimeout(timer);
+  }, [query.loading]);
   const items = query.data ?? [];
 
   const toggle = async (item: Record<string, unknown>) => {
@@ -573,7 +582,14 @@ function McpPanel({
     <View style={{ gap: 8 }}>
       <Text style={ui.s.tiny}>{t("AgentDetail.76")}</Text>
       {query.loading && items.length === 0 ? <LoadingRow ui={ui} /> : null}
-      {!query.loading && items.length === 0 ? (
+      {query.loading && slow && items.length === 0 ? (
+        <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
+          <Text style={ui.s.tiny}>{t("AgentDetail.113")}</Text>
+          <Btn ui={ui} label={t("Nav.14")} icon="RefreshCw" onPress={query.refresh} />
+        </View>
+      ) : null}
+      {query.error ? <ErrorNote ui={ui} message={query.error} onRetry={query.refresh} /> : null}
+      {!query.loading && !query.error && items.length === 0 ? (
         <Empty ui={ui} icon="Plug" title={t("AgentDetail.77")} description={t("AgentDetail.78")} />
       ) : null}
       {items.map((item, index) => {

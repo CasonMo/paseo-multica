@@ -40,6 +40,7 @@ export function InboxPage() {
   const [tab, setTab] = useState<Tab>("inbox");
   const [search, setSearch] = useState("");
   const [confirmArchiveAll, setConfirmArchiveAll] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState<InboxItem | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<InboxItem | null>(null);
   const [snoozeItem, setSnoozeItem] = useState<InboxItem | null>(null);
   const [snoozeChoice, setSnoozeChoice] = useState("0");
@@ -143,6 +144,18 @@ export function InboxPage() {
     setConfirmArchiveAll(false);
     if (result.ok) {
       toast.show(t("Inbox.12"), { variant: "success" });
+      refreshAll();
+    } else toast.error(result.error ?? t("AgentDetail.20"));
+  };
+
+  const archiveOne = async () => {
+    if (!confirmArchive) return;
+    setBusy(true);
+    const result = await api({ method: "POST", path: `/api/inbox/${confirmArchive.id}/archive` });
+    setBusy(false);
+    if (result.ok) {
+      toast.show(t("AgentDetail.28"), { variant: "success" });
+      setConfirmArchive(null);
       refreshAll();
     } else toast.error(result.error ?? t("AgentDetail.20"));
   };
@@ -310,7 +323,7 @@ export function InboxPage() {
                             ui={ui}
                             icon="Archive"
                             label={t("Inbox.32")}
-                            onPress={() => void action(`/api/inbox/${item.id}/archive`, "POST", t("AgentDetail.28"))}
+                            onPress={() => setConfirmArchive(item)}
                           />
                         ) : null}
                         {tab === "snoozed" && item.snoozed_until ? (
@@ -349,9 +362,9 @@ export function InboxPage() {
           {filtered.length > 0 ? (
             <LoadMore
               ui={ui}
-              loaded={items.length}
-              total={itemsQuery.total}
-              hasMore={itemsQuery.hasMore}
+              loaded={needle ? filtered.length : items.length}
+              total={needle ? filtered.length : itemsQuery.total}
+              hasMore={needle ? false : itemsQuery.hasMore}
               loadingMore={itemsQuery.loadingMore}
               loading={itemsQuery.loading}
               onLoadMore={itemsQuery.loadMore}
@@ -373,7 +386,7 @@ export function InboxPage() {
           ]}
         >
           <Text style={ui.s.tiny}>
-            {t("Inbox.40")} {itemsQuery.total} {t("Inbox.41")} {relTime(filtered[0]?.created_at)}
+            {needle ? t("Inbox.153", { a: filtered.length }) : `${t("Inbox.40")} ${itemsQuery.total} ${t("Inbox.41")}`} {relTime(filtered[0]?.created_at)}
           </Text>
         </View>
       ) : null}
@@ -390,6 +403,25 @@ export function InboxPage() {
             <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8 }]}>
               <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setConfirmArchiveAll(false)} />
               <Btn ui={ui} label={t("Inbox.21")} icon="Archive" busy={busy} onPress={() => void archiveAll()} />
+            </View>
+          </View>
+        </Modal.Content>
+      </Modal>
+
+      <Modal
+        title={t("Inbox.32")}
+        icon={<Icon name="Archive" size={16} color={ui.c.muted} />}
+        open={Boolean(confirmArchive)}
+        onOpenChange={(next) => {
+          if (!next) setConfirmArchive(null);
+        }}
+      >
+        <Modal.Content>
+          <View style={{ gap: 12 }}>
+            <Text style={ui.s.body}>{t("Inbox.151")}{confirmArchive?.title}{t("Inbox.152")}</Text>
+            <View style={[ui.s.row, { justifyContent: "flex-end", gap: 8 }]}>
+              <Btn ui={ui} label={t("AgentDetail.40")} onPress={() => setConfirmArchive(null)} />
+              <Btn ui={ui} label={t("AgentDetail.28")} icon="Archive" busy={busy} onPress={() => void archiveOne()} />
             </View>
           </View>
         </Modal.Content>

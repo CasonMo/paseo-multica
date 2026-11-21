@@ -490,9 +490,10 @@ export function Avatar({
   const emoji = url?.startsWith("emoji:") ? url.slice(6).trim() : null;
   const pair = AVATAR_PAIRS[avatarSeed(label || url || "?") % AVATAR_PAIRS.length];
   const imageUri = url && !emoji && !broken && /^(https?:|data:)/i.test(url) ? url : null;
-  const gradient = !color && !emoji && !imageUri ? `linear-gradient(135deg, ${pair[0]} 0%, ${pair[1]} 100%)` : undefined;
+  // 图片加载期间/失败时露出字母头像兜底，避免灰圈占位
+  const gradient = !color && !emoji ? `linear-gradient(135deg, ${pair[0]} 0%, ${pair[1]} 100%)` : undefined;
   const glyph = Array.from(label)[0]?.toUpperCase() ?? "?";
-  const glyphColor = color ? pickTextColor(color) : gradient ? pickTextColor(mixHex(pair[0], pair[1])) : ui.c.fg;
+  const glyphColor = color ? pickTextColor(color) : pickTextColor(mixHex(pair[0], pair[1]));
   return (
     <View
       style={[
@@ -501,20 +502,28 @@ export function Avatar({
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: color ?? (emoji ? `${pair[0]}26` : gradient ? pair[1] : ui.c.fill),
+          backgroundColor: color ?? (emoji ? `${pair[0]}26` : pair[1]),
           borderWidth: emoji ? 1 : 0,
           borderColor: `${pair[0]}55`,
           backgroundImage: gradient,
           experimental_backgroundImage: gradient,
+          overflow: "hidden",
         } as ViewStyle,
       ]}
     >
       {emoji ? (
         <Text style={{ fontSize: Math.max(10, size * 0.52), lineHeight: Math.max(12, size * 0.66) }}>{emoji}</Text>
-      ) : imageUri ? (
-        <Image source={{ uri: imageUri }} style={{ width: size, height: size }} onError={() => setBroken(true)} />
       ) : (
-        <Text style={[ui.s.avatarText, { color: glyphColor, fontSize: Math.max(9, size * 0.4) }]}>{glyph}</Text>
+        <>
+          <Text style={[ui.s.avatarText, { color: glyphColor, fontSize: Math.max(9, size * 0.4) }]}>{glyph}</Text>
+          {imageUri ? (
+            <Image
+              source={{ uri: imageUri }}
+              style={{ position: "absolute", top: 0, left: 0, width: size, height: size }}
+              onError={() => setBroken(true)}
+            />
+          ) : null}
+        </>
       )}
     </View>
   );
