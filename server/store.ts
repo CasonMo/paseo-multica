@@ -181,9 +181,13 @@ export async function saveConnection(input: SaveConnectionInput): Promise<Connec
     const baseUrl = normalizeBaseUrl(input.baseUrl);
     const existing = input.id ? state.servers.find((server) => server.id === input.id) : undefined;
     if (existing) {
+      const nextToken = typeof input.token === "string" ? input.token.trim() : "";
+      if (baseUrl !== existing.baseUrl && !nextToken) {
+        throw new Error("更换服务器地址后必须输入新服务器的 API Key");
+      }
       existing.name = input.name.trim() || existing.name;
       existing.baseUrl = baseUrl;
-      if (typeof input.token === "string" && input.token.trim().length > 0) existing.token = input.token.trim();
+      if (nextToken) existing.token = nextToken;
       if (input.workspaceId !== undefined) existing.workspaceId = input.workspaceId;
       existing.updatedAt = now;
     } else {

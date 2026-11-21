@@ -874,7 +874,8 @@ export const resources = {
     "68": "Language",
     "69": "Follow Paseo",
     "70": "English",
-    "71": "中文"
+    "71": "中文",
+    "72": "Changing the server URL requires the new server's API key; the old key is never sent to the new destination."
   },
   "Team": {
     "5": "Create session failed",
@@ -1860,7 +1861,8 @@ export const resources = {
     "68": "语言",
     "69": "跟随 Paseo",
     "70": "English",
-    "71": "中文"
+    "71": "中文",
+    "72": "更换服务器地址后必须输入新服务器的 API Key；旧 Key 不会发往新地址。"
   },
   "Team": {
     "5": "创建会话失败",

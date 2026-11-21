@@ -79,7 +79,10 @@ its own key, workspace and internal-route preference.
 - The API key is stored only on the daemon host, in `~/.paseo/multica/connections.json`
   with file mode `0600`. It is never sent to the interface; settings show a masked form
   such as `mul_…abcd`. The daemon attaches it as an `Authorization: Bearer` header on
-  requests to the selected server only.
+  requests to the selected server only. Changing a connection's server URL requires
+  entering the new server's API key: both the connection test and the save handler
+  reject a destination change without a new key, so a previous key is never sent to or
+  retained for a different destination.
 - Issue content, comments, chat messages and agent instructions you write are sent to the
   configured Multica server, which dispatches them to its own agent runtimes. This plugin
   sends nothing to any other third party.

@@ -40,6 +40,13 @@ export function createHandlers() {
     if (!/^https?:\/\/[^/\s]+/i.test(baseUrl)) throw new Error("服务器地址不合法");
     const token = input.token?.trim();
     if (token && !/^[A-Za-z0-9_\-.]{8,}$/.test(token)) throw new Error("API Key 格式不正确");
+    // 目的地变更时禁止沿用旧 Key：旧凭据绝不能发往/留存到新服务器
+    if (input.id) {
+      const stored = (await readConnections()).servers.find((server) => server.id === input.id);
+      if (stored && stored.baseUrl !== baseUrl && !token) {
+        throw new Error("更换服务器地址后必须输入新服务器的 API Key");
+      }
+    }
     return saveConnection({ ...input, name, baseUrl, token: token || undefined });
   };
 
@@ -51,6 +58,9 @@ export function createHandlers() {
     let workspaceId: string | null = input.workspaceId?.trim() || null;
     if (input.id || !baseUrl) {
       const stored = await resolveServer(input.id);
+      if (input.id && baseUrl && baseUrl !== stored.baseUrl && !token) {
+        return { ok: false, error: "更换服务器地址后必须输入新服务器的 API Key" };
+      }
       baseUrl = baseUrl || stored.baseUrl;
       token = token || stored.token;
       workspaceId = workspaceId ?? stored.workspaceId;

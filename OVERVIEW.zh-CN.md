@@ -58,7 +58,9 @@ Windows）。你需要一个 Multica 账号或服务器，以及一个个人访�
   运行期间不下载或安装任何软件。
 - API Key 只保存在 daemon 所在主机的 `~/.paseo/multica/connections.json`，文件权限 `0600`。
   Key 不会下发到界面，设置页只显示 `mul_…abcd` 形式的掩码；daemon 仅在请求所选服务器时以
-  `Authorization: Bearer` 头携带它。
+  `Authorization: Bearer` 头携带它。更换连接的服务器地址时必须输入新服务器的 API Key：
+  连接测试与保存两个 handler 都会拒绝「换地址但不带新 Key」的请求，旧 Key 绝不会发往
+  新地址或被留存用于新地址。
 - 你编写的需求内容、评论、聊天消息与智能体指令会发送到所配置的 Multica 服务器，由该服务器
   派发给它自己的智能体运行时。本插件不向任何其他第三方发送数据。
 - `/api/internal` 与 `/api/daemon` 接口默认隐藏，需在设置里显式开启。接口调试器发出的请求

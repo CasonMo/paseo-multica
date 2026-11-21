@@ -398,6 +398,16 @@ function ConnectionModal({
   const [result, setResult] = useState<ConnectionTestOutput | null>(null);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const targetKey = target ? (target === "new" ? "new" : target.id) : null;
+  // 与 daemon normalizeBaseUrl 同口径的轻量归一，仅用于表单提示；强校验在 daemon
+  const normalizeUrl = (value: string) => {
+    let s = value.trim();
+    if (!s) return "";
+    if (!/^https?:\/\//i.test(s)) s = `https://${s}`;
+    if (/^https?:\/\/(multica\.ai|app\.multica\.ai|www\.multica\.ai)$/i.test(s)) return OFFICIAL_BASE_URL;
+    return s.replace(/\/+$/, "").replace(/\/api$/i, "");
+  };
+  const destinationChanged = Boolean(existing) && baseUrl.trim() !== "" && normalizeUrl(baseUrl) !== normalizeUrl(existing?.baseUrl ?? "");
+  const needsNewKey = destinationChanged && !token.trim();
 
   useEffect(() => {
     setName(existing?.name ?? t("Settings.48"));
@@ -436,7 +446,7 @@ function ConnectionModal({
             onChangeText={setToken}
             placeholder={existing?.tokenConfigured ? t("Settings.55", { a: existing.tokenMasked }) : "mul_…"}
             secureTextEntry
-            hint={t("Settings.56")}
+            hint={needsNewKey ? t("Settings.72") : t("Settings.56")}
           />
 
           <View style={[ui.s.row, { gap: 8, flexWrap: "wrap" }]}>
@@ -445,7 +455,9 @@ function ConnectionModal({
               label={t("Settings.57")}
               icon="Activity"
               busy={testing}
+              disabled={needsNewKey}
               onPress={async () => {
+                if (needsNewKey) return setError(t("Settings.72"));
                 setTesting(true);
                 setError(null);
                 try {
@@ -509,10 +521,12 @@ function ConnectionModal({
             label={t("AgentDetail.72")}
             tone="primary"
             busy={busy}
+            disabled={needsNewKey}
             onPress={async () => {
               if (!name.trim()) return setError(t("AgentDetail.92"));
               if (!baseUrl.trim()) return setError(t("Settings.66"));
               if (!existing && !token.trim()) return setError(t("Settings.67"));
+              if (needsNewKey) return setError(t("Settings.72"));
               setBusy(true);
               setError(null);
               const failure = await onSave({
