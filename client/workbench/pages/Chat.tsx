@@ -1,7 +1,17 @@
 import { t } from "../i18n";
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View, type TextStyle } from "react-native";
+import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
+import {
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type TextStyle,
+} from "react-native";
+import { useKeyboardInset } from "../../use-keyboard-inset";
 import { asList, useQuery } from "../api";
 import { Avatar, Btn, Empty, ErrorNote, LoadingRow, enterToSend, useUi, type Ui , Select } from "../bits";
 import { TaskStepsBlock } from "../Execution";
@@ -24,6 +34,9 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
   const [busy, setBusy] = useState(false);
   const [sentAt, setSentAt] = useState<number | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  const rootRef = useRef<ComponentRef<typeof View>>(null);
+  const keyboardInset = useKeyboardInset(rootRef);
+  const followRef = useRef(true);
 
   const sessionsQuery = useQuery(
     api,
@@ -127,6 +140,16 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
     setActiveId(id);
     setShowList(compact);
     navigate("chat", { sessionId: id });
+  };
+
+  const onTranscriptScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    followRef.current = contentOffset.y + layoutMeasurement.height >= contentSize.height - 24;
+  };
+
+  // 键盘抬起后视口变矮，原本贴底的转录要重新贴底，否则最后一条被输入区盖住。
+  const onTranscriptLayout = () => {
+    if (followRef.current) scrollRef.current?.scrollToEnd({ animated: false });
   };
 
   const send = async () => {
@@ -301,6 +324,9 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={{ padding: compact ? 12 : 18, gap: 12 }}
+        onScroll={onTranscriptScroll}
+        scrollEventThrottle={16}
+        onLayout={onTranscriptLayout}
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
       >
         {messagesQuery.loading && messages.length === 0 ? <LoadingRow ui={ui} /> : null}
@@ -396,7 +422,13 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
   );
 
   return (
-    <View style={{ flex: 1, flexDirection: compact && showList ? "column" : "row" }}>
+    <View
+      ref={rootRef}
+      style={[
+        { flex: 1, flexDirection: compact && showList ? "column" : "row" },
+        keyboardInset > 0 ? { marginBottom: keyboardInset } : null,
+      ]}
+    >
       {compact ? (showList ? list : thread) : (
         <>
           <View style={{ width: 280 }}>{list}</View>

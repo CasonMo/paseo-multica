@@ -1,6 +1,6 @@
 import { t } from "../i18n";
 import { Icon, Markdown, Modal } from "@getpaseo/plugin/client/ui";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import {
   Pressable,
   ScrollView,
@@ -12,6 +12,7 @@ import {
   type NativeSyntheticEvent,
 } from "react-native";
 import { Avatar, Btn, Divider, Empty, ErrorNote, Field, IconBtn, LoadingRow, Tag, enterToSend, useUi, type Ui , Select } from "../bits";
+import { useKeyboardInset } from "../../use-keyboard-inset";
 import { asList, asRecord, useQuery } from "../api";
 import { refreshInboxBadge } from "../badge";
 import { useWorkbench } from "../context";
@@ -68,6 +69,8 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [threadBusy, setThreadBusy] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView | null>(null);
+  const rootRef = useRef<ComponentRef<typeof View>>(null);
+  const keyboardInset = useKeyboardInset(rootRef);
   const metrics = useRef({ y: 0, viewH: 0, contentH: 0 });
   const [scrollState, setScrollState] = useState({ canScroll: false, atBottom: true });
   const [seenCount, setSeenCount] = useState(0);
@@ -194,8 +197,15 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   };
 
   const onScrollLayout = (event: { nativeEvent: { layout: { height: number } } }) => {
-    metrics.current.viewH = event.nativeEvent.layout.height;
+    const prevViewH = metrics.current.viewH;
+    const nextViewH = event.nativeEvent.layout.height;
+    metrics.current.viewH = nextViewH;
     applyMetrics();
+    // 键盘抬起压缩视口时保持内容底边不动：贴底转录仍贴底（等价于滚到底），
+    // 紧凑布局里流内的评论框也不会被挤出可视区。
+    if (prevViewH > nextViewH) {
+      scrollRef.current?.scrollTo({ y: metrics.current.y + (prevViewH - nextViewH), animated: false });
+    }
   };
 
   useEffect(() => {
@@ -900,7 +910,10 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
   );
 
   return (
-    <View style={{ flex: 1 }}>
+    <View
+      ref={rootRef}
+      style={[{ flex: 1 }, keyboardInset > 0 ? { marginBottom: keyboardInset } : null]}
+    >
       <View
         style={[
           ui.s.row,

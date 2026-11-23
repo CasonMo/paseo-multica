@@ -1,6 +1,6 @@
 import { t, errorMessage, localizeError, useLocaleOverride, setLocaleOverride, type LocaleOverride } from "../i18n";
 import { Icon, Modal, copyText, useToast } from "@getpaseo/plugin/client/ui";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ComponentRef } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRpc } from "@getpaseo/plugin/client";
 import { API_ROUTES, isInternalRoute } from "../../../shared/routes";
@@ -18,6 +18,7 @@ import {
 } from "../../../shared/contracts";
 import { Avatar, Btn, Card, Chips, Divider, Empty, ErrorNote, Field, Tag, useUi , Select } from "../bits";
 import { useWorkbench } from "../context";
+import { useKeyboardInset } from "../../use-keyboard-inset";
 import { relTime } from "../model";
 import { AccountSettings, WorkspaceMembersSettings } from "../SettingsSections";
 import { ApiExplorerPage } from "./ApiExplorer";
@@ -28,6 +29,8 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
   const { theme, compact, connections, server, servers, user, workspaces, workspaceId, toast, locale } = ctx;
   const override = useLocaleOverride();
   const ui = useUi(theme, compact);
+  const rootRef = useRef<ComponentRef<typeof View>>(null);
+  const keyboardInset = useKeyboardInset(rootRef);
   const saveRpc = useRpc(connectionsSaveRpc);
   const removeRpc = useRpc(connectionsRemoveRpc);
   const activateRpc = useRpc(connectionsActivateRpc);
@@ -87,7 +90,10 @@ export function SettingsPage({ initialTab }: { initialTab?: "connection" | "work
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View
+      ref={rootRef}
+      style={[{ flex: 1 }, keyboardInset > 0 ? { marginBottom: keyboardInset } : null]}
+    >
       <View style={{ paddingHorizontal: compact ? 12 : 20, paddingTop: compact ? 12 : 20, gap: 14 }}>
         <View>
           <Text style={ui.s.title}>{t("Nav.15")}</Text>

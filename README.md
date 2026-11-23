@@ -29,6 +29,10 @@ cloud (`https://api.multica.ai`) and any self-hosted Multica server.
 - **Settings** — multiple server connections (keys stay daemon-side), workspace switching,
   members & invitations, profile, access tokens, notification preferences, internal-route
   toggle, and the embedded API explorer (the single entry point for interface debugging).
+- **Touch & soft keyboard** — on iPad / iPhone (native app and touch web) the chat, issue
+  reply and settings surfaces lift their input area above the soft keyboard by the
+  measured keyboard height, so the composer and the row beneath it stay visible; a
+  bottom-pinned transcript stays pinned while the viewport shrinks. Desktop is unchanged.
 
 ## Setup
 

@@ -74,6 +74,12 @@ its own key, workspace and internal-route preference.
   issues and pull requests. The links open github.com in the system browser only when
   clicked. Dismissing it persists `coCreateDismissed` in the daemon-side
   `connections.json`, so it stays hidden across restarts.
+- **Soft keyboard on touch devices** — the chat, issue detail and settings surfaces
+  measure the real keyboard height (iOS keyboard events natively, `visualViewport` on
+  touch web) and reserve that much space below the panel, so the composer and the row
+  beneath it are not covered. Transcripts that were pinned to the bottom stay pinned as
+  the viewport shrinks. This is layout only: no new permissions, storage or network
+  access, and desktop rendering is unchanged.
 
 ## Where your data goes
 
