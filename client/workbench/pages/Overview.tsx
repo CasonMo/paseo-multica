@@ -6,6 +6,7 @@ import { asList, asRecord, num, usePagedQuery, useQuery } from "../api";
 import { useWorkbench } from "../context";
 import { relTime, type Agent, type AgentRuntime, type InboxItem, type Issue, type Project } from "../model";
 import { AgentRow, InboxRow, IssueRow } from "../parts";
+import { CommunityBanner } from "../CommunityBanner";
 import { UsageCard } from "../UsageCard";
 
 export function OverviewPage() {
@@ -75,6 +76,7 @@ export function OverviewPage() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: compact ? 12 : 18, gap: 14, paddingBottom: 40 }}>
+      <CommunityBanner />
       <Card
         ui={ui}
         padded={false}

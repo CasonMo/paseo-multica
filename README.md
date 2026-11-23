@@ -9,7 +9,8 @@ cloud (`https://api.multica.ai`) and any self-hosted Multica server.
 
 - **Overview** — workspace stats, usage & stability (7-day tokens / tasks / failure
   reasons / average duration), recently updated issues, project progress, inbox preview
-  and agent roster in an equal-height two-column grid.
+  and agent roster in an equal-height two-column grid. A dismissible co-creation banner
+  links to GitHub issues / PRs; once dismissed it stays hidden across restarts.
 - **Issues** — six-column kanban with per-column pagination and server-side column
   totals, plus a 36px list view; search, project filter and saved views (all / mine /
   active / done / closed).

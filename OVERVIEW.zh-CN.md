@@ -51,11 +51,15 @@ Windows）。你需要一个 Multica 账号或服务器，以及一个个人访�
   并查看状态码、耗时与响应 JSON。
 - **加载策略** — 支持分页的列表首屏取 20–50 条，滚动触底自动预取下一页，并保留「加载更多」
   按钮与「已加载 / 总数」footer；上游不支持分页的接口（收件箱、聊天）单次全量加载并如实标注。
+- **共创横幅** — 概览页顶部展示一行横幅，邀请到 GitHub 提 Issue / 提 PR；按钮仅在点击时
+  用系统浏览器打开 github.com。点 ✕ 关闭后会把 `coCreateDismissed` 持久化到 daemon 侧
+  `connections.json`，重启后不再显示。
 
 ## 数据去向
 
 - 唯一的网络目的地是你配置的 Multica 服务器地址。无遥测、无隐藏网络调用、无动态代码执行，
-  运行期间不下载或安装任何软件。
+  运行期间不下载或安装任何软件。共创横幅的 Issue / PR 按钮点击后由系统浏览器打开 GitHub，
+  插件本身不向 GitHub 发送任何数据。
 - API Key 只保存在 daemon 所在主机的 `~/.paseo/multica/connections.json`，文件权限 `0600`。
   Key 不会下发到界面，设置页只显示 `mul_…abcd` 形式的掩码；daemon 仅在请求所选服务器时以
   `Authorization: Bearer` 头携带它。更换连接的服务器地址时必须输入新服务器的 API Key：

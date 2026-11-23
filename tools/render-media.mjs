@@ -150,48 +150,64 @@ const overview = () => {
   defs.length = 0; gradSeq = 0;
   let s = rail("overview");
   const x = 66, mw = W - x - 18;
-  s += card(x, 18, mw, 148);
-  s += `<g transform="translate(${x + 20},36) scale(${44 / 512})">${logoInner}</g>`;
-  s += text(x + 78, 55, L("下午好，演示用户", "Good afternoon, Demo User"), { size: 19, weight: 700 });
-  s += text(x + 78, 76, L("这里汇总了工作区的需求流转、收件箱与智能体状态。上次同步 刚刚。", "Workspace issue flow, inbox and agent status at a glance. Last sync just now."), { size: 12.5, fill: C.muted });
+  s += rect(x, 16, mw, 36, { r: 8, fill: C.fill, stroke: C.border });
+  s += rect(x, 16, 3, 36, { fill: C.brand });
+  const sx = x + 22, sy = 34;
+  s += `<path d="M${sx} ${sy - 7} L${sx + 2} ${sy - 2} L${sx + 7} ${sy} L${sx + 2} ${sy + 2} L${sx} ${sy + 7} L${sx - 2} ${sy + 2} L${sx - 7} ${sy} L${sx - 2} ${sy - 2} Z" fill="${C.brand}"/>`;
+  const coTitle = L("开源共创", "Open source, built together");
+  const coHint = L(" · Multica 因你而更好。发现问题或有新想法？欢迎提 Issue、提 PR。", " · Multica gets better with you. Found a bug or have an idea? Open an issue or send a PR.");
+  s += text(x + 38, 38, coTitle, { size: 12, weight: 700, fill: C.brand });
+  s += text(x + 38 + tw(coTitle, 12), 38, coHint, { size: 12 });
+  const coBtn = (bx, label) => {
+    const w = tw(label, 11) + 16;
+    return rect(bx, 21, w, 26, { r: 6, fill: C.card, stroke: C.border }) + text(bx + 8, 38, label, { size: 11, weight: 600, fill: C.brand });
+  };
+  const prLabel = L("提 PR", "Open PR"), issueLabel = L("提 Issue", "Open issue");
+  const prX = x + mw - 40 - (tw(prLabel, 11) + 16);
+  s += coBtn(prX - 8 - (tw(issueLabel, 11) + 16), issueLabel) + coBtn(prX, prLabel);
+  s += text(x + mw - 20, 38, "✕", { size: 12, fill: C.faint, anchor: "middle" });
+  s += card(x, 66, mw, 148);
+  s += `<g transform="translate(${x + 20},84) scale(${44 / 512})">${logoInner}</g>`;
+  s += text(x + 78, 103, L("下午好，演示用户", "Good afternoon, Demo User"), { size: 19, weight: 700 });
+  s += text(x + 78, 124, L("这里汇总了工作区的需求流转、收件箱与智能体状态。上次同步 刚刚。", "Workspace issue flow, inbox and agent status at a glance. Last sync just now."), { size: 12.5, fill: C.muted });
   let bx = x + 20;
   for (const [label, primary] of [[L("新建需求", "New issue"), true], [L("团队", "Team"), false]]) {
-    const b = btn(bx, 96, label, { primary });
+    const b = btn(bx, 144, label, { primary });
     s += b.svg; bx += b.w + 8;
   }
   const metrics = [[L("需求总数", "Total issues"), String(D.issues.length)], [L("进行中", "In progress"), String(D.issues.filter((i) => i.status_category === "in_progress").length)], [L("未读通知", "Unread"), String(D.inbox.filter((i) => !i.read).length)], [L("在线运行时", "Runtimes online"), "1/2"]];
   metrics.forEach(([label, value], i) => {
     const mx = x + i * (mw / 4);
-    if (i > 0) s += line(mx, 130, mx, 166, C.border);
-    s += text(mx + 16, 146, label, { size: 11, fill: C.faint }) + text(mx + 16, 162, value, { size: 17, weight: 700 });
+    if (i > 0) s += line(mx, 178, mx, 214, C.border);
+    s += text(mx + 16, 194, label, { size: 11, fill: C.faint }) + text(mx + 16, 210, value, { size: 17, weight: 700 });
   });
-  s += line(x, 130, x + mw, 130, C.border);
-  s += card(x, 180, mw, 152);
-  s += text(x + 16, 204, L("用量与稳定性", "Usage & stability"), { size: 14, weight: 600 }) + text(x + mw - 16, 204, L("刷新", "Refresh"), { size: 12, fill: C.faint, anchor: "end" });
+  s += line(x, 178, x + mw, 178, C.border);
+  s += card(x, 228, mw, 152);
+  s += text(x + 16, 252, L("用量与稳定性", "Usage & stability"), { size: 14, weight: 600 }) + text(x + mw - 16, 252, L("刷新", "Refresh"), { size: 12, fill: C.faint, anchor: "end" });
   const tokens = D.usageDaily.reduce((t, d) => t + d.input_tokens + d.output_tokens + d.cache_read_tokens, 0);
   const tasks = D.usageDaily.reduce((t, d) => t + d.task_count, 0);
   const fails = D.failuresDaily.reduce((t, d) => t + d.task_count, 0);
   const stats = [["Tokens", `${(tokens / 1e6).toFixed(1)}M`], [L("任务数", "Tasks"), String(tasks)], [L("失败任务", "Failed tasks"), String(fails)], [L("平均耗时", "Avg duration"), L("1 分钟", "1 min")]];
   stats.forEach(([label, value], i) => {
-    const sx = x + 16 + i * 200;
-    s += rect(sx, 216, 188, 62, { r: 10, fill: C.canvas, stroke: C.border });
-    s += text(sx + 12, 236, label, { size: 11, fill: C.faint }) + text(sx + 12, 262, value, { size: 18, weight: 700, fill: i === 2 ? C.danger : C.fg });
+    const sx2 = x + 16 + i * 200;
+    s += rect(sx2, 264, 188, 62, { r: 10, fill: C.canvas, stroke: C.border });
+    s += text(sx2 + 12, 284, label, { size: 11, fill: C.faint }) + text(sx2 + 12, 310, value, { size: 18, weight: 700, fill: i === 2 ? C.danger : C.fg });
   });
   const maxDay = Math.max(...D.usageDaily.map((d) => d.input_tokens + d.output_tokens));
   D.usageDaily.forEach((d, i) => {
     const h = 8 + 34 * ((d.input_tokens + d.output_tokens) / maxDay);
-    s += rect(x + 830 + i * 40, 272 - h, 30, h, { r: 3, fill: C.brand, opacity: 0.85 });
-    s += text(x + 845 + i * 40, 286, d.date.slice(5), { size: 9, fill: C.faint, anchor: "middle" });
+    s += rect(x + 830 + i * 40, 320 - h, 30, h, { r: 3, fill: C.brand, opacity: 0.85 });
+    s += text(x + 845 + i * 40, 334, d.date.slice(5), { size: 9, fill: C.faint, anchor: "middle" });
   });
   ["demo_provider_timeout", "demo_unknown", "demo_auth"].forEach((reason, i) => {
-    const y = 222 + i * 22;
+    const y = 270 + i * 22;
     s += warn(x + 1130, y, C.warning) + text(x + 1150, y + 10, reason, { size: 10.5, fill: C.muted, mono: true });
     s += chip(x + mw - 60, y - 4, L(`${[30, 10, 5][i]} 次`, `${[30, 10, 5][i]}×`), { bg: "rgba(227,179,65,0.15)", fg: C.warning, size: 10 });
   });
-  const gy = 346, lw = 900, rx = x + lw + 14, rw = mw - lw - 14;
-  s += card(x, gy, lw, 380);
+  const gy = 394, lw = 900, rx = x + lw + 14, rw = mw - lw - 14;
+  s += card(x, gy, lw, 339);
   s += text(x + 16, gy + 26, L("最近更新的需求", "Recently updated issues"), { size: 14, weight: 600 }) + text(x + lw - 16, gy + 26, L("全部 ›", "All ›"), { size: 12, fill: C.brand, anchor: "end" });
-  D.issues.slice(0, 8).forEach((issue, i) => {
+  D.issues.slice(0, 7).forEach((issue, i) => {
     const y = gy + 44 + i * 41;
     if (i > 0) s += line(x + 14, y - 6, x + lw - 14, y - 6, C.line);
     s += dot(x + 24, y + 12, statusColor(issue.status_category));
@@ -199,15 +215,15 @@ const overview = () => {
     s += text(x + 110, y + 16, fit(titleOf(i), lw - 220, 13), { size: 13 });
     s += text(x + lw - 16, y + 16, relTime(issue.updated_at), { size: 11, fill: C.faint, anchor: "end" });
   });
-  s += card(x, gy + 394, lw, 142);
-  s += text(x + 16, gy + 420, L("项目进展", "Project progress"), { size: 14, weight: 600 }) + text(x + lw - 16, gy + 420, L("全部 ›", "All ›"), { size: 12, fill: C.brand, anchor: "end" });
+  s += card(x, gy + 353, lw, 132);
+  s += text(x + 16, gy + 379, L("项目进展", "Project progress"), { size: 14, weight: 600 }) + text(x + lw - 16, gy + 379, L("全部 ›", "All ›"), { size: 12, fill: C.brand, anchor: "end" });
   D.projects.forEach((p, i) => {
-    const y = gy + 440 + i * 46;
+    const y = gy + 399 + i * 46;
     s += text(x + 16, y + 12, projectName(i), { size: 13, weight: 600 }) + text(x + lw - 16, y + 12, `${p.done_count}/${p.issue_count}`, { size: 11, fill: C.faint, anchor: "end" });
     s += rect(x + 16, y + 20, lw - 32, 6, { r: 3, fill: C.fill });
     s += rect(x + 16, y + 20, (lw - 32) * (p.done_count / p.issue_count), 6, { r: 3, fill: i === 0 ? C.brand : C.success });
   });
-  s += card(rx, gy, rw, 300);
+  s += card(rx, gy, rw, 276);
   s += text(rx + 16, gy + 26, L("收件箱", "Inbox"), { size: 14, weight: 600 });
   s += chip(rx + 70, gy + 12, L("3 未读", "3 unread"), { bg: "rgba(122,162,247,0.15)", fg: C.brand, size: 10 });
   s += text(rx + rw - 16, gy + 26, L("全部已读", "Mark all read"), { size: 12, fill: C.muted, anchor: "end" });
@@ -218,26 +234,26 @@ const overview = () => {
     L("虚构失败原因：demo_provider_timeout", "Fictional failure: demo_provider_timeout"),
   ];
   D.inbox.slice(0, 4).forEach((item, i) => {
-    const y = gy + 44 + i * 56;
+    const y = gy + 44 + i * 50;
     if (i > 0) s += line(rx + 14, y - 6, rx + rw - 14, y - 6, C.line);
     s += item.type === "new_comment" ? commentIcon(rx + 18, y + 4, C.brand) : bell(rx + 18, y + 2, item.severity === "warning" ? C.warning : C.faint);
-    s += text(rx + 42, y + 14, fit(titleOf(D.issues.findIndex((q) => q.id === item.issue_id)), rw - 120, 12.5), { size: 12.5, weight: item.read ? 400 : 600 });
-    s += text(rx + 42, y + 30, fit(inboxBodies[i], rw - 120, 11.5), { size: 11.5, fill: C.faint });
-    s += text(rx + 42, y + 44, `${item.issue_identifier} · ${relTime(item.created_at)}`, { size: 10.5, fill: C.faint, mono: true });
+    s += text(rx + 42, y + 12, fit(titleOf(D.issues.findIndex((q) => q.id === item.issue_id)), rw - 120, 12.5), { size: 12.5, weight: item.read ? 400 : 600 });
+    s += text(rx + 42, y + 27, fit(inboxBodies[i], rw - 120, 11.5), { size: 11.5, fill: C.faint });
+    s += text(rx + 42, y + 40, `${item.issue_identifier} · ${relTime(item.created_at)}`, { size: 10.5, fill: C.faint, mono: true });
   });
-  s += line(rx, gy + 270, rx + rw, gy + 270, C.line);
-  s += text(rx + 16, gy + 288, L("共 6 条", "6 items"), { size: 11, fill: C.faint }) + text(rx + rw - 16, gy + 288, L("查看全部 ›", "View all ›"), { size: 11, fill: C.brand, anchor: "end" });
-  s += card(rx, gy + 314, rw, 222);
-  s += text(rx + 16, gy + 340, L("智能体", "Agents"), { size: 14, weight: 600 }) + text(rx + rw - 16, gy + 340, L("管理 ›", "Manage ›"), { size: 12, fill: C.brand, anchor: "end" });
+  s += line(rx, gy + 246, rx + rw, gy + 246, C.line);
+  s += text(rx + 16, gy + 264, L("共 6 条", "6 items"), { size: 11, fill: C.faint }) + text(rx + rw - 16, gy + 264, L("查看全部 ›", "View all ›"), { size: 11, fill: C.brand, anchor: "end" });
+  s += card(rx, gy + 290, rw, 206);
+  s += text(rx + 16, gy + 316, L("智能体", "Agents"), { size: 14, weight: 600 }) + text(rx + rw - 16, gy + 316, L("管理 ›", "Manage ›"), { size: 12, fill: C.brand, anchor: "end" });
   D.agents.forEach((a, i) => {
-    const y = gy + 356 + i * 40;
+    const y = gy + 332 + i * 36;
     if (i > 0) s += line(rx + 14, y - 5, rx + rw - 14, y - 5, C.line);
     s += avatar(rx + 16, y, 24, agentName(i)[0], i);
     s += text(rx + 50, y + 12, fit(agentName(i), rw - 160, 13), { size: 13, weight: 500 });
     s += text(rx + 50, y + 26, fit(a.runtime_id ? runtimeName(D.runtimes.findIndex((r) => r.id === a.runtime_id)) : L("未绑定运行时", "No runtime bound"), rw - 160, 10.5), { size: 10.5, fill: C.faint });
     s += chip(rx + rw - 76, y + 4, a.status === "working" ? L("在工作", "Working") : L("空闲", "Idle"), { bg: a.status === "working" ? "rgba(63,185,80,0.15)" : C.fill, fg: a.status === "working" ? C.success : C.faint, size: 10 });
   });
-  s += text(rx + 16, gy + 528, L("已加载 4 / 4", "Loaded 4 / 4"), { size: 10.5, fill: C.faint });
+  s += text(rx + 16, gy + 482, L("已加载 4 / 4", "Loaded 4 / 4"), { size: 10.5, fill: C.faint });
   return wrap(s);
 };
 

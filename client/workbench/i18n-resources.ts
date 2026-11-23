@@ -988,6 +988,16 @@ export const resources = {
       "24": "server"
     }
   },
+  "Community": {
+    "1": "Open source, built together",
+    "2": "Multica gets better with you. Found a bug or have an idea? Open an issue or send a PR.",
+    "3": "Open issue",
+    "4": "Open PR",
+    "5": "Open a GitHub issue",
+    "6": "Open a GitHub pull request",
+    "7": "Dismiss co-creation banner",
+    "8": "Could not dismiss the banner. Try again."
+  },
   "ServerErr": {
     "1": "Enter a server name",
     "2": "Invalid server URL",
@@ -1995,6 +2005,16 @@ export const resources = {
       "21": "Multica 连接设置",
       "24": "服务器"
     }
+  },
+  "Community": {
+    "1": "开源共创",
+    "2": "Multica 因你而更好。发现问题或有新想法？欢迎提 Issue、提 PR。",
+    "3": "提 Issue",
+    "4": "提 PR",
+    "5": "在 GitHub 提 Issue",
+    "6": "在 GitHub 提 Pull Request",
+    "7": "关闭共创提示",
+    "8": "关闭提示失败，请重试"
   },
   "ServerErr": {
     "1": "请填写服务器名称",

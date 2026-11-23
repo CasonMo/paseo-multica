@@ -21,6 +21,7 @@ interface StoredState {
   version: 1;
   activeServerId: string | null;
   allowInternal: boolean;
+  coCreateDismissed: boolean;
   servers: StoredServer[];
 }
 
@@ -60,7 +61,7 @@ function seedState(): StoredState {
     createdAt: now,
     updatedAt: now,
   };
-  return { version: 1, activeServerId: server.id, allowInternal: false, servers: [server] };
+  return { version: 1, activeServerId: server.id, allowInternal: false, coCreateDismissed: false, servers: [server] };
 }
 
 function coerceState(raw: unknown): StoredState {
@@ -86,7 +87,7 @@ function coerceState(raw: unknown): StoredState {
     typeof input.activeServerId === "string" && servers.some((server) => server.id === input.activeServerId)
       ? input.activeServerId
       : servers[0].id;
-  return { version: 1, activeServerId, allowInternal: input.allowInternal === true, servers };
+  return { version: 1, activeServerId, allowInternal: input.allowInternal === true, coCreateDismissed: input.coCreateDismissed === true, servers };
 }
 
 async function load(): Promise<StoredState> {
@@ -139,6 +140,7 @@ function view(state: StoredState): ConnectionsView {
     activeServerId: state.activeServerId,
     servers: state.servers.map(toView),
     allowInternal: state.allowInternal,
+    coCreateDismissed: state.coCreateDismissed,
     storePath: storeFile,
   };
 }
@@ -245,9 +247,10 @@ export async function updateWorkspaceMeta(serverId: string, workspaceId: string,
   });
 }
 
-export async function savePreferences(input: { allowInternal?: boolean }): Promise<ConnectionsView> {
+export async function savePreferences(input: { allowInternal?: boolean; coCreateDismissed?: boolean }): Promise<ConnectionsView> {
   return mutate((state) => {
     if (typeof input.allowInternal === "boolean") state.allowInternal = input.allowInternal;
+    if (typeof input.coCreateDismissed === "boolean") state.coCreateDismissed = input.coCreateDismissed;
     return view(state);
   });
 }

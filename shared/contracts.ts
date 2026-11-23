@@ -21,6 +21,7 @@ export const connectionsViewSchema = z.object({
   activeServerId: z.string().nullable(),
   servers: z.array(serverViewSchema),
   allowInternal: z.boolean(),
+  coCreateDismissed: z.boolean(),
   storePath: z.string(),
 });
 export type ConnectionsView = z.infer<typeof connectionsViewSchema>;
@@ -127,7 +128,7 @@ export const workspaceSelectRpc = defineRpc({
 
 export const preferencesSaveRpc = defineRpc({
   name: "connections.preferences",
-  input: z.object({ allowInternal: z.boolean().optional() }),
+  input: z.object({ allowInternal: z.boolean().optional(), coCreateDismissed: z.boolean().optional() }),
   output: connectionsViewSchema,
 });
 

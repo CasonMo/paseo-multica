@@ -70,12 +70,17 @@ its own key, workspace and internal-route preference.
 - **Loading behavior** — paginated lists fetch 20–50 items first and prefetch the next
   page near the bottom, with a load-more button and a loaded/total footer. Endpoints
   without upstream pagination (inbox, chat) load in a single request and say so.
+- **Co-creation banner** — the overview page shows a one-line banner inviting GitHub
+  issues and pull requests. The links open github.com in the system browser only when
+  clicked. Dismissing it persists `coCreateDismissed` in the daemon-side
+  `connections.json`, so it stays hidden across restarts.
 
 ## Where your data goes
 
 - The only network destination is the Multica base URL you configure. There is no
   telemetry, no hidden network call, no dynamic code execution, and nothing is downloaded
-  or installed while the plugin runs.
+  or installed while the plugin runs. The co-creation banner's issue / PR buttons open
+  GitHub in the system browser on click; the plugin itself sends no data there.
 - The API key is stored only on the daemon host, in `~/.paseo/multica/connections.json`
   with file mode `0600`. It is never sent to the interface; settings show a masked form
   such as `mul_…abcd`. The daemon attaches it as an `Authorization: Bearer` header on
