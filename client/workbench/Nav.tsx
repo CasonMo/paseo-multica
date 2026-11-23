@@ -339,12 +339,8 @@ function WorkNav() {
   const total = (data: unknown) => num(asRecord(data).total, 0);
 
   const all = useQuery(api, "/api/issues", { query: { limit: 1 }, select: total }, key);
-  const mine = useQuery(
-    api,
-    user?.id ? "/api/issues" : null,
-    { query: { limit: 1, assignee_id: user?.id ?? "" }, select: total },
-    key,
-  );
+  // 「我的工作」含我拥有的智能体名下的任务，服务端无 OR 过滤，计数改由工作页扫描得出，侧栏不显示误导性的 0
+  const mine = useQuery(api, null, { query: { limit: 1 }, select: total }, key);
   const active = useQuery(
     api,
     "/api/issues",

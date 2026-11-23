@@ -1,6 +1,6 @@
 import { t } from "../i18n";
 import { Icon, Modal } from "@getpaseo/plugin/client/ui";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Avatar, Btn, Empty, ErrorNote, Field, LoadingRow, LoadMore, nearBottom, useUi, type Ui , Select } from "../bits";
 import { asList, asRecord, num, str, usePagedQuery, useQuery } from "../api";
@@ -86,7 +86,7 @@ export function IssuesPage() {
     };
     if (search) when.q = search;
     if (projectId) when.project_id = projectId;
-    if (view === "mine" && user?.id) when.assignee_id = user.id;
+    // 「我的工作」= 指派给我 + 指派给我拥有的智能体；服务端不支持多 assignee OR，客户端过滤
     // 视图过滤对列表与看板总数同时生效；看板各列会再按自己的粗桶覆盖 status_category
     if (view === "active") when.status_category = "started";
     if (view === "done") when.status_category = "done";
@@ -94,11 +94,36 @@ export function IssuesPage() {
     return when;
   }, [mode, search, projectId, view, user?.id]);
 
+  const myAgentsQuery = useQuery(
+    api,
+    view === "mine" && user?.id ? "/api/agents" : null,
+    {
+      query: { include_archived: "true", limit: 100 },
+      pollMs: 15000,
+      select: (data) => asList<Agent>(data, "agents").filter((agent) => agent.owner_id === user?.id).map((agent) => agent.id),
+    },
+    `${listKey}:myagents`,
+  );
+  const mineIds = useMemo(
+    () => (view === "mine" && user?.id ? [user.id, ...(myAgentsQuery.data ?? [])] : null),
+    [view, user?.id, myAgentsQuery.data],
+  );
+  const mineFilter = useCallback(
+    (issue: Issue) => Boolean(mineIds && issue.assignee_id && mineIds.includes(issue.assignee_id)),
+    [mineIds],
+  );
   const paged = usePagedQuery<Issue>(
     api,
     mode === "list" ? "/api/issues" : null,
-    { query: request, pageSize: 25 },
+    { query: request, pageSize: 25, filter: mineIds ? mineFilter : undefined },
     listKey,
+    "issues",
+  );
+  const mineBoardTotal = usePagedQuery<Issue>(
+    api,
+    mode === "board" && mineIds ? "/api/issues" : null,
+    { query: request, pageSize: 100, filter: mineFilter },
+    `${listKey}:minetotal`,
     "issues",
   );
   const boardTotal = useQuery(
@@ -201,7 +226,7 @@ export function IssuesPage() {
             </Pressable>
           </View>
         ) : null}
-        <Text style={ui.s.tiny}>{t("Inbox.40")} {mode === "board" ? (boardTotal.data ?? 0) : total} {t("Issues.16")}</Text>
+        <Text style={ui.s.tiny}>{t("Inbox.40")} {mode === "board" ? (mineIds ? mineBoardTotal.total : (boardTotal.data ?? 0)) : total} {t("Issues.16")}</Text>
         {sidebarHidden ? (
           <Pressable
             accessibilityRole="button"
@@ -317,6 +342,7 @@ export function IssuesPage() {
               statuses={statuses}
               query={request}
               listKey={listKey}
+              mineFilter={mineIds ? mineFilter : undefined}
               width={compact ? 232 : narrow ? 252 : 272}
               projectMap={projectMap}
               assigneeMap={assigneeMap}
@@ -671,6 +697,7 @@ function BoardColumn({
   projectMap,
   assigneeMap,
   workingAgents,
+  mineFilter,
   onOpen,
   onCreate,
 }: {
@@ -683,6 +710,7 @@ function BoardColumn({
   projectMap: Map<string, Project>;
   assigneeMap: Map<string, { name: string; url?: string | null }>;
   workingAgents: Map<string, WorkingAgent>;
+  mineFilter?: (issue: Issue) => boolean;
   onOpen(id: string): void;
   onCreate(status?: string): void;
 }) {
@@ -690,7 +718,7 @@ function BoardColumn({
   const primary = usePagedQuery<Issue>(
     api,
     "/api/issues",
-    { query: { ...query, status_category: COLUMN_BUCKET[column.key] ?? column.categories[0] }, pageSize: 100 },
+    { query: { ...query, status_category: COLUMN_BUCKET[column.key] ?? column.categories[0] }, pageSize: 100, filter: mineFilter },
     `${listKey}:col:${column.key}`,
     "issues",
   );

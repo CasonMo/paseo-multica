@@ -169,16 +169,16 @@ export interface PagedResult<T> {
 export function usePagedQuery<T = Record<string, unknown>>(
   api: ApiFn,
   path: string | null,
-  options: { query?: QueryParams; pageSize?: number; enabled?: boolean; serverId?: string; workspaceId?: string } = {},
+  options: { query?: QueryParams; pageSize?: number; enabled?: boolean; serverId?: string; workspaceId?: string; filter?: (item: T) => boolean } = {},
   key?: string,
   ...listKeys: string[]
 ): PagedResult<T> {
-  const { query, pageSize = 30, enabled = true, serverId, workspaceId } = options;
+  const { query, pageSize = 30, enabled = true, serverId, workspaceId, filter } = options;
   const queryKey = JSON.stringify(query ?? {});
   const keysKey = listKeys.join("|");
   const keysRef = useRef(listKeys);
   keysRef.current = listKeys;
-  const [items, setItems] = useState<T[]>([]);
+  const [rawItems, setRawItems] = useState<T[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(Boolean(path) && enabled);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -187,8 +187,8 @@ export function usePagedQuery<T = Record<string, unknown>>(
   const inFlight = useRef(false);
   const pendingReset = useRef(false);
   const mounted = useRef(true);
-  const itemsRef = useRef(items);
-  itemsRef.current = items;
+  const itemsRef = useRef(rawItems);
+  itemsRef.current = rawItems;
 
   useEffect(() => {
     mounted.current = true;
@@ -221,7 +221,7 @@ export function usePagedQuery<T = Record<string, unknown>>(
               ? (result.data as Record<string, unknown>)
               : {};
           const nextTotal = Number(envelope.total ?? NaN);
-          setItems((prev) => (reset ? list : [...prev, ...list]));
+          setRawItems((prev) => (reset ? list : [...prev, ...list]));
           setTotal(Number.isFinite(nextTotal) ? nextTotal : reset ? list.length : itemsRef.current.length + list.length);
           setError(null);
         } else {
@@ -251,7 +251,7 @@ export function usePagedQuery<T = Record<string, unknown>>(
       setLoading(false);
       return;
     }
-    setItems([]);
+    setRawItems([]);
     setTotal(0);
     setError(null);
     if (inFlight.current) {
@@ -263,7 +263,10 @@ export function usePagedQuery<T = Record<string, unknown>>(
      
   }, [run, key, keysKey]);
 
-  const hasMore = items.length < total;
+  // 服务端不支持的过滤（如「我的工作」= 我 + 我拥有的智能体）在客户端对已扫描页过滤；
+  // hasMore 仍按服务端总量推进，保证瀑布流继续扫描后续页
+  const items = filter ? rawItems.filter(filter) : rawItems;
+  const hasMore = rawItems.length < total;
   const loadMore = useCallback(() => {
     if (hasMore) void run(false);
   }, [hasMore, run]);
@@ -276,7 +279,7 @@ export function usePagedQuery<T = Record<string, unknown>>(
     }
   }, [run]);
 
-  return { items, total, loading, loadingMore, error, hasMore, loadMore, refresh };
+  return { items, total: filter ? items.length : total, loading, loadingMore, error, hasMore, loadMore, refresh };
 }
 
 export interface RuntimeModel {

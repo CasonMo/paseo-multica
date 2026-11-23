@@ -61,6 +61,7 @@ export interface Agent {
   permission_mode?: string;
   skills?: { id?: string; name?: string; slug?: string }[];
   archived_at?: string | null;
+  owner_id?: string;
   created_at?: string;
   updated_at?: string;
 }
