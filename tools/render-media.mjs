@@ -11,6 +11,8 @@ const L = (zh, en) => (LOCALE === "en" ? en : zh);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = path.join(root, "assets", "screenshots", LOCALE);
 fs.mkdirSync(outDir, { recursive: true });
+const logoFull = fs.readFileSync(path.join(root, "client", "workbench", "Logo.tsx"), "utf8").match(/`(<svg[\s\S]*?<\/svg>)`/)[1];
+const logoInner = logoFull.replace(/<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
 
 const TITLES_EN = [
   "Demo issue: handoff prompt flows to qa_passed first",
@@ -149,7 +151,7 @@ const overview = () => {
   let s = rail("overview");
   const x = 66, mw = W - x - 18;
   s += card(x, 18, mw, 148);
-  s += rect(x + 20, 36, 44, 44, { r: 13, fill: "#2F9169" }) + text(x + 42, 64, "✳", { size: 22, fill: "#fff", anchor: "middle" });
+  s += `<g transform="translate(${x + 20},36) scale(${44 / 512})">${logoInner}</g>`;
   s += text(x + 78, 55, L("下午好，演示用户", "Good afternoon, Demo User"), { size: 19, weight: 700 });
   s += text(x + 78, 76, L("这里汇总了工作区的需求流转、收件箱与智能体状态。上次同步 刚刚。", "Workspace issue flow, inbox and agent status at a glance. Last sync just now."), { size: 12.5, fill: C.muted });
   let bx = x + 20;
@@ -349,7 +351,5 @@ const issueDetail = () => {
 fs.writeFileSync(path.join(outDir, "overview.svg"), overview());
 fs.writeFileSync(path.join(outDir, "kanban.svg"), kanban());
 fs.writeFileSync(path.join(outDir, "issue-detail.svg"), issueDetail());
-const logoSrc = fs.readFileSync(path.join(root, "client", "workbench", "Logo.tsx"), "utf8");
-const logo = logoSrc.match(/`(<svg[\s\S]*?<\/svg>)`/)[1].replace('width="24" height="24"', 'width="256" height="256"');
-fs.writeFileSync(path.join(root, "assets", "icon.svg"), logo);
+fs.writeFileSync(path.join(root, "assets", "icon.svg"), logoFull.replace('width="24" height="24"', 'width="256" height="256"'));
 console.log("wrote", LOCALE, fs.readdirSync(outDir).join(", "), "+ icon.svg");
