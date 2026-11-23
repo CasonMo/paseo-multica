@@ -130,17 +130,21 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
     { pollMs: 5000, select: (data) => asList<ActiveTask>(data, "tasks") },
     key,
   );
-  const activeTask = (activeTaskQuery.data ?? []).find((task) => task.status === "running") ?? null;
+  const activeTasks = (activeTaskQuery.data ?? []).filter(
+    (task) => task.status === "running" || task.status === "queued" || task.status === "pending" || task.status === "waiting",
+  );
+  const activeTask = activeTasks.find((task) => task.status === "running") ?? activeTasks[0] ?? null;
   const activeAgent = activeTask ? agents.find((agent) => agent.id === activeTask.agent_id) ?? null : null;
+  const agentOf = (task: ActiveTask) => agents.find((agent) => agent.id === task.agent_id) ?? null;
   const [stopTask, setStopTask] = useState<TaskRun | null>(null);
   const [stopBusy, setStopBusy] = useState(false);
 
   const insights = useIssueInsights(issueId, bump, !ctx.loading);
   const runs = insights.runs;
-  const activeAttribution =
-    (activeTask ? runs.find((run) => run.id === activeTask.id)?.attribution : null) ?? activeTask?.attribution ?? null;
-  const triggerCommentId =
-    activeAttribution?.evidence?.kind === "comment" ? (activeAttribution.evidence.ref_id ?? null) : null;
+  const triggerOf = (task: ActiveTask): string | null => {
+    const att = runs.find((run) => run.id === task.id)?.attribution ?? task.attribution ?? null;
+    return att?.evidence?.kind === "comment" ? (att.evidence.ref_id ?? null) : null;
+  };
   const [runsOpen, setRunsOpen] = useState(false);
   const [runLogId, setRunLogId] = useState<string | null>(null);
   const [openActivity, setOpenActivity] = useState<Record<string, boolean>>({});
@@ -617,17 +621,18 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
         ) : comments.length === 0 ? (
           <View style={ui.s.panel}>
             <Text style={[ui.s.tiny, { padding: 16 }]}>{t("IssueDetail.56")}</Text>
-            {activeTask ? (
-              <RunningResponseRow ui={ui} task={activeTask} agent={activeAgent} onOpenLog={setRunLogId} onStop={setStopTask} />
-            ) : null}
+            {activeTasks.map((task) => (
+              <RunningResponseRow key={task.id} ui={ui} task={task} agent={agentOf(task)} onOpenLog={setRunLogId} onStop={setStopTask} />
+            ))}
           </View>
         ) : (
           <View style={{ gap: 12 }}>
             {roots.map((root) => {
               const replies = threadOf(root.id);
-              const hasRunning = Boolean(
-                activeTask && triggerCommentId && (triggerCommentId === root.id || replies.some((item) => item.id === triggerCommentId)),
-              );
+              const hasRunning = activeTasks.some((task) => {
+                const tr = triggerOf(task);
+                return Boolean(tr && (tr === root.id || replies.some((item) => item.id === tr)));
+              });
               const folded = collapsed[root.id] === true && !hasRunning;
               const target = replyTo && (replyTo.id === root.id || replies.some((item) => item.id === replyTo.id)) ? replyTo : null;
               const activities = activityMap.get(root.id) ?? [];
@@ -645,7 +650,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                       busy={threadBusy === root.id}
                       onReply={() => openReply(root.id, root)}
                       onResolve={() => void toggleResolve(root)}
-                      runningTask={activeTask && triggerCommentId === root.id ? activeTask : null}
+                      runningTask={activeTasks.find((task) => triggerOf(task) === root.id) ?? null}
                       onStopRun={setStopTask}
                     />
                     {folded
@@ -664,7 +669,7 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                               busy={threadBusy === reply.id}
                               onReply={() => openReply(root.id, reply)}
                               onResolve={() => void toggleResolve(reply)}
-                              runningTask={activeTask && triggerCommentId === reply.id ? activeTask : null}
+                              runningTask={activeTasks.find((task) => triggerOf(task) === reply.id) ?? null}
                               onStopRun={setStopTask}
                             />
                           </View>
@@ -728,11 +733,16 @@ export function IssueDetailPage({ issueId }: { issueId: string }) {
                 </View>
               );
             })}
-            {activeTask && (!triggerCommentId || !commentById.has(triggerCommentId)) ? (
-              <View style={[ui.s.panel, { paddingVertical: 4 }]}>
-                <RunningResponseRow ui={ui} task={activeTask} agent={activeAgent} onOpenLog={setRunLogId} onStop={setStopTask} />
-              </View>
-            ) : null}
+            {activeTasks
+              .filter((task) => {
+                const tr = triggerOf(task);
+                return !tr || !commentById.has(tr);
+              })
+              .map((task) => (
+                <View key={task.id} style={[ui.s.panel, { paddingVertical: 4 }]}>
+                  <RunningResponseRow ui={ui} task={task} agent={agentOf(task)} onOpenLog={setRunLogId} onStop={setStopTask} />
+                </View>
+              ))}
           </View>
         )}
       </View>

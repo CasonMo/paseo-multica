@@ -321,6 +321,7 @@ export function ChatPage({ sessionId, agentId }: { sessionId?: string; agentId?:
               ? {
                   taskId: runningTask?.id ?? null,
                   startedAt: runningTask?.started_at ?? (sentAt != null ? new Date(sentAt).toISOString() : null),
+                  queued: runningTask ? runningTask.status !== "running" : true,
                 }
               : null;
           return (
@@ -462,8 +463,8 @@ function Bubble({
   ui: Ui;
   message: ChatMessage;
   agentName?: string;
-  runningTask?: { id: string; started_at?: string | null } | null;
-  pending?: { taskId: string | null; startedAt: string | null } | null;
+  runningTask?: { id: string; status?: string; started_at?: string | null } | null;
+  pending?: { taskId: string | null; startedAt: string | null; queued: boolean } | null;
   onQuickAction?(text: string): void;
 }) {
   const mine = message.role === "user";
@@ -518,6 +519,7 @@ function Bubble({
             running={turnRunning}
             startedAt={runningTask?.started_at ?? message.created_at}
             elapsedMs={mine ? null : message.elapsed_ms}
+            queued={turnRunning && runningTask?.status !== "running"}
           />
           {!mine && quickActions.length > 0 ? (
             <View style={[ui.s.row, { gap: 6, flexWrap: "wrap", marginTop: 6, alignItems: "center" }]}>
@@ -535,7 +537,7 @@ function Bubble({
         </View>
       ) : pending ? (
         <View style={{ alignSelf: "stretch", maxWidth: "88%" }}>
-          <TaskStepsBlock ui={ui} taskId={pending.taskId} running startedAt={pending.startedAt} elapsedMs={null} />
+          <TaskStepsBlock ui={ui} taskId={pending.taskId} running startedAt={pending.startedAt} elapsedMs={null} queued={pending.queued} />
         </View>
       ) : null}
     </View>

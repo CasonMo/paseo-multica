@@ -118,6 +118,7 @@ export function RunningResponseRow({
   }, [taskId]);
 
   const name = agent?.name ?? t("AgentDetail.23");
+  const queued = task.status !== "running";
   return (
     <View style={[ui.s.row, { gap: 4, paddingLeft: 32, paddingRight: 8, paddingVertical: 6 }]}>
       <Pressable
@@ -135,9 +136,9 @@ export function RunningResponseRow({
         <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: "500", color: ui.c.fg, flexShrink: 0 }}>
           {name}
         </Text>
-        <ActivityIndicator size="small" color={ui.c.brand} />
+        {queued ? <Icon name="Clock" size={13} color={ui.c.muted} /> : <ActivityIndicator size="small" color={ui.c.brand} />}
         <Text numberOfLines={1} style={{ fontSize: 13, color: ui.c.muted, flex: 1 }}>
-          {step ?? t("Execution.5")}
+          {queued ? t("Execution.83") : (step ?? t("Execution.5"))}
         </Text>
         <Text style={ui.s.tiny}>{fmtDuration(runDurationMs(task))}</Text>
         <Icon name="ChevronRight" size={12} color={ui.c.faint} />
@@ -711,20 +712,22 @@ export function TaskStepsBlock({
   running,
   startedAt,
   elapsedMs,
+  queued,
 }: {
   ui: Ui;
   taskId: string | null;
   running: boolean;
   startedAt: string | null;
   elapsedMs?: number | null;
+  queued?: boolean;
 }) {
-  const [expanded, setExpanded] = useState(running);
+  const [expanded, setExpanded] = useState(running && !queued);
   const [openStep, setOpenStep] = useState<string | null>(null);
   const [, setTick] = useState(0);
   const { steps, loading } = useTaskSteps(taskId, running, startedAt);
   useEffect(() => {
-    if (running) setExpanded(true);
-  }, [running]);
+    if (running && !queued) setExpanded(true);
+  }, [running, queued]);
   useEffect(() => {
     if (!running) return;
     const timer = setInterval(() => setTick((x) => x + 1), 1000);
@@ -736,7 +739,7 @@ export function TaskStepsBlock({
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ expanded }}
-        accessibilityLabel={running ? t("Chat.39") : t("Chat.43", { a: steps.length })}
+        accessibilityLabel={running ? (queued ? t("Execution.83") : t("Chat.39")) : t("Chat.43", { a: steps.length })}
         onPress={() => setExpanded(!expanded)}
         style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
           ui.s.row,
@@ -745,15 +748,15 @@ export function TaskStepsBlock({
           pressed && ui.s.pressed,
         ]}
       >
-        {running ? <ActivityIndicator size="small" color={ui.c.brand} /> : <Icon name={expanded ? "ChevronDown" : "ChevronRight"} size={13} color={ui.c.muted} />}
-        <Text style={{ fontSize: 12, fontWeight: 600, color: running ? ui.c.brand : ui.c.muted }}>
-          {running ? `${t("Chat.39")} · ${fmtDuration(elapsed)}` : t("Chat.43", { a: steps.length })}
+        {running && !queued ? <ActivityIndicator size="small" color={ui.c.brand} /> : <Icon name={expanded ? "ChevronDown" : "ChevronRight"} size={13} color={ui.c.muted} />}
+        <Text style={{ fontSize: 12, fontWeight: 600, color: running && !queued ? ui.c.brand : ui.c.muted }}>
+          {running ? `${queued ? t("Execution.83") : t("Chat.39")} · ${fmtDuration(elapsed)}` : t("Chat.43", { a: steps.length })}
         </Text>
         {!running && elapsedMs != null ? <Text style={ui.s.tiny}>{t("Chat.44", { a: fmtDuration(elapsedMs) })}</Text> : null}
       </Pressable>
       {expanded ? (
         <View style={{ gap: 2, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: ui.c.line, marginLeft: 6 }}>
-          {running && steps.length === 0 ? <Text style={ui.s.tiny}>{t("Chat.45")}</Text> : null}
+          {running && !queued && steps.length === 0 ? <Text style={ui.s.tiny}>{t("Chat.45")}</Text> : null}
           {!running && loading && steps.length === 0 ? <Text style={ui.s.tiny}>{t("Execution.80")}</Text> : null}
           {steps.map((s) => (
             <View key={s.id} style={{ gap: 2 }}>

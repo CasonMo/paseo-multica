@@ -945,5 +945,6 @@
   "ServerErr.14": "无法连接到服务器，请检查地址、网络或代理",
   "ServerErr.15": "连接失败",
   "ServerErr.16": "读取收件箱失败",
-  "ServerErr.17": "读取步骤失败"
+  "ServerErr.17": "读取步骤失败",
+  "Execution.83": "等待可用的智能体。"
 }

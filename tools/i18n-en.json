@@ -945,5 +945,6 @@
   "ServerErr.14": "Cannot reach the server; check URL, network or proxy",
   "ServerErr.15": "Connection failed",
   "ServerErr.16": "Failed to read inbox",
-  "ServerErr.17": "Failed to read steps"
+  "ServerErr.17": "Failed to read steps",
+  "Execution.83": "Waiting for an available agent."
 }

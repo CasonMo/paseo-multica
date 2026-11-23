@@ -159,7 +159,8 @@ export const resources = {
     "79": " steps",
     "80": "Loading steps…",
     "81": "Step +{{a}} {{b}}",
-    "82": "No matching steps."
+    "82": "No matching steps.",
+    "83": "Waiting for an available agent."
   },
   "Nav": {
     "2": "Work",
@@ -1166,7 +1167,8 @@ export const resources = {
     "79": "个步骤",
     "80": "读取步骤…",
     "81": "步骤 +{{a}} {{b}}",
-    "82": "没有匹配的步骤。"
+    "82": "没有匹配的步骤。",
+    "83": "等待可用的智能体。"
   },
   "Nav": {
     "2": "工作",
