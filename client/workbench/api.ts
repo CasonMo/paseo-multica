@@ -169,11 +169,11 @@ export interface PagedResult<T> {
 export function usePagedQuery<T = Record<string, unknown>>(
   api: ApiFn,
   path: string | null,
-  options: { query?: QueryParams; pageSize?: number; enabled?: boolean; serverId?: string; workspaceId?: string; filter?: (item: T) => boolean } = {},
+  options: { query?: QueryParams; pageSize?: number; enabled?: boolean; serverId?: string; workspaceId?: string; filter?: (item: T) => boolean; autoExhaust?: boolean } = {},
   key?: string,
   ...listKeys: string[]
 ): PagedResult<T> {
-  const { query, pageSize = 30, enabled = true, serverId, workspaceId, filter } = options;
+  const { query, pageSize = 30, enabled = true, serverId, workspaceId, filter, autoExhaust } = options;
   const queryKey = JSON.stringify(query ?? {});
   const keysKey = listKeys.join("|");
   const keysRef = useRef(listKeys);
@@ -221,9 +221,14 @@ export function usePagedQuery<T = Record<string, unknown>>(
               ? (result.data as Record<string, unknown>)
               : {};
           const nextTotal = Number(envelope.total ?? NaN);
-          setRawItems((prev) => (reset ? list : [...prev, ...list]));
-          setTotal(Number.isFinite(nextTotal) ? nextTotal : reset ? list.length : itemsRef.current.length + list.length);
+          const merged = reset ? list : [...itemsRef.current, ...list];
+          itemsRef.current = merged;
+          setRawItems(merged);
+          const serverTotal = Number.isFinite(nextTotal) ? nextTotal : merged.length;
+          setTotal(serverTotal);
           setError(null);
+          // 计数场景：服务端无 OR 过滤时自动扫完全部页，得到完整客户端过滤计数
+          if (autoExhaust && merged.length < serverTotal) setTimeout(() => void run(false), 0);
         } else {
           setError(result.error ?? t("api.1", { a: result.status }));
         }
@@ -241,7 +246,7 @@ export function usePagedQuery<T = Record<string, unknown>>(
         }
       }
     },
-    [api, path, enabled, queryKey, pageSize, serverId, workspaceId],
+    [api, path, enabled, queryKey, pageSize, serverId, workspaceId, autoExhaust],
   );
 
   useEffect(() => {

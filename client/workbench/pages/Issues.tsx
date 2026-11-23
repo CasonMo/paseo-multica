@@ -122,10 +122,13 @@ export function IssuesPage() {
   const mineBoardTotal = usePagedQuery<Issue>(
     api,
     mode === "board" && mineIds ? "/api/issues" : null,
-    { query: request, pageSize: 100, filter: mineFilter },
+    { query: request, pageSize: 100, filter: mineFilter, autoExhaust: true },
     `${listKey}:minetotal`,
     "issues",
   );
+  useEffect(() => {
+    if (mineIds && mode === "board") mineBoardTotal.refresh();
+  }, [mineIds, mode]);
   const boardTotal = useQuery(
     api,
     mode === "board" ? "/api/issues" : null,

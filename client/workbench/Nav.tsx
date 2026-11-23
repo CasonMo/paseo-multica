@@ -1,11 +1,11 @@
 import { t } from "./i18n";
 import { Icon } from "@getpaseo/plugin/client/ui";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
-import { asList, asRecord, num, useQuery } from "./api";
+import { asList, asRecord, num, usePagedQuery, useQuery } from "./api";
 import { useUi } from "./bits";
 import { useWorkbench, type PageKey } from "./context";
-import { initials, type Project } from "./model";
+import { initials, type Agent, type Issue, type Project } from "./model";
 
 /** RN-web 的 Pressable 会带 hovered，但 RN 0.81 的类型里没有声明。 */
 type NavPressState = { pressed: boolean; hovered?: boolean };
@@ -339,8 +339,33 @@ function WorkNav() {
   const total = (data: unknown) => num(asRecord(data).total, 0);
 
   const all = useQuery(api, "/api/issues", { query: { limit: 1 }, select: total }, key);
-  // 「我的工作」含我拥有的智能体名下的任务，服务端无 OR 过滤，计数改由工作页扫描得出，侧栏不显示误导性的 0
-  const mine = useQuery(api, null, { query: { limit: 1 }, select: total }, key);
+  // 「我的工作」= 指派给我 + 我拥有的智能体名下的任务；服务端无 OR 过滤，自动扫页客户端计数
+  const myAgents = useQuery(
+    api,
+    user?.id ? "/api/agents" : null,
+    {
+      query: { include_archived: "true", limit: 100 },
+      pollMs: 15000,
+      select: (data) => asList<Agent>(data, "agents").filter((agent) => agent.owner_id === user?.id).map((agent) => agent.id),
+    },
+    `${key}:myagents`,
+  );
+  const mineIds = useMemo(() => (user?.id ? [user.id, ...(myAgents.data ?? [])] : null), [user?.id, myAgents.data]);
+  const mineFilter = useCallback(
+    (issue: Issue) => Boolean(mineIds && issue.assignee_id && mineIds.includes(issue.assignee_id)),
+    [mineIds],
+  );
+  const mine = usePagedQuery<Issue>(
+    api,
+    mineIds ? "/api/issues" : null,
+    { query: {}, pageSize: 100, filter: mineFilter, autoExhaust: true },
+    `${key}:minecount`,
+    "issues",
+  );
+  // 智能体列表晚到或 RPC 瞬时失败后自愈重扫，保证计数最终正确
+  useEffect(() => {
+    if (mineIds) mine.refresh();
+  }, [mineIds]);
   const active = useQuery(
     api,
     "/api/issues",
@@ -362,7 +387,7 @@ function WorkNav() {
     typeof unread.data === "number" ? unread.data : num(asRecord(unread.data).count ?? asRecord(unread.data).unread, 0);
   const counts: Record<string, number | null> = {
     all: all.data,
-    mine: user?.id ? mine.data : null,
+    mine: mineIds ? (mine.loading && mine.items.length === 0 ? null : mine.total) : null,
     active: active.data,
     done: done.data,
     closed: closed.data,
